@@ -62,7 +62,7 @@ async def test_heating_curve(trovis: Trovis557x) -> None:
     assert curve is not None
     assert len(curve) == 41
     # day mode on, soll=20, niveau=0, steigung=1.0, clamp [20, 80]
-    assert curve[0] == pytest.approx(68.0)   # outside -20 °C
+    assert curve[0] == pytest.approx(68.0)  # outside -20 °C
     assert curve[-1] == pytest.approx(24.0)  # outside +20 °C
     assert trovis.curve_x_values == list(range(-20, 21))
 

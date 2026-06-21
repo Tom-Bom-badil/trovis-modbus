@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from modbus_connection import ModbusExceptionError
 
@@ -151,11 +151,19 @@ class Trovis557x:
 
     def _int(self, key: str) -> int | None:
         value = self._values.get(key)
-        return int(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else None
+        return (
+            int(value)
+            if isinstance(value, (int, float)) and not isinstance(value, bool)
+            else None
+        )
 
     def _float(self, key: str) -> float | None:
         value = self._values.get(key)
-        return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else None
+        return (
+            float(value)
+            if isinstance(value, (int, float)) and not isinstance(value, bool)
+            else None
+        )
 
     def _heating_curve(self, circuit: int, mode: str) -> list[float] | None:
         if circuit not in (1, 2, 3):
@@ -237,7 +245,11 @@ class Trovis557x:
 
     def _raw_int(self, key: str) -> int | None:
         value = self._values.get(key)
-        return int(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else None
+        return (
+            int(value)
+            if isinstance(value, (int, float)) and not isinstance(value, bool)
+            else None
+        )
 
     def _range_text(self, low_key: str, span_key: str) -> str | None:
         low = self._raw_int(low_key)

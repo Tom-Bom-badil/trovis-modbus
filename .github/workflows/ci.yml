@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Ruff format
+        run: uvx ruff format --check .
+      - name: Ruff lint
+        run: uvx ruff check .
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: trovis-modbus
+      # trovis-modbus depends on the sibling modbus-connection via a path source
+      # ([tool.uv.sources]). Check it out next to this repo. Adjust the
+      # repository slug if it is hosted elsewhere.
+      - uses: actions/checkout@v4
+        with:
+          repository: home-assistant-libs/modbus-connection
+          path: modbus-connection
+      - uses: astral-sh/setup-uv@v6
+      - name: Clone the reference Trovis YAML (enables the /goal parity tests)
+        run: git clone --depth 1 https://github.com/Tom-Bom-badil/samson_trovis_557x /tmp/trovis-ref
+      - name: Install dependencies
+        working-directory: trovis-modbus
+        run: uv sync
+      - name: Run tests
+        working-directory: trovis-modbus
+        run: uv run pytest

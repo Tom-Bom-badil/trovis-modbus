@@ -29,9 +29,7 @@ class _IgnoreSecret(yaml.SafeLoader):
     pass
 
 
-_IgnoreSecret.add_constructor(
-    "!secret", lambda loader, node: f"secret:{node.value}"
-)
+_IgnoreSecret.add_constructor("!secret", lambda loader, node: f"secret:{node.value}")
 
 
 def _load_entities(subdir: str) -> list[dict[str, Any]]:
@@ -85,7 +83,9 @@ def test_every_coil_reproduced() -> None:
     )
 
 
-@pytest.mark.parametrize("entity", _load_entities("registers"), ids=lambda e: e["unique_id"])
+@pytest.mark.parametrize(
+    "entity", _load_entities("registers"), ids=lambda e: e["unique_id"]
+)
 def test_register_attributes_match(entity: dict[str, Any]) -> None:
     register = REGISTERS_BY_KEY[entity["unique_id"]]
     assert register.address == entity["address"]
@@ -101,7 +101,9 @@ def test_register_attributes_match(entity: dict[str, Any]) -> None:
         assert register.max_value == entity["max_value"]
 
 
-@pytest.mark.parametrize("entity", _load_entities("coils"), ids=lambda e: e["unique_id"])
+@pytest.mark.parametrize(
+    "entity", _load_entities("coils"), ids=lambda e: e["unique_id"]
+)
 def test_coil_attributes_match(entity: dict[str, Any]) -> None:
     coil = COILS_BY_KEY[entity["unique_id"]]
     assert coil.address == entity["address"]
@@ -111,4 +113,6 @@ def test_template_sensors_accounted_for() -> None:
     template_ids = _template_unique_ids()
     derived_keys = {d.key for d in DERIVED}
     unaccounted = template_ids - derived_keys - EXCLUDED_UI_KEYS
-    assert not unaccounted, f"template sensors neither derived nor excluded: {unaccounted}"
+    assert not unaccounted, (
+        f"template sensors neither derived nor excluded: {unaccounted}"
+    )

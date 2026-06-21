@@ -77,3 +77,11 @@ uv run pytest
 The test suite cross-checks the catalog against the upstream YAML (cloned to
 `/tmp/trovis-ref`) and exercises decoding/derived values against a real
 in-process Modbus server.
+
+Formatting/linting is [ruff](https://docs.astral.sh/ruff/), enforced in CI. Install
+the commit hook with [prek](https://github.com/j178/prek):
+
+```bash
+uvx prek install          # format on commit
+uvx prek run --all-files  # format + lint everything now
+```
