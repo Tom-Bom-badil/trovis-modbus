@@ -43,6 +43,8 @@ class RegisterField:
         kind: str = "number",
         stride: int = 0,
         unit: str | None = None,
+        level_coil: int | None = None,
+        level_coil_stride: int = 0,
         doc: str = "",
     ) -> None:
         self.address = address
@@ -53,6 +55,10 @@ class RegisterField:
         self.kind = kind  # number | mode | weekday | time | raw
         self.stride = stride
         self.unit = unit
+        # The "Ebene" override coil that must be set to 0 (remote control) before
+        # this value can be written over Modbus; None if no override is needed.
+        self.level_coil = level_coil
+        self.level_coil_stride = level_coil_stride
         self._decimals = _decimals(scale)
         suffix = f" ({unit})" if unit else ""
         self.__doc__ = f"{doc}{suffix}".strip() or None
@@ -106,11 +112,20 @@ class CoilField:
     """A coil exposed as a boolean attribute on a component."""
 
     def __init__(
-        self, address: int, *, writable: bool = False, stride: int = 0, doc: str = ""
+        self,
+        address: int,
+        *,
+        writable: bool = False,
+        stride: int = 0,
+        level_coil: int | None = None,
+        level_coil_stride: int = 0,
+        doc: str = "",
     ) -> None:
         self.address = address
         self.writable = writable
         self.stride = stride
+        self.level_coil = level_coil
+        self.level_coil_stride = level_coil_stride
         self.__doc__ = doc or None
 
     def __set_name__(self, owner: type, name: str) -> None:

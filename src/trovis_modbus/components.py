@@ -165,7 +165,13 @@ class HeatingCircuit(Component):
     """
 
     mode = RegisterField(
-        105, kind="mode", stride=2, writable=True, doc="Operating mode"
+        105,
+        kind="mode",
+        stride=2,
+        writable=True,
+        level_coil=88,  # EBNBetrArtRk1
+        level_coil_stride=2,
+        doc="Operating mode",
     )
     control_signal = RegisterField(
         106, signed=False, stride=2, unit="%", doc="Valve position 0-100%"
@@ -209,7 +215,14 @@ class HeatingCircuit(Component):
     outside_shutdown = CoilField(1006, stride=200, doc="Outside-temp shutdown active")
     standby = CoilField(1007, stride=200, doc="Standby")
     frost_protection = CoilField(1008, stride=200, doc="Frost protection active")
-    pump_running = CoilField(56, stride=1, writable=True, doc="Circulation pump on")
+    pump_running = CoilField(
+        56,
+        stride=1,
+        writable=True,
+        level_coil=95,  # EBNBinaerBA1
+        level_coil_stride=1,
+        doc="Circulation pump on",
+    )
     manual_active = CoilField(4, stride=1, doc="Manual mode active")
 
     def heating_curve(self, mode: str = "active") -> list[float] | None:
@@ -254,7 +267,13 @@ class HeatingCircuit(Component):
 class HotWater(Component):
     """The domestic hot water circuit (HK4 / TW): setpoints and disinfection."""
 
-    mode = RegisterField(111, kind="mode", writable=True, doc="Operating mode")
+    mode = RegisterField(
+        111,
+        kind="mode",
+        writable=True,
+        level_coil=94,  # EBNBetrArtTW
+        doc="Operating mode",
+    )
     setpoint_day = temperature(1799, writable=True, doc="Hot-water setpoint (day)")
     setpoint_active = temperature(1807, doc="Currently active hot-water setpoint")
     setpoint_max = temperature(1800, writable=True, doc="Maximum settable setpoint")
@@ -292,8 +311,18 @@ class HotWater(Component):
     frost_protection = CoilField(1805, doc="Frost protection active")
     forced_charge = CoilField(1806, writable=True, doc="Force a storage charge")
     solar_pump_running = CoilField(1807, doc="Solar circuit pump on")
-    charge_pump_running = CoilField(59, writable=True, doc="Storage charge pump on")
-    circulation_pump_running = CoilField(60, writable=True, doc="Circulation pump on")
+    charge_pump_running = CoilField(
+        59,
+        writable=True,
+        level_coil=98,
+        doc="Storage charge pump on",  # EBNBinaerBA4
+    )
+    circulation_pump_running = CoilField(
+        60,
+        writable=True,
+        level_coil=99,
+        doc="Circulation pump on",  # EBNBinaerBA5
+    )
     manual_active = CoilField(7, doc="Manual mode active")
 
     @property

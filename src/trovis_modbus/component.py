@@ -132,11 +132,18 @@ class Component:
     # -- writes --------------------------------------------------------------
 
     async def write(self, field: str, value: Any) -> None:
-        """Write a writable register or coil by attribute name."""
+        """Write a writable register or coil by attribute name.
+
+        If the field has an override ("Ebene") coil, it is first set to 0
+        (remote control) so the controller accepts the write — a documented
+        Trovis quirk: e.g. the operating mode is ignored over Modbus unless its
+        Ebene coil is released first.
+        """
         if field in self._register_fields:
             register = self._register_fields[field]
             if not register.writable:
                 raise AttributeError(f"{field} is read-only")
+            await self._enable_remote_control(register)
             await self._unit.write_register(
                 self._address(register), register.encode(value)
             )
@@ -144,6 +151,14 @@ class Component:
             coil = self._coil_fields[field]
             if not coil.writable:
                 raise AttributeError(f"{field} is read-only")
+            await self._enable_remote_control(coil)
             await self._unit.write_coil(self._address(coil), bool(value))
         else:
             raise AttributeError(f"unknown field {field!r}")
+
+    async def _enable_remote_control(self, field: RegisterField | CoilField) -> None:
+        """Release the field's override coil (set it to 0 = remote control)."""
+        if field.level_coil is None:
+            return
+        address = field.level_coil + field.level_coil_stride * (self._index - 1)
+        await self._unit.write_coil(address, False)

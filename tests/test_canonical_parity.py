@@ -49,6 +49,23 @@ def _fields() -> list[tuple[str, int, RegisterField | CoilField]]:
     return out
 
 
+def _override_cases() -> list[Any]:
+    """(label, effective override-coil address, field) for fields with an Ebene coil."""
+    device = Trovis557x(unit=None)  # type: ignore[arg-type]
+    cases: list[Any] = []
+    for component in device.components:
+        index = component._index
+        label = type(component).__name__ + (f"[{index}]" if index != 1 else "")
+        for field in {**component._register_fields, **component._coil_fields}.values():
+            if field.level_coil is None:
+                continue
+            address = field.level_coil + field.level_coil_stride * (index - 1)
+            cases.append(
+                pytest.param(label, address, field, id=f"{label}.{field.name}")
+            )
+    return cases
+
+
 REGISTER_CASES = [
     pytest.param(label, addr, field, id=f"{label}.{field.name}")
     for label, addr, field in _fields()
@@ -76,6 +93,23 @@ def test_register_matches_canonical(
             )
     if field.writable:
         assert entry["art"] == "rw", f"{label}.{field.name} is read-only in the spec"
+
+
+@pytest.mark.parametrize(("label", "address", "field"), _override_cases())
+def test_override_coil_matches_canonical(
+    label: str, address: int, field: RegisterField | CoilField
+) -> None:
+    """Every 'Ebene' override coil is an rw remote/autonomous (Liste_FA) coil."""
+    # Circuit-3 override coils (92/93/97) are absent from the 5576-based
+    # reference; they follow the +2/+1 pattern verified on circuits 1 and 2.
+    if "[3]" in label and address in (92, 93, 97):
+        pytest.skip("circuit-3 override coils absent from reference table")
+    assert address in CANON_COIL, f"{label}.{field.name} override {address} not in spec"
+    entry = CANON_COIL[address]
+    assert entry["art"] == "rw"
+    assert entry["typ"] == "Liste_FA", (
+        f"override {address} is {entry['typ']}, not Liste_FA"
+    )
 
 
 @pytest.mark.parametrize(("label", "address", "field"), COIL_CASES)

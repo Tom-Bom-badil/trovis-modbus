@@ -114,3 +114,24 @@ async def test_write_roundtrip(trovis: Trovis557x) -> None:
 async def test_write_rejects_readonly(trovis: Trovis557x) -> None:
     with pytest.raises(AttributeError):
         await trovis.heating_circuit_1.write("flow_setpoint", 50.0)
+
+
+async def test_mode_write_releases_override_coil(trovis: Trovis557x) -> None:
+    """Setting the mode first releases the Ebene coil (0 = remote control)."""
+    unit = trovis.heating_circuit_1._unit
+    await unit.write_coil(88, True)  # start "autonomous" (controller-controlled)
+
+    await trovis.heating_circuit_1.set_mode(OperatingMode.DAY)
+
+    # Override coil 88 (EBNBetrArtRk1) released to 0, then mode register written.
+    assert (await unit.read_coils(88, 1))[0] is False
+    assert (await unit.read_holding_registers(105, 1))[0] == int(OperatingMode.DAY)
+
+
+async def test_circuit2_mode_uses_strided_override(trovis: Trovis557x) -> None:
+    """Circuit 2's override coil follows the +2 stride (90, not 88)."""
+    unit = trovis.heating_circuit_2._unit
+    await unit.write_coil(90, True)
+    await trovis.heating_circuit_2.set_mode(OperatingMode.NIGHT)
+    assert (await unit.read_coils(90, 1))[0] is False
+    assert (await unit.read_holding_registers(107, 1))[0] == int(OperatingMode.NIGHT)
