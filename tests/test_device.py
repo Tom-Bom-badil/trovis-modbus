@@ -6,14 +6,14 @@ from datetime import date, time
 
 import pytest
 
-from trovis_modbus import OperatingMode, Trovis557x, Weekday
-from trovis_modbus.components import MonthDay
+from trovis_modbus import MonthDay, OperatingMode, Trovis557x, Weekday
 
 
 async def test_device_info(trovis: Trovis557x) -> None:
     await trovis.async_update()
-    assert trovis.info.model == 5579
-    assert trovis.info.firmware_version == pytest.approx(3.05)
+    # The @RegisterField decorator shapes these inline (model -> "Trovis 5579").
+    assert trovis.info.model == "Trovis 5579"
+    assert trovis.info.firmware_version == "3.05"
     info = trovis.device_info
     assert info.manufacturer == "Samson"
     assert info.model == "Trovis 5579"

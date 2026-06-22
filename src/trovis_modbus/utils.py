@@ -1,12 +1,21 @@
-"""Heating-curve computation (ported from the original YAML template)."""
+"""Small helpers shared across sub-systems: the heating curve and value types."""
 
 from __future__ import annotations
+
+from typing import NamedTuple
 
 # Outside-temperature x-axis shared by every heating curve.
 OUTSIDE_TEMPERATURES: list[int] = list(range(-20, 21))
 
 
-def flow_temperatures(
+class MonthDay(NamedTuple):
+    """A recurring day-of-year without a year (e.g. a summer-mode boundary)."""
+
+    day: int
+    month: int
+
+
+def heating_curve(
     *,
     room_setpoint: float,
     slope: float,

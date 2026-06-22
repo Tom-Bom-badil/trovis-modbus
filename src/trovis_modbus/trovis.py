@@ -4,15 +4,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from .clock import Clock
 from .component import Component
-from .components import (
-    Clock,
-    Controller,
-    DeviceInformation,
-    HeatingCircuit,
-    HotWater,
-    Sensors,
-)
+from .controller import Controller
+from .device_info import DeviceInformation
+from .heating_circuit import HeatingCircuit
+from .hot_water import HotWater
+from .sensors import Sensors
 
 if TYPE_CHECKING:
     from modbus_connection import ModbusUnit

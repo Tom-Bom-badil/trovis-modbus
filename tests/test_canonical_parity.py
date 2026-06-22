@@ -15,7 +15,7 @@ from typing import Any
 import pytest
 
 from trovis_modbus import Trovis557x
-from trovis_modbus.fields import CoilField, RegisterField
+from trovis_modbus.component import CoilField, RegisterField
 
 _REF = json.loads(
     (Path(__file__).parent / "reference" / "canonical_points.json").read_text()
