@@ -11,12 +11,9 @@ from trovis_modbus import MonthDay, OperatingMode, Trovis557x, Weekday
 
 async def test_device_info(trovis: Trovis557x) -> None:
     await trovis.async_update()
-    # The @RegisterField decorator shapes these inline (model -> "Trovis 5579").
-    assert trovis.info.model == "Trovis 5579"
-    assert trovis.info.firmware_version == "3.05"
-    info = trovis.device_info
+    info = trovis.info
     assert info.manufacturer == "Samson"
-    assert info.model == "Trovis 5579"
+    assert info.model == "Trovis 5579"  # shaped inline by the property
     assert info.serial_number == "12345"
     assert info.firmware_version == "3.05"
 

@@ -15,8 +15,6 @@ from .sensors import Sensors
 if TYPE_CHECKING:
     from modbus_connection import ModbusUnit
 
-    from .device_info import DeviceInfo
-
 
 class Trovis557x:
     """A Samson Trovis 557x heating controller reached through a ``ModbusUnit``.
@@ -29,7 +27,7 @@ class Trovis557x:
         trovis.heating_circuit_1.room_setpoint_active
         trovis.heating_circuit_1.pump_running    # bool
         trovis.hot_water.charging
-        trovis.info.device_info
+        trovis.info.model
 
     Each sub-system can also be refreshed on its own (``await
     trovis.hot_water.async_update()``) and exposes ``add_update_listener`` so a
@@ -66,11 +64,6 @@ class Trovis557x:
             *self.heating_circuits,
             self.hot_water,
         )
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Static device identity (from the last ``info`` update)."""
-        return self.info.device_info
 
     async def async_update(self) -> None:
         """Refresh every sub-system."""

@@ -17,7 +17,7 @@ over the ``Component`` / ``RegisterField`` / ``CoilField`` base classes in
 from .clock import Clock
 from .component import CoilField, Component, RegisterField
 from .controller import Controller
-from .device_info import DeviceInfo, DeviceInformation
+from .device_info import DeviceInformation
 from .enums import OperatingMode, Weekday
 from .heating_circuit import HeatingCircuit
 from .hot_water import HotWater
@@ -31,7 +31,6 @@ __all__ = [
     "CoilField",
     "Component",
     "Controller",
-    "DeviceInfo",
     "DeviceInformation",
     "HeatingCircuit",
     "HotWater",
