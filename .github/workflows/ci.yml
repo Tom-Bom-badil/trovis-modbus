@@ -25,16 +25,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           path: trovis-modbus
-      # trovis-modbus depends on the sibling modbus-connection via a path source
-      # ([tool.uv.sources]). Check it out next to this repo. Adjust the
-      # repository slug if it is hosted elsewhere.
+      # trovis-modbus depends on modbus-connection >=1.0. Until that is published
+      # to PyPI it is resolved from the sibling checkout via [tool.uv.sources];
+      # the checked-out version must satisfy the constraint. Once it is on PyPI,
+      # drop this checkout and the [tool.uv.sources] block — uv sync will fetch it.
       - uses: actions/checkout@v4
         with:
           repository: home-assistant-libs/modbus-connection
           path: modbus-connection
       - uses: astral-sh/setup-uv@v6
-      - name: Clone the reference Trovis YAML (enables the /goal parity tests)
-        run: git clone --depth 1 https://github.com/Tom-Bom-badil/samson_trovis_557x /tmp/trovis-ref
       - name: Install dependencies
         working-directory: trovis-modbus
         run: uv sync
