@@ -22,11 +22,6 @@ dependencies = ["modbus-connection>=1.0,<2"]
 [project.urls]
 Homepage = "https://github.com/balloob/trovis-modbus"
 
-# Until modbus-connection 1.0.0 is published to PyPI, resolve it from the sibling
-# checkout. Drop this block once it is on PyPI.
-[tool.uv.sources]
-modbus-connection = { path = "../modbus-connection", editable = true }
-
 [dependency-groups]
 dev = [
     "pytest>=8",

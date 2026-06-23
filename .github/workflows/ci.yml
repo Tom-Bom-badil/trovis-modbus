@@ -23,20 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          path: trovis-modbus
-      # trovis-modbus depends on modbus-connection >=1.0. Until that is published
-      # to PyPI it is resolved from the sibling checkout via [tool.uv.sources];
-      # the checked-out version must satisfy the constraint. Once it is on PyPI,
-      # drop this checkout and the [tool.uv.sources] block — uv sync will fetch it.
-      - uses: actions/checkout@v4
-        with:
-          repository: home-assistant-libs/modbus-connection
-          path: modbus-connection
       - uses: astral-sh/setup-uv@v6
       - name: Install dependencies
-        working-directory: trovis-modbus
         run: uv sync
       - name: Run tests
-        working-directory: trovis-modbus
         run: uv run pytest
