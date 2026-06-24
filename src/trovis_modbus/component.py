@@ -16,11 +16,12 @@ a private field plus a normal ``@property`` so static typing stays accurate::
 
 from __future__ import annotations
 
+import struct
 from collections.abc import Callable, Iterable
 from datetime import time
 from typing import TYPE_CHECKING, Any, overload
 
-from modbus_connection import ModbusExceptionError
+from modbus_connection import ModbusExceptionError, WordOrder
 
 from .enums import OperatingMode, Weekday
 
@@ -53,6 +54,8 @@ class RegisterField[T]:
         writable: bool = False,
         nan: int | None = None,
         kind: str = "number",
+        count: int = 1,
+        word_order: WordOrder = "big",
         stride: int = 0,
         unit: str | None = None,
         level_coil: int | None = None,
@@ -63,7 +66,10 @@ class RegisterField[T]:
         self.signed = signed
         self.writable = writable
         self.nan = nan
-        self.kind = kind  # number | mode | weekday | time | raw
+        self.kind = kind  # number | mode | weekday | time | raw | float
+        # Number of 16-bit registers this value spans (2 for uint32/float32/...).
+        self.count = count
+        self.word_order = word_order
         self.stride = stride
         self.unit = unit
         # The "Ebene" override coil that must be set to 0 (remote control) before
@@ -90,11 +96,27 @@ class RegisterField[T]:
 
     # -- codec ---------------------------------------------------------------
 
-    def decode(self, raw: int) -> Any:
+    def _combine(self, words: list[int]) -> int:
+        """Pack the field's registers into one integer (per ``word_order``)."""
+        ordered = words if self.word_order == "big" else list(reversed(words))
+        raw = 0
+        for word in ordered:
+            raw = (raw << 16) | (word & 0xFFFF)
+        return raw
+
+    def decode(self, words: list[int]) -> Any:
+        """Decode this field's ``count`` register words into its Python value."""
+        if self.kind == "float":
+            ordered = words if self.word_order == "big" else list(reversed(words))
+            raw_bytes = b"".join((w & 0xFFFF).to_bytes(2, "big") for w in ordered)
+            value = struct.unpack(">f", raw_bytes)[0]
+            return value * self.scale if self.scale != 1.0 else value
+        raw = self._combine(words)
         if self.nan is not None and raw == self.nan:
             return None
-        if self.signed and raw >= 0x8000:
-            raw -= 0x10000
+        bits = 16 * self.count
+        if self.signed and raw >= 1 << (bits - 1):
+            raw -= 1 << bits
         if self.kind == "raw":
             return raw
         if self.kind == "mode":
@@ -110,7 +132,15 @@ class RegisterField[T]:
         value = raw * self.scale
         return int(value) if self._decimals == 0 else round(value, self._decimals)
 
-    def encode(self, value: Any) -> int:
+    def encode(self, value: Any) -> list[int]:
+        """Encode a Python value into this field's ``count`` register words."""
+        if self.kind == "float":
+            raw_bytes = struct.pack(">f", float(value))
+            words = [
+                int.from_bytes(raw_bytes[i : i + 2], "big")
+                for i in range(0, len(raw_bytes), 2)
+            ]
+            return words if self.word_order == "big" else list(reversed(words))
         if self.kind == "mode":
             raw = int(OperatingMode(value))
         elif self.kind == "weekday":
@@ -121,7 +151,12 @@ class RegisterField[T]:
             raw = round(value / self.scale)
         else:
             raw = int(value)
-        return raw & 0xFFFF if raw < 0 else raw
+        if raw < 0:
+            raw += 1 << (16 * self.count)
+        words = [
+            (raw >> (16 * (self.count - 1 - i))) & 0xFFFF for i in range(self.count)
+        ]
+        return words if self.word_order == "big" else list(reversed(words))
 
 
 class CoilField:
@@ -258,6 +293,72 @@ def raw_register(address: int, *, writable: bool = False) -> RegisterField[int]:
     return RegisterField(address, kind="raw", writable=writable)
 
 
+def uint32(
+    address: int,
+    *,
+    scale: float = 1.0,
+    word_order: WordOrder = "big",
+    stride: int = 0,
+    writable: bool = False,
+    unit: str | None = None,
+) -> RegisterField[int]:
+    """An unsigned 32-bit value over two consecutive registers."""
+    return RegisterField(
+        address,
+        count=2,
+        word_order=word_order,
+        scale=scale,
+        signed=False,
+        stride=stride,
+        writable=writable,
+        unit=unit,
+    )
+
+
+def int32(
+    address: int,
+    *,
+    scale: float = 1.0,
+    word_order: WordOrder = "big",
+    stride: int = 0,
+    writable: bool = False,
+    unit: str | None = None,
+) -> RegisterField[int]:
+    """A signed 32-bit value over two consecutive registers."""
+    return RegisterField(
+        address,
+        count=2,
+        word_order=word_order,
+        scale=scale,
+        signed=True,
+        stride=stride,
+        writable=writable,
+        unit=unit,
+    )
+
+
+def float32(
+    address: int,
+    *,
+    scale: float = 1.0,
+    word_order: WordOrder = "big",
+    stride: int = 0,
+    writable: bool = False,
+    unit: str | None = None,
+) -> RegisterField[float]:
+    """An IEEE-754 single-precision float over two consecutive registers."""
+    return RegisterField(
+        address,
+        count=2,
+        word_order=word_order,
+        kind="float",
+        scale=scale,
+        stride=stride,
+        writable=writable,
+        unit=unit,
+    )
+
+
 def coil(
     address: int,
     *,
@@ -276,21 +377,121 @@ def coil(
     )
 
 
-def _blocks(items: Iterable[tuple[int, str]]) -> list[list[tuple[int, str]]]:
-    """Group (address, name) pairs into contiguous read blocks."""
-    ordered = sorted(items)
-    blocks: list[list[tuple[int, str]]] = []
-    current: list[tuple[int, str]] = []
-    for address, name in ordered:
-        if current and (
-            address - current[-1][0] > _MAX_GAP or address - current[0][0] >= _MAX_SPAN
-        ):
-            blocks.append(current)
-            current = []
-        current.append((address, name))
-    if current:
-        blocks.append(current)
+# A read target: (absolute address, field, the component store to write into).
+RegisterItem = tuple[int, "RegisterField[Any]", dict[str, Any]]
+CoilItem = tuple[int, "CoilField", dict[str, Any]]
+
+
+Range = tuple[int, int]  # an inclusive (low, high) readable address range
+
+
+def _range_of(address: int, ranges: tuple[Range, ...] | None) -> Range | None:
+    """The readable range containing ``address``, or ``None``."""
+    if ranges is None:
+        return None
+    for low, high in ranges:
+        if low <= address <= high:
+            return (low, high)
+    return None
+
+
+def _plan_blocks(
+    spans: Iterable[tuple[int, int]],
+    ranges: tuple[Range, ...] | None = None,
+) -> list[tuple[int, int]]:
+    """Group ``(start_address, width)`` spans into ``(start, count)`` read blocks.
+
+    A multi-register value is never split across blocks (each span is placed
+    whole) and a block never grows past ``_MAX_SPAN`` registers.
+
+    Without ``ranges`` (the generic default), spans no more than ``_MAX_GAP``
+    apart share a block. With ``ranges`` — the controller's readable address
+    ranges — spans merge only when they sit in the *same* range (the gap between
+    them is then readable too), and never across a range boundary; reads are
+    still clipped to the addresses actually used.
+    """
+    ordered = sorted(set(spans))
+    if not ordered:
+        return []
+    blocks: list[tuple[int, int]] = []
+    block_start, width = ordered[0]
+    block_end = block_start + width - 1  # last (inclusive) address covered so far
+    block_range = _range_of(block_start, ranges)
+    for address, width in ordered[1:]:
+        end = address + width - 1
+        if ranges is None:
+            mergeable = address - block_end <= _MAX_GAP
+        else:
+            address_range = _range_of(address, ranges)
+            mergeable = address_range is not None and address_range == block_range
+        if mergeable and end - block_start + 1 <= _MAX_SPAN:
+            block_end = max(block_end, end)
+        else:
+            blocks.append((block_start, block_end - block_start + 1))
+            block_start, block_end = address, end
+            block_range = _range_of(address, ranges)
+    blocks.append((block_start, block_end - block_start + 1))
     return blocks
+
+
+async def _bulk_read_registers(
+    unit: ModbusUnit,
+    items: list[RegisterItem],
+    ranges: tuple[Range, ...] | None = None,
+) -> None:
+    """Read every ``(address, field, store)`` in as few Modbus calls as possible.
+
+    Targets are pooled across whatever components are passed in, so adjacent
+    registers — even ones belonging to different sub-systems — are fetched
+    together, and a multi-register value is always kept within one block.
+    ``ranges`` (the device's readable address ranges) keeps reads from crossing an
+    unreadable gap. Each field's decoded value lands in its ``store`` under
+    ``field.name``; a Modbus exception covering a block sets those fields to
+    ``None`` (other errors propagate so the caller can mark the device down).
+    """
+    if not items:
+        return
+    by_address: dict[int, list[tuple[RegisterField[Any], dict[str, Any]]]] = {}
+    spans: list[tuple[int, int]] = []
+    for address, field, store in items:
+        by_address.setdefault(address, []).append((field, store))
+        spans.append((address, field.count))
+    for start, count in _plan_blocks(spans, ranges):
+        try:
+            words = await unit.read_holding_registers(start, count)
+        except ModbusExceptionError:
+            for offset in range(count):
+                for field, store in by_address.get(start + offset, ()):
+                    store[field.name] = None
+            continue
+        for offset in range(count):
+            for field, store in by_address.get(start + offset, ()):
+                store[field.name] = field.decode(words[offset : offset + field.count])
+
+
+async def _bulk_read_coils(
+    unit: ModbusUnit,
+    items: list[CoilItem],
+    ranges: tuple[Range, ...] | None = None,
+) -> None:
+    """Read coil ``(address, field, store)`` targets in as few calls as possible."""
+    if not items:
+        return
+    by_address: dict[int, list[tuple[CoilField, dict[str, Any]]]] = {}
+    for address, field, store in items:
+        by_address.setdefault(address, []).append((field, store))
+    for start, count in _plan_blocks(((address, 1) for address in by_address), ranges):
+        try:
+            bits = await unit.read_coils(start, count)
+        except ModbusExceptionError:
+            for offset in range(count):
+                for field, store in by_address.get(start + offset, ()):
+                    store[field.name] = None
+            continue
+        for offset in range(count):
+            bit = bool(bits[offset])
+            for field, store in by_address.get(start + offset, ()):
+                store[field.name] = bit
 
 
 class Component:
@@ -325,6 +526,10 @@ class Component:
         self._values: dict[str, Any] = {}
         self._coils: dict[str, bool | None] = {}
         self._listeners: list[UpdateListener] = []
+        # The device's readable address ranges, set by the owning device so reads
+        # don't cross an unreadable gap; None falls back to gap-based planning.
+        self._register_ranges: tuple[Range, ...] | None = None
+        self._coil_ranges: tuple[Range, ...] | None = None
 
     def _address(self, field: RegisterField[Any] | CoilField) -> int:
         return field.address + field.stride * (self._index - 1)
@@ -345,46 +550,32 @@ class Component:
 
     # -- update --------------------------------------------------------------
 
-    async def async_update(self) -> None:
-        """Read this component's registers and coils, then notify listeners."""
-        await self._update_registers()
-        await self._update_coils()
+    def _register_items(self) -> list[RegisterItem]:
+        """This component's register read targets (absolute address, field, store)."""
+        return [
+            (self._address(f), f, self._values) for f in self._register_fields.values()
+        ]
+
+    def _coil_items(self) -> list[CoilItem]:
+        """This component's coil read targets (absolute address, field, store)."""
+        return [(self._address(f), f, self._coils) for f in self._coil_fields.values()]
+
+    def _notify(self) -> None:
         for listener in list(self._listeners):
             listener()
 
-    async def _update_registers(self) -> None:
-        fields = self._register_fields
-        if not fields:
-            return
-        addr_to_name = {self._address(f): name for name, f in fields.items()}
-        for block in _blocks(addr_to_name.items()):
-            start = block[0][0]
-            count = block[-1][0] - start + 1
-            try:
-                words = await self._unit.read_holding_registers(start, count)
-            except ModbusExceptionError:
-                for _addr, name in block:
-                    self._values[name] = None
-                continue
-            for address, name in block:
-                self._values[name] = fields[name].decode(words[address - start])
+    async def async_update(self) -> None:
+        """Read this component's registers and coils, then notify listeners.
 
-    async def _update_coils(self) -> None:
-        fields = self._coil_fields
-        if not fields:
-            return
-        addr_to_name = {self._address(f): name for name, f in fields.items()}
-        for block in _blocks(addr_to_name.items()):
-            start = block[0][0]
-            count = block[-1][0] - start + 1
-            try:
-                bits = await self._unit.read_coils(start, count)
-            except ModbusExceptionError:
-                for _addr, name in block:
-                    self._coils[name] = None
-                continue
-            for address, name in block:
-                self._coils[name] = bool(bits[address - start])
+        Reads only this sub-system's own registers, so it can refresh on its own.
+        :meth:`Trovis557x.async_update` pools every sub-system's reads instead, to
+        fetch the whole device in as few Modbus calls as possible.
+        """
+        await _bulk_read_registers(
+            self._unit, self._register_items(), self._register_ranges
+        )
+        await _bulk_read_coils(self._unit, self._coil_items(), self._coil_ranges)
+        self._notify()
 
     # -- writes --------------------------------------------------------------
 
@@ -401,9 +592,12 @@ class Component:
             if not register.writable:
                 raise AttributeError(f"{field} is read-only")
             await self._enable_remote_control(register)
-            await self._unit.write_register(
-                self._address(register), register.encode(value)
-            )
+            address = self._address(register)
+            words = register.encode(value)
+            if len(words) == 1:
+                await self._unit.write_register(address, words[0])
+            else:
+                await self._unit.write_registers(address, words)
         elif field in self._coil_fields:
             coil_field = self._coil_fields[field]
             if not coil_field.writable:
