@@ -2,27 +2,22 @@
 
 from __future__ import annotations
 
-from .component import (
-    Component,
-    coil,
-    gauge,
-    integer,
-    operating_mode,
-    raw_register,
-    temperature,
-)
+from modbus_connection.model import coil, enum, gauge, integer, raw_register
+
+from .enums import OperatingMode
+from .model import TrovisComponent, temperature
 from .utils import MonthDay
 
 
-class Controller(Component):
+class Controller(TrovisComponent):
     """Controller-wide status and settings."""
 
     error_status = integer(149, signed=False)
     max_flow_setpoint = temperature(98)
-    # The three front-panel rotary switches, top to bottom.
-    switch_top = operating_mode(102)  # RK1
-    switch_middle = operating_mode(103)  # RK2
-    switch_bottom = operating_mode(104)  # hot water
+    # The three front-panel rotary switches, top to bottom (RK1 / RK2 / hot water).
+    switch_top = enum(102, OperatingMode)
+    switch_middle = enum(103, OperatingMode)
+    switch_bottom = enum(104, OperatingMode)
     summer_outside_limit = temperature(116, writable=True)
     outside_delay = gauge(117, 0.1, writable=True, unit="K/h")  # AT adaptation rate
     frost_limit = temperature(122, writable=True)

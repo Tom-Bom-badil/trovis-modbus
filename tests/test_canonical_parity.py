@@ -13,9 +13,9 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from modbus_connection.model import CoilField, RegisterField
 
 from trovis_modbus import Trovis557x
-from trovis_modbus.component import CoilField, RegisterField
 
 _REF = json.loads(
     (Path(__file__).parent / "reference" / "canonical_points.json").read_text()
@@ -89,14 +89,16 @@ def test_register_matches_canonical(
 ) -> None:
     assert address in CANON_REG, f"{label}.{field.name} address {address} not in spec"
     entry = CANON_REG[address]
-    if field.kind == "number":
+    # Plain scaled numbers (not enum-mapped) must match the canonical scale.
+    scale = getattr(field, "scale", None)
+    if scale is not None and getattr(field, "enum_type", None) is None:
         if address in HARDWARE_VERIFIED_SCALE:
             expected = HARDWARE_VERIFIED_SCALE[address]
         else:
             expected = _canonical_scale(entry)
         if expected is not None:
-            assert field.scale == pytest.approx(expected), (
-                f"{label}.{field.name} scale {field.scale} != spec {expected} "
+            assert scale == pytest.approx(expected), (
+                f"{label}.{field.name} scale {scale} != spec {expected} "
                 f"({entry['name']})"
             )
     if field.writable:

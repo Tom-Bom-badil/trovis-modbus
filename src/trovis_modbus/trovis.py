@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from modbus_connection.model import Component, ComponentGroup
+
 from .clock import Clock
-from .component import Component, _bulk_read_coils, _bulk_read_registers
 from .controller import Controller
 from .device_info import DeviceInformation
 from .heating_circuit import HeatingCircuit
 from .hot_water import HotWater
-from .ranges import COIL_RANGES, REGISTER_RANGES
 from .sensors import Sensors
 
 if TYPE_CHECKING:
@@ -27,7 +27,7 @@ class Trovis557x:
         trovis.sensors.outside_1                 # °C
         trovis.heating_circuit_1.room_setpoint_active
         trovis.heating_circuit_1.pump_running    # bool
-        trovis.hot_water.charging
+        trovis.hot_water.charge_pump_running
         trovis.info.model
 
     Each sub-system can also be refreshed on its own (``await
@@ -45,11 +45,9 @@ class Trovis557x:
         self.heating_circuit_2 = HeatingCircuit(unit, index=2)
         self.heating_circuit_3 = HeatingCircuit(unit, index=3)
         self.hot_water = HotWater(unit)
-        # Hand every sub-system the controller's readable address ranges, so an
-        # independent component refresh also avoids crossing an unreadable gap.
-        for component in self.components:
-            component._register_ranges = REGISTER_RANGES
-            component._coil_ranges = COIL_RANGES
+        # One pooled-read group over every sub-system; it derives the readable
+        # ranges from the components and caches its block plan after the first poll.
+        self._group = ComponentGroup(unit, self.components)
 
     @property
     def heating_circuits(self) -> tuple[HeatingCircuit, HeatingCircuit, HeatingCircuit]:
@@ -80,10 +78,4 @@ class Trovis557x:
         from different sub-systems are fetched together — rather than each
         component querying independently. Listeners then fire per sub-system.
         """
-        components = self.components
-        register_items = [item for c in components for item in c._register_items()]
-        coil_items = [item for c in components for item in c._coil_items()]
-        await _bulk_read_registers(self._unit, register_items, REGISTER_RANGES)
-        await _bulk_read_coils(self._unit, coil_items, COIL_RANGES)
-        for component in components:
-            component._notify()
+        await self._group.async_update()
