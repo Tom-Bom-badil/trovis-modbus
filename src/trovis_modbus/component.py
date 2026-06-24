@@ -276,21 +276,79 @@ def coil(
     )
 
 
-def _blocks(items: Iterable[tuple[int, str]]) -> list[list[tuple[int, str]]]:
-    """Group (address, name) pairs into contiguous read blocks."""
-    ordered = sorted(items)
-    blocks: list[list[tuple[int, str]]] = []
-    current: list[tuple[int, str]] = []
-    for address, name in ordered:
-        if current and (
-            address - current[-1][0] > _MAX_GAP or address - current[0][0] >= _MAX_SPAN
-        ):
-            blocks.append(current)
-            current = []
-        current.append((address, name))
-    if current:
-        blocks.append(current)
+# A read target: (absolute address, field, the component store to write into).
+RegisterItem = tuple[int, "RegisterField[Any]", dict[str, Any]]
+CoilItem = tuple[int, "CoilField", dict[str, Any]]
+
+
+def _plan_blocks(addresses: Iterable[int]) -> list[tuple[int, int]]:
+    """Group addresses into ``(start, count)`` read blocks.
+
+    Addresses no more than ``_MAX_GAP`` apart share one block — reading a few
+    unused registers in a small gap is far cheaper than a second round-trip — and
+    a block never spans more than ``_MAX_SPAN`` registers.
+    """
+    ordered = sorted(set(addresses))
+    if not ordered:
+        return []
+    blocks: list[tuple[int, int]] = []
+    start = prev = ordered[0]
+    for address in ordered[1:]:
+        if address - prev > _MAX_GAP or address - start >= _MAX_SPAN:
+            blocks.append((start, prev - start + 1))
+            start = address
+        prev = address
+    blocks.append((start, prev - start + 1))
     return blocks
+
+
+async def _bulk_read_registers(unit: ModbusUnit, items: list[RegisterItem]) -> None:
+    """Read every ``(address, field, store)`` in as few Modbus calls as possible.
+
+    Targets are pooled across whatever components are passed in, so adjacent
+    registers — even ones belonging to different sub-systems — are fetched
+    together. Each field's decoded value lands in its ``store`` under
+    ``field.name``; a Modbus exception covering a block sets those fields to
+    ``None`` (other errors propagate so the caller can mark the device down).
+    """
+    if not items:
+        return
+    by_address: dict[int, list[tuple[RegisterField[Any], dict[str, Any]]]] = {}
+    for address, field, store in items:
+        by_address.setdefault(address, []).append((field, store))
+    for start, count in _plan_blocks(by_address):
+        try:
+            words = await unit.read_holding_registers(start, count)
+        except ModbusExceptionError:
+            for offset in range(count):
+                for field, store in by_address.get(start + offset, ()):
+                    store[field.name] = None
+            continue
+        for offset in range(count):
+            word = words[offset]
+            for field, store in by_address.get(start + offset, ()):
+                store[field.name] = field.decode(word)
+
+
+async def _bulk_read_coils(unit: ModbusUnit, items: list[CoilItem]) -> None:
+    """Read coil ``(address, field, store)`` targets in as few calls as possible."""
+    if not items:
+        return
+    by_address: dict[int, list[tuple[CoilField, dict[str, Any]]]] = {}
+    for address, field, store in items:
+        by_address.setdefault(address, []).append((field, store))
+    for start, count in _plan_blocks(by_address):
+        try:
+            bits = await unit.read_coils(start, count)
+        except ModbusExceptionError:
+            for offset in range(count):
+                for field, store in by_address.get(start + offset, ()):
+                    store[field.name] = None
+            continue
+        for offset in range(count):
+            bit = bool(bits[offset])
+            for field, store in by_address.get(start + offset, ()):
+                store[field.name] = bit
 
 
 class Component:
@@ -345,46 +403,30 @@ class Component:
 
     # -- update --------------------------------------------------------------
 
-    async def async_update(self) -> None:
-        """Read this component's registers and coils, then notify listeners."""
-        await self._update_registers()
-        await self._update_coils()
+    def _register_items(self) -> list[RegisterItem]:
+        """This component's register read targets (absolute address, field, store)."""
+        return [
+            (self._address(f), f, self._values) for f in self._register_fields.values()
+        ]
+
+    def _coil_items(self) -> list[CoilItem]:
+        """This component's coil read targets (absolute address, field, store)."""
+        return [(self._address(f), f, self._coils) for f in self._coil_fields.values()]
+
+    def _notify(self) -> None:
         for listener in list(self._listeners):
             listener()
 
-    async def _update_registers(self) -> None:
-        fields = self._register_fields
-        if not fields:
-            return
-        addr_to_name = {self._address(f): name for name, f in fields.items()}
-        for block in _blocks(addr_to_name.items()):
-            start = block[0][0]
-            count = block[-1][0] - start + 1
-            try:
-                words = await self._unit.read_holding_registers(start, count)
-            except ModbusExceptionError:
-                for _addr, name in block:
-                    self._values[name] = None
-                continue
-            for address, name in block:
-                self._values[name] = fields[name].decode(words[address - start])
+    async def async_update(self) -> None:
+        """Read this component's registers and coils, then notify listeners.
 
-    async def _update_coils(self) -> None:
-        fields = self._coil_fields
-        if not fields:
-            return
-        addr_to_name = {self._address(f): name for name, f in fields.items()}
-        for block in _blocks(addr_to_name.items()):
-            start = block[0][0]
-            count = block[-1][0] - start + 1
-            try:
-                bits = await self._unit.read_coils(start, count)
-            except ModbusExceptionError:
-                for _addr, name in block:
-                    self._coils[name] = None
-                continue
-            for address, name in block:
-                self._coils[name] = bool(bits[address - start])
+        Reads only this sub-system's own registers, so it can refresh on its own.
+        :meth:`Trovis557x.async_update` pools every sub-system's reads instead, to
+        fetch the whole device in as few Modbus calls as possible.
+        """
+        await _bulk_read_registers(self._unit, self._register_items())
+        await _bulk_read_coils(self._unit, self._coil_items())
+        self._notify()
 
     # -- writes --------------------------------------------------------------
 

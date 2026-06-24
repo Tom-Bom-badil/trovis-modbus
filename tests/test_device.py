@@ -5,8 +5,31 @@ from __future__ import annotations
 from datetime import date, time
 
 import pytest
+from modbus_connection.mock import MockModbusConnection, MockModbusUnit
 
 from trovis_modbus import MonthDay, OperatingMode, Trovis557x, Weekday
+
+from .conftest import COILS, HOLDING
+
+
+class _CountingUnit:
+    """Wraps a ModbusUnit and counts read calls; delegates everything else."""
+
+    def __init__(self, inner: MockModbusUnit) -> None:
+        self._inner = inner
+        self.register_reads = 0
+        self.coil_reads = 0
+
+    async def read_holding_registers(self, address: int, count: int) -> list[int]:
+        self.register_reads += 1
+        return await self._inner.read_holding_registers(address, count)
+
+    async def read_coils(self, address: int, count: int) -> list[bool]:
+        self.coil_reads += 1
+        return await self._inner.read_coils(address, count)
+
+    def __getattr__(self, name: str) -> object:
+        return getattr(self._inner, name)
 
 
 async def test_device_info(trovis: Trovis557x) -> None:
@@ -87,6 +110,43 @@ async def test_independent_component_update(trovis: Trovis557x) -> None:
     await trovis.hot_water.async_update()
     assert trovis.hot_water.setpoint_day == pytest.approx(50.0)
     assert trovis.heating_circuit_1.flow_setpoint is None  # not updated yet
+
+
+async def test_full_update_consolidates_reads() -> None:
+    """A full device update pools all sub-systems into a few block reads."""
+    inner = MockModbusConnection().for_unit(1)
+    inner.holding.update(HOLDING)
+    inner.coils.update(COILS)
+    unit = _CountingUnit(inner)
+    device = Trovis557x(unit)  # type: ignore[arg-type]
+
+    field_count = sum(
+        len(c._register_fields) + len(c._coil_fields) for c in device.components
+    )
+    await device.async_update()
+
+    # 155 fields collapse into a couple dozen block reads, far fewer than both the
+    # field count and the ~40 calls a per-component update would issue.
+    total_reads = unit.register_reads + unit.coil_reads
+    assert total_reads < field_count // 4
+    assert unit.register_reads <= 16
+    assert unit.coil_reads <= 10
+
+
+async def test_consolidated_reads_decode_correctly() -> None:
+    """Interleaved per-circuit registers decode to the right circuit after pooling."""
+    inner = MockModbusConnection().for_unit(1)
+    # flow sensors VF1/VF2/VF3 are at adjacent addresses 12/13/14 — fetched in one
+    # block, then distributed to circuits 1/2/3.
+    inner.holding.update({12: 100, 13: 200, 14: 300})
+    unit = _CountingUnit(inner)
+    device = Trovis557x(unit)  # type: ignore[arg-type]
+
+    await device.async_update()
+
+    assert device.heating_circuit_1.flow_temperature == pytest.approx(10.0)
+    assert device.heating_circuit_2.flow_temperature == pytest.approx(20.0)
+    assert device.heating_circuit_3.flow_temperature == pytest.approx(30.0)
 
 
 async def test_update_listener(trovis: Trovis557x) -> None:

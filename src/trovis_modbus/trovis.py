@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from .clock import Clock
-from .component import Component
+from .component import Component, _bulk_read_coils, _bulk_read_registers
 from .controller import Controller
 from .device_info import DeviceInformation
 from .heating_circuit import HeatingCircuit
@@ -35,6 +35,7 @@ class Trovis557x:
     """
 
     def __init__(self, unit: ModbusUnit) -> None:
+        self._unit = unit
         self.info = DeviceInformation(unit)
         self.controller = Controller(unit)
         self.clock = Clock(unit)
@@ -66,6 +67,17 @@ class Trovis557x:
         )
 
     async def async_update(self) -> None:
-        """Refresh every sub-system."""
-        for component in self.components:
-            await component.async_update()
+        """Refresh every sub-system in as few Modbus calls as possible.
+
+        All sub-systems share one unit, so their register and coil reads are
+        pooled into a single consolidated set of block reads — adjacent registers
+        from different sub-systems are fetched together — rather than each
+        component querying independently. Listeners then fire per sub-system.
+        """
+        components = self.components
+        register_items = [item for c in components for item in c._register_items()]
+        coil_items = [item for c in components for item in c._coil_items()]
+        await _bulk_read_registers(self._unit, register_items)
+        await _bulk_read_coils(self._unit, coil_items)
+        for component in components:
+            component._notify()
