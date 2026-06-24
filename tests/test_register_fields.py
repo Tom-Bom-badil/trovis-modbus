@@ -20,12 +20,12 @@ from trovis_modbus.component import (
 class _Meter(Component):
     """A throwaway component exercising 32-bit fields (all read-only)."""
 
-    energy = uint32(100, doc="Cumulative energy")
-    energy_le = uint32(102, word_order="little", doc="Same, little word order")
-    balance = int32(104, doc="Signed counter")
-    flow = float32(106, doc="IEEE-754 flow")
-    flow_scaled = float32(108, scale=10, doc="Scaled float")
-    neighbour = integer(110, signed=False, doc="A plain 16-bit neighbour")
+    energy = uint32(100)
+    energy_le = uint32(102, word_order="little")  # same value, low word first
+    balance = int32(104)
+    flow = float32(106)
+    flow_scaled = float32(108, scale=10)
+    neighbour = integer(110, signed=False)  # a plain 16-bit neighbour
 
 
 class _WritableMeter(Component):

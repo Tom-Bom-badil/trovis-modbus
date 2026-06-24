@@ -301,7 +301,6 @@ def uint32(
     stride: int = 0,
     writable: bool = False,
     unit: str | None = None,
-    doc: str = "",
 ) -> RegisterField[int]:
     """An unsigned 32-bit value over two consecutive registers."""
     return RegisterField(
@@ -313,7 +312,6 @@ def uint32(
         stride=stride,
         writable=writable,
         unit=unit,
-        doc=doc,
     )
 
 
@@ -325,7 +323,6 @@ def int32(
     stride: int = 0,
     writable: bool = False,
     unit: str | None = None,
-    doc: str = "",
 ) -> RegisterField[int]:
     """A signed 32-bit value over two consecutive registers."""
     return RegisterField(
@@ -337,7 +334,6 @@ def int32(
         stride=stride,
         writable=writable,
         unit=unit,
-        doc=doc,
     )
 
 
@@ -349,7 +345,6 @@ def float32(
     stride: int = 0,
     writable: bool = False,
     unit: str | None = None,
-    doc: str = "",
 ) -> RegisterField[float]:
     """An IEEE-754 single-precision float over two consecutive registers."""
     return RegisterField(
@@ -361,7 +356,6 @@ def float32(
         stride=stride,
         writable=writable,
         unit=unit,
-        doc=doc,
     )
 
 
