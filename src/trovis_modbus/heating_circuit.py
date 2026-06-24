@@ -5,8 +5,8 @@ from __future__ import annotations
 from modbus_connection.model import coil, gauge, integer
 
 from . import utils
-from .enums import OperatingMode, enum_or_none
-from .model import TrovisComponent, temperature
+from .enums import OperatingMode
+from .model import TrovisComponent, operating_mode, temperature
 
 
 class HeatingCircuit(TrovisComponent):
@@ -22,8 +22,8 @@ class HeatingCircuit(TrovisComponent):
     return_temperature = temperature(16, stride=1)  # RüF
     room_temperature = temperature(19, stride=1)  # RF
 
-    _mode_raw = integer(
-        105, signed=False, stride=2, writable=True, level_coil=88, level_coil_stride=2
+    mode = operating_mode(
+        105, stride=2, writable=True, level_coil=88, level_coil_stride=2
     )
     control_signal = integer(106, signed=False, stride=2, unit="%")  # valve position
     flow_setpoint = temperature(999, stride=200)
@@ -56,11 +56,6 @@ class HeatingCircuit(TrovisComponent):
     )  # circulation pump (UP)
     manual_active = coil(4, stride=1)
 
-    @property
-    def mode(self) -> OperatingMode | None:
-        """Operating mode of this circuit."""
-        return enum_or_none(self._mode_raw, OperatingMode)
-
     def heating_curve(self, mode: str = "active") -> list[float] | None:
         """Flow-temperature curve over outside temps -20..20 °C.
 
@@ -86,7 +81,7 @@ class HeatingCircuit(TrovisComponent):
 
     async def set_mode(self, mode: OperatingMode) -> None:
         """Set the operating mode."""
-        await self.write("_mode_raw", int(mode))
+        await self.write("mode", mode)
 
     async def set_room_setpoint_day(self, celsius: float) -> None:
         """Set the day room setpoint (°C)."""

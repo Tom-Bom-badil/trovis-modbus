@@ -4,14 +4,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from modbus_connection.model import Component, async_update_all
+from modbus_connection.model import Component, ComponentGroup
 
 from .clock import Clock
 from .controller import Controller
 from .device_info import DeviceInformation
 from .heating_circuit import HeatingCircuit
 from .hot_water import HotWater
-from .ranges import COIL_RANGES, REGISTER_RANGES
 from .sensors import Sensors
 
 if TYPE_CHECKING:
@@ -46,6 +45,9 @@ class Trovis557x:
         self.heating_circuit_2 = HeatingCircuit(unit, index=2)
         self.heating_circuit_3 = HeatingCircuit(unit, index=3)
         self.hot_water = HotWater(unit)
+        # One pooled-read group over every sub-system; it derives the readable
+        # ranges from the components and caches its block plan after the first poll.
+        self._group = ComponentGroup(unit, self.components)
 
     @property
     def heating_circuits(self) -> tuple[HeatingCircuit, HeatingCircuit, HeatingCircuit]:
@@ -76,6 +78,4 @@ class Trovis557x:
         from different sub-systems are fetched together — rather than each
         component querying independently. Listeners then fire per sub-system.
         """
-        await async_update_all(
-            self._unit, self.components, REGISTER_RANGES, COIL_RANGES
-        )
+        await self._group.async_update()

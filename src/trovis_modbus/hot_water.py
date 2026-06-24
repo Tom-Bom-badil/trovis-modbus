@@ -6,8 +6,8 @@ import datetime
 
 from modbus_connection.model import coil, gauge, integer, raw_register
 
-from .enums import OperatingMode, Weekday, enum_or_none
-from .model import TrovisComponent, temperature
+from .enums import OperatingMode
+from .model import TrovisComponent, operating_mode, temperature, weekday_value
 from .utils import time_from_hhmm
 
 
@@ -17,7 +17,7 @@ class HotWater(TrovisComponent):
     storage_temperature = temperature(22)  # SF1
     storage_temperature_lower = temperature(23)  # SF2
 
-    _mode_raw = integer(111, signed=False, writable=True, level_coil=94)
+    mode = operating_mode(111, writable=True, level_coil=94)
     setpoint_day = temperature(1799, writable=True)
     setpoint_active = temperature(1807)
     setpoint_max = temperature(1800, writable=True)
@@ -29,7 +29,7 @@ class HotWater(TrovisComponent):
     active_charge_setpoint = temperature(1837)
     return_max = temperature(1827, writable=True)
     disinfection_temp = temperature(1829, writable=True)
-    _disinfection_weekday_raw = integer(1830, signed=False, writable=True)
+    disinfection_weekday = weekday_value(1830, writable=True)
     _disinfection_start_raw = raw_register(1831, writable=True)
     _disinfection_stop_raw = raw_register(1832, writable=True)
     disinfection_hold = integer(1838, writable=True, unit="min")  # hold duration
@@ -46,16 +46,6 @@ class HotWater(TrovisComponent):
     manual_active = coil(7)
     charge_pump_running = coil(59, writable=True, level_coil=98)  # storage pump (SLP)
     circulation_pump_running = coil(60, writable=True, level_coil=99)  # ZP
-
-    @property
-    def mode(self) -> OperatingMode | None:
-        """Hot-water operating mode."""
-        return enum_or_none(self._mode_raw, OperatingMode)
-
-    @property
-    def disinfection_weekday(self) -> Weekday | None:
-        """Weekday of the thermal-disinfection cycle (OFF = disabled)."""
-        return enum_or_none(self._disinfection_weekday_raw, Weekday)
 
     @property
     def disinfection_start(self) -> datetime.time | None:
@@ -78,7 +68,7 @@ class HotWater(TrovisComponent):
 
     async def set_mode(self, mode: OperatingMode) -> None:
         """Set the operating mode."""
-        await self.write("_mode_raw", int(mode))
+        await self.write("mode", mode)
 
     async def start_forced_charge(self) -> None:
         """Trigger a one-off storage charge."""
