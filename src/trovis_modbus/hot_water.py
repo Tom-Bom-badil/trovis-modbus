@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import datetime
 
-from modbus_connection.model import coil, gauge, integer, raw_register
+from modbus_connection.model import coil, enum, gauge, integer, raw_register
 
-from .enums import OperatingMode
-from .model import TrovisComponent, operating_mode, temperature, weekday_value
+from .enums import OperatingMode, Weekday
+from .model import TrovisComponent, temperature
 from .utils import time_from_hhmm
 
 
@@ -17,7 +17,7 @@ class HotWater(TrovisComponent):
     storage_temperature = temperature(22)  # SF1
     storage_temperature_lower = temperature(23)  # SF2
 
-    mode = operating_mode(111, writable=True, level_coil=94)
+    mode = enum(111, OperatingMode, writable=True, level_coil=94)
     setpoint_day = temperature(1799, writable=True)
     setpoint_active = temperature(1807)
     setpoint_max = temperature(1800, writable=True)
@@ -29,7 +29,7 @@ class HotWater(TrovisComponent):
     active_charge_setpoint = temperature(1837)
     return_max = temperature(1827, writable=True)
     disinfection_temp = temperature(1829, writable=True)
-    disinfection_weekday = weekday_value(1830, writable=True)
+    disinfection_weekday = enum(1830, Weekday, writable=True)
     _disinfection_start_raw = raw_register(1831, writable=True)
     _disinfection_stop_raw = raw_register(1832, writable=True)
     disinfection_hold = integer(1838, writable=True, unit="min")  # hold duration

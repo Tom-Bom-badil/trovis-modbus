@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from modbus_connection.model import coil, gauge, integer
+from modbus_connection.model import coil, enum, gauge, integer
 
 from . import utils
 from .enums import OperatingMode
-from .model import TrovisComponent, operating_mode, temperature
+from .model import TrovisComponent, temperature
 
 
 class HeatingCircuit(TrovisComponent):
@@ -22,8 +22,8 @@ class HeatingCircuit(TrovisComponent):
     return_temperature = temperature(16, stride=1)  # RüF
     room_temperature = temperature(19, stride=1)  # RF
 
-    mode = operating_mode(
-        105, stride=2, writable=True, level_coil=88, level_coil_stride=2
+    mode = enum(
+        105, OperatingMode, stride=2, writable=True, level_coil=88, level_coil_stride=2
     )
     control_signal = integer(106, signed=False, stride=2, unit="%")  # valve position
     flow_setpoint = temperature(999, stride=200)
