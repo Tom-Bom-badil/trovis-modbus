@@ -17,20 +17,14 @@ classifiers = [
 ]
 # Protocol + the device-modelling framework (modbus_connection.model). The caller
 # injects a ModbusUnit built from whichever backend they choose.
-# DRAFT: this needs the unreleased .model module; pin to >=1.1 once published.
-dependencies = ["modbus-connection"]
+dependencies = ["modbus-connection>=2.0,<3"]
 
 [project.optional-dependencies]
 # Concrete backend for the script/query.py CLI (pip install trovis-modbus[cli]).
-cli = ["modbus-connection[pymodbus]"]
+cli = ["modbus-connection[pymodbus]>=2.0,<3"]
 
 [project.urls]
 Homepage = "https://github.com/balloob/trovis-modbus"
-
-[tool.uv.sources]
-# DRAFT: use the local checkout until modbus-connection 1.1 (with .model) ships,
-# then drop this block and pin the dependency to >=1.1,<2.
-modbus-connection = { path = "../modbus-connection", editable = true }
 
 [dependency-groups]
 dev = [
