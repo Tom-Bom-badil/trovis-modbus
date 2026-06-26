@@ -25,7 +25,7 @@ class Controller(TrovisComponent):
     summer_days_on = integer(114, writable=True)  # days above limit to enter summer
     summer_days_off = integer(115, writable=True)  # days below limit to leave summer
 
-    collective_fault = coil(0)
+    general_fault = coil(0)
     summer_active = coil(8)
     auto_daylight_saving = coil(136, writable=True)
     manual_levels_locked = coil(149, writable=True)
