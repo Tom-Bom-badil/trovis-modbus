@@ -47,8 +47,12 @@ class TrovisComponent(Component):
             await self._unit.write_coil(address + stride * (self._index - 1), False)
         await super().write(field, value)
 
-    async def async_write_setting(self, field: str, value: Any) -> None:
-        """Write a TROVIS setting. This is the public write entry point for integrations."""
+    async def async_write_datapoint(self, field: str, value: Any) -> None:
+        """
+        Write a TROVIS data point.
+        This is the public write entry point for integrations. The actual TROVIS
+        write sequence is intentionally not implemented yet.
+        """
         raise TrovisWriteNotImplementedError(
             f"Writing {self.__class__.__name__}.{field} is not implemented yet"
         )
