@@ -15,12 +15,12 @@ sub-system.
 """
 
 from __future__ import annotations
-
 from typing import Any
 
 from modbus_connection.model import Component, RegisterField, gauge
-
 from .ranges import COIL_RANGES, REGISTER_RANGES
+from .exceptions import TrovisWriteNotImplementedError
+
 
 NAN_INT16 = 0x7FFF  # the value the controller returns for an absent sensor
 
@@ -46,6 +46,12 @@ class TrovisComponent(Component):
             address, stride = override
             await self._unit.write_coil(address + stride * (self._index - 1), False)
         await super().write(field, value)
+
+    async def async_write_setting(self, field: str, value: Any) -> None:
+        """Write a TROVIS setting. This is the public write entry point for integrations."""
+        raise TrovisWriteNotImplementedError(
+            f"Writing {self.__class__.__name__}.{field} is not implemented yet"
+        )
 
 
 def temperature(

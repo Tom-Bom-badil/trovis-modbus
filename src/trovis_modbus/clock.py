@@ -41,3 +41,8 @@ class Clock(TrovisComponent):
         if (day := self.date) is None or moment is None:
             return None
         return datetime.datetime.combine(day, moment)
+
+    @property
+    def year(self) -> int | None:
+        """Current controller year."""
+        return self._year_raw or None
