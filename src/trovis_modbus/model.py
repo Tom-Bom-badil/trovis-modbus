@@ -17,15 +17,19 @@
 # sub-system.
 # """
 
-
-from __future__ import annotations
-
 from typing import Any
 
-from modbus_connection.model import Component, RegisterField, gauge
+from modbus_connection import ModbusError
+from modbus_connection.model import (
+    Component,
+    RegisterField,
+    coil as _modbus_coil,
+    gauge,
+)
 
-from .exceptions import TrovisWriteAccessDisabledError
+from .exceptions import TrovisWriteAccessError
 from .ranges import COIL_RANGES, REGISTER_RANGES
+
 
 NAN_INT16 = 0x7FFF  # the value the controller returns for an absent sensor
 
@@ -33,16 +37,45 @@ DEFAULT_WRITE_ACCESS_CODE = 1732
 WRITE_ACCESS_REGISTER = 144
 WRITE_ACCESS_DISABLE_CODE = 0
 
-# Manufacturer CL4, zero-based Modbus coil address 3.
-# False/0 = GLT, True/1 = AUTARK.
-GLOBAL_LEVEL_COIL = 3
 LEVEL_GLT = False
 LEVEL_AUTARK = True
 
 
+def coil_address(cl_number: int) -> int:
+    """Return the zero-based Modbus address for a TROVIS CL number.
+    Manufacturer coil lists use CL numbers starting at 1. Modbus PDU addresses
+    are zero-based, so CL137 is sent as address 136.
+    """
+    if cl_number < 1:
+        raise ValueError(f"Invalid TROVIS coil number: {cl_number}")
+
+    return cl_number - 1
+
+
+def coil(
+    cl_number: int,
+    *,
+    stride: int = 0,
+    writable: bool = False,
+):
+    """Create a coil field from a manufacturer TROVIS CL number."""
+    return _modbus_coil(
+        coil_address(cl_number),
+        stride=stride,
+        writable=writable,
+    )
+
+
 async def async_read_writing_enabled(unit: Any) -> bool:
-    """Return whether the controller is currently in GLT/write mode."""
-    return (await unit.read_coils(GLOBAL_LEVEL_COIL, 1))[0] is LEVEL_GLT
+    """Return whether TROVIS write access appears to be active."""
+    try:
+        return (
+            await unit.read_holding_registers(WRITE_ACCESS_REGISTER, 1)
+        )[0] != WRITE_ACCESS_DISABLE_CODE
+    except ModbusError as err:
+        raise TrovisWriteAccessError(
+            "Could not read TROVIS write access state"
+        ) from err
 
 
 async def async_enable_writing(
@@ -50,27 +83,35 @@ async def async_enable_writing(
     access_code: int = DEFAULT_WRITE_ACCESS_CODE,
 ) -> None:
     """Enable TROVIS writing globally."""
-    await unit.write_register(WRITE_ACCESS_REGISTER, access_code)
-    await unit.write_coil(GLOBAL_LEVEL_COIL, LEVEL_GLT)
+    try:
+        await unit.write_register(WRITE_ACCESS_REGISTER, access_code)
+    except ModbusError as err:
+        raise TrovisWriteAccessError(
+            "Could not enable TROVIS write access"
+        ) from err
 
 
 async def async_disable_writing(unit: Any) -> None:
     """Disable TROVIS writing globally."""
-    # Set AUTARK while writing is still enabled, then clear the access code.
-    await unit.write_coil(GLOBAL_LEVEL_COIL, LEVEL_AUTARK)
-    await unit.write_register(WRITE_ACCESS_REGISTER, WRITE_ACCESS_DISABLE_CODE)
+    try:
+        await unit.write_register(WRITE_ACCESS_REGISTER, WRITE_ACCESS_DISABLE_CODE)
+    except ModbusError as err:
+        raise TrovisWriteAccessError(
+            "Could not reset TROVIS write access"
+        ) from err
 
 
 async def async_ensure_writing_enabled(
     unit: Any,
     access_code: int = DEFAULT_WRITE_ACCESS_CODE,
 ) -> None:
-    """Ensure that a normal data point write may proceed."""
-    if not await async_read_writing_enabled(unit):
-        raise TrovisWriteAccessDisabledError("Please enable writing for changes!")
-
-    # Keep the modem/write access alive for the actual value write.
-    await unit.write_register(WRITE_ACCESS_REGISTER, access_code)
+    """Ensure that the TROVIS access code is active for the next write."""
+    try:
+        await unit.write_register(WRITE_ACCESS_REGISTER, access_code)
+    except ModbusError as err:
+        raise TrovisWriteAccessError(
+            "Could not refresh TROVIS write access"
+        ) from err
 
 
 class TrovisComponent(Component):
@@ -101,7 +142,10 @@ class TrovisComponent(Component):
         """Write a field, applying field-specific TROVIS preconditions."""
         if (override := self.ebene_coils.get(field)) is not None:
             address, stride = override
-            await self._unit.write_coil(address + stride * (self._index - 1), LEVEL_GLT)
+            await self._unit.write_coil(
+                coil_address(address + stride * (self._index - 1)),
+                LEVEL_GLT,
+            )
 
         await super().write(field, value)
 

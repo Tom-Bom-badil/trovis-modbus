@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from modbus_connection.model import coil, enum, gauge, integer
+from modbus_connection.model import enum, gauge, integer
 
 from . import utils
 from .enums import OperatingMode
-from .model import TrovisComponent, temperature
+from .model import TrovisComponent, coil, temperature
 
 
 class HeatingCircuit(TrovisComponent):
@@ -41,24 +41,24 @@ class HeatingCircuit(TrovisComponent):
 
     ### coils
 
-    manual_active = coil(4, stride=1)
-    pump_running = coil(56, stride=1, writable=True)  # circulation pump (UP)
-    room_control_unit = coil(702, stride=1, writable=True)  # CL703 / 704 / 705
-    automatic = coil(999, stride=200)  # following the time program
-    day_active = coil(1000, stride=200)
-    night_active = coil(1001, stride=200)
-    hold_active = coil(1002, stride=200)
-    setback_active = coil(1003, stride=200)
-    heat_up_active = coil(1004, stride=200)
-    return_limit_active = coil(1005, stride=200)
-    outside_shutdown = coil(1006, stride=200)
-    standby = coil(1007, stride=200)
-    frost_protection = coil(1008, stride=200)
-    optimization = coil(2106, stride=100, writable=True)  # CL2107 / 2207 / 2307
-    adaptation = coil(2107, stride=100, writable=True)  # CL2108 / 2208 / 2308
+    manual_active = coil(5, stride=1)
+    pump_running = coil(57, stride=1, writable=True)  # CL57 / 58 / 59: circulation pump
+    room_control_unit = coil(703, stride=1, writable=True)  # CL703 / 704 / 705
+    automatic = coil(1000, stride=200)  # following the time program
+    day_active = coil(1001, stride=200)
+    night_active = coil(1002, stride=200)
+    hold_active = coil(1003, stride=200)
+    setback_active = coil(1004, stride=200)
+    heat_up_active = coil(1005, stride=200)
+    return_limit_active = coil(1006, stride=200)
+    outside_shutdown = coil(1007, stride=200)
+    standby = coil(1008, stride=200)
+    frost_protection = coil(1009, stride=200)
+    optimization = coil(2107, stride=100, writable=True)  # CL2107 / 2207 / 2307
+    adaptation = coil(2108, stride=100, writable=True)  # CL2108 / 2208 / 2308
 
-    # Override coils (mode 88+2n, pump 95+1n) released before a write.
-    ebene_coils = {"mode": (88, 2), "pump_running": (95, 1)}
+    # Override coils (mode 89+2n, pump 96+1n) released before a write.
+    ebene_coils = {"mode": (89, 2), "pump_running": (96, 1)}
 
 
     def heating_curve(self, mode: str = "active") -> list[float] | None:

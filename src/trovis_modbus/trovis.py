@@ -52,6 +52,7 @@ class Trovis557x:
         self.heating_circuit_2 = HeatingCircuit(unit, index=2)
         self.heating_circuit_3 = HeatingCircuit(unit, index=3)
         self.hot_water = HotWater(unit)
+        self._writing_enabled = False
         # One pooled-read group over every sub-system; it derives the readable
         # ranges from the components and caches its block plan after the first poll.
         self._group = ComponentGroup(unit, self.components)
@@ -78,12 +79,9 @@ class Trovis557x:
         )
 
     @property
-    def writing_enabled(self) -> bool | None:
-        """Whether TROVIS writing is currently enabled according to the last update."""
-        global_level_autark = self.controller.global_level_autark
-        if global_level_autark is None:
-            return None
-        return global_level_autark is LEVEL_GLT
+    def writing_enabled(self) -> bool:
+        """Whether writing is enabled by the integration safety switch."""
+        return self._writing_enabled
 
     async def async_update(self) -> None:
         """Refresh every sub-system in as few Modbus calls as possible.
@@ -104,7 +102,11 @@ class Trovis557x:
     ) -> None:
         """Enable TROVIS writing globally."""
         await async_enable_writing(self._unit, access_code)
+        self._writing_enabled = True
 
     async def async_disable_writing(self) -> None:
         """Disable TROVIS writing globally."""
-        await async_disable_writing(self._unit)
+        try:
+            await async_disable_writing(self._unit)
+        finally:
+            self._writing_enabled = False

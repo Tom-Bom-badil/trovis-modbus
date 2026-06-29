@@ -15,7 +15,7 @@ class Clock(TrovisComponent):
 
     _time_raw = raw_register(99, writable=True)
     _date_raw = raw_register(100, writable=True)
-    _year_raw = raw_register(101, writable=True)
+    year = raw_register(101, writable=True)
 
     @property
     def time(self) -> datetime.time | None:
@@ -26,7 +26,7 @@ class Clock(TrovisComponent):
     def date(self) -> datetime.date | None:
         """Calendar date (the controller stores day*100+month and the year)."""
         raw = self._date_raw
-        year = self._year_raw
+        year = self.year
         if not raw or not year:
             return None
         try:
@@ -41,8 +41,3 @@ class Clock(TrovisComponent):
         if (day := self.date) is None or moment is None:
             return None
         return datetime.datetime.combine(day, moment)
-
-    @property
-    def year(self) -> int | None:
-        """Current controller year."""
-        return self._year_raw or None

@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import datetime
 
-from modbus_connection.model import coil, enum, gauge, integer, raw_register
+from modbus_connection.model import enum, gauge, integer, raw_register
 
 from .enums import OperatingMode, Weekday
-from .model import TrovisComponent, temperature
+from .model import TrovisComponent, coil, temperature
 from .utils import time_from_hhmm
 
 
@@ -16,9 +16,9 @@ class HotWater(TrovisComponent):
 
     # Override coils released before a write (no per-index stride here).
     ebene_coils = {
-        "mode": (94, 0),
-        "charge_pump_running": (98, 0),
-        "circulation_pump_running": (99, 0),
+        "mode": (95, 0),
+        "charge_pump_running": (99, 0),
+        "circulation_pump_running": (100, 0),
     }
 
     ### sensors
@@ -42,19 +42,19 @@ class HotWater(TrovisComponent):
 
     ### coils
 
-    intermediate_heating_operation = coil(406, writable=True)  # CL407 / FB07
-    automatic = coil(1799)  # following the time program
-    disinfection_active = coil(1800)
-    priority = coil(1801)  # hot water has priority over heating
-    max_charge_limit_active = coil(1802)
-    return_limit_active = coil(1803)
-    standby = coil(1804)
-    frost_protection = coil(1805)
-    forced_charge = coil(1806, writable=True)
-    solar_pump_running = coil(1807)
-    manual_active = coil(7)
-    charge_pump_running = coil(59, writable=True)  # storage pump (SLP)
-    circulation_pump_running = coil(60, writable=True)  # ZP
+    intermediate_heating_operation = coil(407, writable=True)  # CL407 / FB07
+    automatic = coil(1800)  # following the time program
+    disinfection_active = coil(1801)
+    priority = coil(1802)  # hot water has priority over heating
+    max_charge_limit_active = coil(1803)
+    return_limit_active = coil(1804)
+    standby = coil(1805)
+    frost_protection = coil(1806)
+    forced_charge = coil(1807, writable=True)
+    solar_pump_running = coil(1808)
+    manual_active = coil(8)
+    charge_pump_running = coil(60, writable=True)  # CL60 / storage pump
+    circulation_pump_running = coil(61, writable=True)  # CL61 / circulation pump
 
     @property
     def disinfection_start(self) -> datetime.time | None:

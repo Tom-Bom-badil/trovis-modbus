@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from modbus_connection.model import coil, enum, gauge, integer, raw_register
+from modbus_connection.model import enum, gauge, integer, raw_register
 
 from .enums import OperatingMode
-from .model import TrovisComponent, temperature
+from .model import TrovisComponent, coil, temperature
 from .utils import MonthDay
 
 
@@ -34,22 +34,26 @@ class Controller(TrovisComponent):
 
     ##### coils
 
-    general_fault = coil(0)
-    global_level_autark = coil(3)  # CL4 / Sammel_Ebenenbit: GLT=0, AUTARK=1
-    summer_active = coil(8)
+    general_fault = coil(1)
+    data_entry_active = coil(2)  # CL2 / Dateneing_aktiv
+    data_entry_performed = coil(3)  # CL3 / Dateneing_stattg
+    global_level_autark = coil(4)  # CL4 / Sammel_Ebenenbit
+    summer_active = coil(9)
 
-    delayed_outside_temp_adjustment_falling = coil(133, writable=True)  # CL134 / FB05
-    delayed_outside_temp_adjustment_rising = coil(134, writable=True)  # CL135 / FB06
-    auto_daylight_saving = coil(136, writable=True)
+    delayed_outside_temp_adjustment_falling = coil(134, writable=True)  # CL134 / FB05
+    delayed_outside_temp_adjustment_rising = coil(135, writable=True)  # CL135 / FB06
+    auto_daylight_saving = coil(137, writable=True)  # CL137 / FB08
 
-    manual_levels_locked = coil(149, writable=True)
-    rotary_switch_locked = coil(150, writable=True)
+    manual_levels_locked = coil(150, writable=True)  # CL150 / FB21
+    rotary_switch_locked = coil(151, writable=True)  # CL151 / FB22
+
 
     @property
     def summer_start(self) -> MonthDay | None:
         """Start of the summer-mode window (day, month)."""
         raw = self._summer_start_raw
         return MonthDay(raw // 100, raw % 100) if raw else None
+
 
     @property
     def summer_end(self) -> MonthDay | None:
