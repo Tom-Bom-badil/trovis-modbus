@@ -35,6 +35,7 @@ class Controller(TrovisComponent):
     ##### coils
 
     general_fault = coil(0)
+    global_level_autark = coil(3)  # CL4 / Sammel_Ebenenbit: GLT=0, AUTARK=1
     summer_active = coil(8)
 
     delayed_outside_temp_adjustment_falling = coil(133, writable=True)  # CL134 / FB05

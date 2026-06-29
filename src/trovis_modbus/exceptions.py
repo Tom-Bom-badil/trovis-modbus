@@ -1,9 +1,15 @@
-# src/trovis_modbus/exceptions.py
-
 """Exceptions raised by trovis-modbus."""
 
 from __future__ import annotations
 
 
 class TrovisWriteNotImplementedError(NotImplementedError):
-    """Raised when writing to TROVIS (only for functions not implemented yet)."""
+    """Raised when writing to TROVIS register/coil is not implemented yet."""
+
+
+class TrovisWriteAccessDisabledError(RuntimeError):
+    """Raised when a write is attempted while TROVIS writing is disabled."""
+
+
+class TrovisWriteAccessError(RuntimeError):
+    """Raised when TROVIS write access could not be changed or verified."""

@@ -7,7 +7,14 @@ from datetime import date, time
 import pytest
 from modbus_connection.mock import MockModbusConnection, MockModbusUnit
 
-from trovis_modbus import MonthDay, OperatingMode, Trovis557x, Weekday
+from trovis_modbus import (
+    MonthDay,
+    OperatingMode,
+    Trovis557x,
+    Weekday,
+    TrovisWriteAccessDisabledError,
+)
+
 from trovis_modbus.ranges import REGISTER_RANGES
 
 from .conftest import COILS, HOLDING
@@ -190,6 +197,7 @@ async def test_update_listener(trovis: Trovis557x) -> None:
 
 async def test_write_roundtrip(trovis: Trovis557x) -> None:
     await trovis.async_update()
+    await trovis.async_enable_writing()
     await trovis.heating_circuit_1.set_room_setpoint_day(21.5)
     await trovis.hot_water.set_setpoint(52.0)
     await trovis.heating_circuit_1.async_update()
@@ -206,8 +214,9 @@ async def test_write_rejects_readonly(trovis: Trovis557x) -> None:
 async def test_mode_write_releases_override_coil(trovis: Trovis557x) -> None:
     """Setting the mode first releases the Ebene coil (0 = remote control)."""
     unit = trovis.heating_circuit_1._unit
-    await unit.write_coil(88, True)  # start "autonomous" (controller-controlled)
 
+    await trovis.async_enable_writing()
+    await unit.write_coil(88, True)  # start "autonomous" (controller-controlled)
     await trovis.heating_circuit_1.set_mode(OperatingMode.DAY)
 
     # Override coil 88 (EBNBetrArtRk1) released to 0, then mode register written.
@@ -222,3 +231,25 @@ async def test_circuit2_mode_uses_strided_override(trovis: Trovis557x) -> None:
     await trovis.heating_circuit_2.set_mode(OperatingMode.NIGHT)
     assert (await unit.read_coils(90, 1))[0] is False
     assert (await unit.read_holding_registers(107, 1))[0] == int(OperatingMode.NIGHT)
+
+
+async def test_write_access_enable_disable(trovis: Trovis557x) -> None:
+    unit = trovis.controller._unit
+
+    await unit.write_coil(3, True)
+    assert await trovis.async_read_writing_enabled() is False
+
+    await trovis.async_enable_writing()
+    assert await trovis.async_read_writing_enabled() is True
+    assert (await unit.read_holding_registers(144, 1))[0] == 1732
+    assert (await unit.read_coils(3, 1))[0] is False
+
+    await trovis.async_disable_writing()
+    assert await trovis.async_read_writing_enabled() is False
+    assert (await unit.read_holding_registers(144, 1))[0] == 0
+    assert (await unit.read_coils(3, 1))[0] is True
+
+
+async def test_write_requires_enabled_access(trovis: Trovis557x) -> None:
+    with pytest.raises(TrovisWriteAccessDisabledError):
+        await trovis.heating_circuit_1.set_room_setpoint_day(21.5)

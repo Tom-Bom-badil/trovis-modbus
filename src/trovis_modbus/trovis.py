@@ -12,6 +12,13 @@ from .device_info import DeviceInformation
 from .heating_circuit import HeatingCircuit
 from .hot_water import HotWater
 from .sensors import Sensors
+from .model import (
+    DEFAULT_WRITE_ACCESS_CODE,
+    LEVEL_GLT,
+    async_disable_writing,
+    async_enable_writing,
+    async_read_writing_enabled,
+)
 
 if TYPE_CHECKING:
     from modbus_connection import ModbusUnit
@@ -70,12 +77,34 @@ class Trovis557x:
             self.hot_water,
         )
 
+    @property
+    def writing_enabled(self) -> bool | None:
+        """Whether TROVIS writing is currently enabled according to the last update."""
+        global_level_autark = self.controller.global_level_autark
+        if global_level_autark is None:
+            return None
+        return global_level_autark is LEVEL_GLT
+
     async def async_update(self) -> None:
         """Refresh every sub-system in as few Modbus calls as possible.
-
         All sub-systems share one unit, so their register and coil reads are
         pooled into a single consolidated set of block reads — adjacent registers
         from different sub-systems are fetched together — rather than each
         component querying independently. Listeners then fire per sub-system.
         """
         await self._group.async_update()
+
+    async def async_read_writing_enabled(self) -> bool:
+        """Read the current write-enabled state directly from the controller."""
+        return await async_read_writing_enabled(self._unit)
+
+    async def async_enable_writing(
+        self,
+        access_code: int = DEFAULT_WRITE_ACCESS_CODE,
+    ) -> None:
+        """Enable TROVIS writing globally."""
+        await async_enable_writing(self._unit, access_code)
+
+    async def async_disable_writing(self) -> None:
+        """Disable TROVIS writing globally."""
+        await async_disable_writing(self._unit)

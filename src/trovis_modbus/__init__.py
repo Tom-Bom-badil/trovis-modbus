@@ -23,7 +23,13 @@ from .hot_water import HotWater
 from .sensors import Sensors
 from .trovis import Trovis557x
 from .utils import OUTSIDE_TEMPERATURES, MonthDay, heating_curve
-from .exceptions import TrovisWriteNotImplementedError
+from .model import DEFAULT_WRITE_ACCESS_CODE
+from .exceptions import (
+    TrovisWriteAccessDisabledError,
+    TrovisWriteAccessError,
+    TrovisWriteNotImplementedError,
+)
+
 
 __all__ = [
     "OUTSIDE_TEMPERATURES",
@@ -38,5 +44,8 @@ __all__ = [
     "Trovis557x",
     "Weekday",
     "heating_curve",
+    "DEFAULT_WRITE_ACCESS_CODE",
     "TrovisWriteNotImplementedError",
+    "TrovisWriteAccessDisabledError",
+    "TrovisWriteAccessError",
 ]

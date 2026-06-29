@@ -51,6 +51,7 @@ HOLDING: dict[int, int] = {
 }
 
 COILS: dict[int, bool] = {
+    3: True,  # CL4 / Sammel_Ebenenbit -> AUTARK by default
     56: True,  # hc1 pump
     999: True,  # hc1 automatic
     1000: True,  # hc1 day active
