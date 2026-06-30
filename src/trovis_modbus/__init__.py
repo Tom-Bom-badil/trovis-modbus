@@ -24,6 +24,7 @@ from .sensors import Sensors
 from .trovis import Trovis557x
 from .utils import OUTSIDE_TEMPERATURES, MonthDay, heating_curve
 from .model import DEFAULT_WRITE_ACCESS_CODE
+from .addresses import coil_address, register_address
 from .exceptions import (
     TrovisWriteAccessDisabledError,
     TrovisWriteAccessError,
@@ -32,6 +33,8 @@ from .exceptions import (
 
 
 __all__ = [
+    "coil_address",
+    "register_address",
     "OUTSIDE_TEMPERATURES",
     "Clock",
     "Controller",

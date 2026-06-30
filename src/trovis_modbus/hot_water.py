@@ -7,7 +7,7 @@ import datetime
 from modbus_connection.model import enum, gauge, integer, raw_register
 
 from .enums import OperatingMode, Weekday
-from .model import TrovisComponent, coil, temperature
+from .model import TrovisComponent, coil, enum, gauge, integer, raw_register, temperature
 from .utils import time_from_hhmm
 
 
@@ -23,22 +23,23 @@ class HotWater(TrovisComponent):
 
     ### sensors
 
-    mode = enum(111, OperatingMode, writable=True)
-    setpoint_day = temperature(1799, writable=True)
-    setpoint_active = temperature(1807)
-    setpoint_max = temperature(1800, writable=True)
-    setpoint_min = temperature(1801, writable=True)
-    hysteresis = gauge(1802, 0.1, unit="K", writable=True)
-    charge_overshoot = gauge(1803, 0.1, unit="K", writable=True)
-    max_charge_temp = temperature(1805, writable=True)
-    hold_value = temperature(1806, writable=True)  # minimum maintained temperature
-    active_charge_setpoint = temperature(1837)
-    return_max = temperature(1827, writable=True)
-    disinfection_temp = temperature(1829, writable=True)
-    disinfection_weekday = enum(1830, Weekday, writable=True)
-    _disinfection_start_raw = raw_register(1831, writable=True)
-    _disinfection_stop_raw = raw_register(1832, writable=True)
-    disinfection_hold = integer(1838, writable=True, unit="min")  # hold duration
+    mode = enum(40112, OperatingMode, writable=True)
+    setpoint_day = temperature(41800, writable=True)
+    setpoint_active = temperature(41808)
+    setpoint_max = temperature(41801, writable=True)
+    setpoint_min = temperature(41802, writable=True)
+    hysteresis = gauge(41803, 0.1, unit="K", writable=True)
+    charge_overshoot = gauge(41804, 0.1, unit="K", writable=True)
+    max_charge_temp = temperature(41806, writable=True)
+    hold_value = temperature(41807, writable=True)  # minimum maintained temperature
+    active_charge_setpoint = temperature(41838)
+
+    return_max = temperature(41828, writable=True)
+    disinfection_temp = temperature(41830, writable=True)
+    disinfection_weekday = enum(41831, Weekday, writable=True)
+    _disinfection_start_raw = raw_register(41832, writable=True)
+    _disinfection_stop_raw = raw_register(41833, writable=True)
+    disinfection_hold = integer(41839, writable=True, unit="min")  # hold duration
 
     ### coils
 

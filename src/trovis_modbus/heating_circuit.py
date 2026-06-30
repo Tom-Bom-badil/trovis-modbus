@@ -6,7 +6,7 @@ from modbus_connection.model import enum, gauge, integer
 
 from . import utils
 from .enums import OperatingMode
-from .model import TrovisComponent, coil, temperature
+from .model import TrovisComponent, coil, enum, gauge, integer, temperature
 
 
 class HeatingCircuit(TrovisComponent):
@@ -18,26 +18,26 @@ class HeatingCircuit(TrovisComponent):
 
     ### registers
 
-    mode = enum(105, OperatingMode, stride=2, writable=True)
+    mode = enum(40106, OperatingMode, stride=2, writable=True)
 
-    valve_setpoint = integer(106, signed=False, stride=2, unit="%")  # control signal
-    flow_setpoint = temperature(999, stride=200)
+    valve_setpoint = integer(40107, signed=False, stride=2, unit="%")  # control signal
 
-    flow_max = temperature(1000, stride=200, writable=True)
-    flow_min = temperature(1001, stride=200, writable=True)
-    room_setpoint_day = temperature(1002, stride=200, writable=True)
-    room_setpoint_night = temperature(1003, stride=200, writable=True)
-    room_setpoint_active = temperature(1004, stride=200)
-    slope = gauge(1005, 0.1, stride=200, writable=True)  # heating-curve slope
-    level = gauge(1006, 0.1, stride=200, writable=True, unit="K")  # heating-curve level
+    flow_setpoint = temperature(41000, stride=200)
+    flow_max = temperature(41001, stride=200, writable=True)
+    flow_min = temperature(41002, stride=200, writable=True)
+    room_setpoint_day = temperature(41003, stride=200, writable=True)
+    room_setpoint_night = temperature(41004, stride=200, writable=True)
+    room_setpoint_active = temperature(41005, stride=200)
+    slope = gauge(41006, 0.1, stride=200, writable=True)  # heating-curve slope
+    level = gauge(41007, 0.1, stride=200, writable=True, unit="K")  # level
 
-    return_slope = gauge(1008, 0.1, stride=200)  # return-curve slope
-    return_level = gauge(1009, 0.1, stride=200, unit="K")  # return-curve level
-    return_max = temperature(1010, stride=200, writable=True)
-    return_base_point = temperature(1011, stride=200)  # return-curve foot point
-    return_setpoint = temperature(1032, stride=200)
+    return_slope = gauge(41009, 0.1, stride=200)  # return-curve slope
+    return_level = gauge(41010, 0.1, stride=200, unit="K")  # return-curve level
+    return_max = temperature(41011, stride=200, writable=True)
+    return_base_point = temperature(41012, stride=200)  # return-curve foot point
+    return_setpoint = temperature(41033, stride=200)
 
-    flow_deviation = gauge(1062, 0.1, stride=200, unit="K")  # flow control deviation
+    flow_deviation = gauge(41063, 0.1, stride=200, unit="K")  # flow control deviation
 
     ### coils
 

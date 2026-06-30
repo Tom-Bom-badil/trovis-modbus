@@ -5,7 +5,7 @@ from __future__ import annotations
 from modbus_connection.model import enum, gauge, integer, raw_register
 
 from .enums import OperatingMode
-from .model import TrovisComponent, coil, temperature
+from .model import TrovisComponent, coil, enum, gauge, integer, raw_register, temperature
 from .utils import MonthDay
 
 
@@ -14,23 +14,23 @@ class Controller(TrovisComponent):
 
     ##### registers
 
-    max_flow_setpoint = temperature(98)
-    
+    max_flow_setpoint = temperature(40099)
+
     # The three front-panel rotary switches, top to bottom (RK1 / RK2 / hot water).
-    switch_top = enum(102, OperatingMode)
-    switch_middle = enum(103, OperatingMode)
-    switch_bottom = enum(104, OperatingMode)
+    switch_top = enum(40103, OperatingMode)
+    switch_middle = enum(40104, OperatingMode)
+    switch_bottom = enum(40105, OperatingMode)
 
-    _summer_start_raw = raw_register(112)
-    _summer_end_raw = raw_register(113)
-    summer_days_on = integer(114, writable=True)  # days above limit to enter summer
-    summer_days_off = integer(115, writable=True)  # days below limit to leave summer
-    summer_outside_limit = temperature(116, writable=True)
-    outside_delay = gauge(117, 0.1, writable=True, unit="K/h")  # AT adaptation rate
-    frost_limit = temperature(122, writable=True)
+    _summer_start_raw = raw_register(40113)
+    _summer_end_raw = raw_register(40114)
+    summer_days_on = integer(40115, writable=True)  # days above limit to enter summer
+    summer_days_off = integer(40116, writable=True)  # days below limit to leave summer
+    summer_outside_limit = temperature(40117, writable=True)
 
-    station_address = integer(142, signed=False)
-    error_status = integer(149, signed=False)
+    outside_delay = gauge(40118, 0.1, writable=True, unit="K/h")  # AT adaptation rate
+    frost_limit = temperature(40123, writable=True)
+    station_address = integer(40143, signed=False)
+    error_status = integer(40150, signed=False)
 
     ##### coils
 

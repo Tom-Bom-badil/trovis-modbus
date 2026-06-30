@@ -24,9 +24,13 @@ from modbus_connection.model import (
     Component,
     RegisterField,
     coil as _modbus_coil,
-    gauge,
+    enum as _modbus_enum,
+    gauge as _modbus_gauge,
+    integer as _modbus_integer,
+    raw_register as _modbus_raw_register,
 )
 
+from .addresses import coil_address, register_address
 from .exceptions import TrovisWriteAccessError
 from .ranges import COIL_RANGES, REGISTER_RANGES
 
@@ -34,11 +38,46 @@ from .ranges import COIL_RANGES, REGISTER_RANGES
 NAN_INT16 = 0x7FFF  # the value the controller returns for an absent sensor
 
 DEFAULT_WRITE_ACCESS_CODE = 1732
-WRITE_ACCESS_REGISTER = 144
+WRITE_ACCESS_REGISTER = 40145  # HR40145 / Write-En_Modem, Modbus address 144
 WRITE_ACCESS_DISABLE_CODE = 0
 
 LEVEL_GLT = False
 LEVEL_AUTARK = True
+
+
+def raw_register(hr_number: int, *args: Any, **kwargs: Any):
+    """Create a raw register field from a manufacturer TROVIS HR reference."""
+    return _modbus_raw_register(register_address(hr_number), *args, **kwargs)
+
+
+def integer(hr_number: int, *args: Any, **kwargs: Any):
+    """Create an integer field from a manufacturer TROVIS HR reference."""
+    return _modbus_integer(register_address(hr_number), *args, **kwargs)
+
+
+def gauge(hr_number: int, *args: Any, **kwargs: Any):
+    """Create a gauge field from a manufacturer TROVIS HR reference."""
+    return _modbus_gauge(register_address(hr_number), *args, **kwargs)
+
+
+def enum(hr_number: int, *args: Any, **kwargs: Any):
+    """Create an enum field from a manufacturer TROVIS HR reference."""
+    return _modbus_enum(register_address(hr_number), *args, **kwargs)
+
+
+def coil(
+    cl_number: int,
+    *,
+    stride: int = 0,
+    writable: bool = False,
+):
+    """Create a coil field from a manufacturer TROVIS CL number."""
+    return _modbus_coil(
+        coil_address(cl_number),
+        stride=stride,
+        writable=writable,
+    )
+
 
 
 def coil_address(cl_number: int) -> int:
@@ -70,7 +109,10 @@ async def async_read_writing_enabled(unit: Any) -> bool:
     """Return whether TROVIS write access appears to be active."""
     try:
         return (
-            await unit.read_holding_registers(WRITE_ACCESS_REGISTER, 1)
+            await unit.read_holding_registers(
+                register_address(WRITE_ACCESS_REGISTER),
+                1,
+            )
         )[0] != WRITE_ACCESS_DISABLE_CODE
     except ModbusError as err:
         raise TrovisWriteAccessError(
@@ -84,7 +126,7 @@ async def async_enable_writing(
 ) -> None:
     """Enable TROVIS writing globally."""
     try:
-        await unit.write_register(WRITE_ACCESS_REGISTER, access_code)
+        await unit.write_register(register_address(WRITE_ACCESS_REGISTER), access_code)
     except ModbusError as err:
         raise TrovisWriteAccessError(
             "Could not enable TROVIS write access"
@@ -94,7 +136,10 @@ async def async_enable_writing(
 async def async_disable_writing(unit: Any) -> None:
     """Disable TROVIS writing globally."""
     try:
-        await unit.write_register(WRITE_ACCESS_REGISTER, WRITE_ACCESS_DISABLE_CODE)
+        await unit.write_register(
+            register_address(WRITE_ACCESS_REGISTER),
+            WRITE_ACCESS_DISABLE_CODE,
+        )
     except ModbusError as err:
         raise TrovisWriteAccessError(
             "Could not reset TROVIS write access"
@@ -107,7 +152,7 @@ async def async_ensure_writing_enabled(
 ) -> None:
     """Ensure that the TROVIS access code is active for the next write."""
     try:
-        await unit.write_register(WRITE_ACCESS_REGISTER, access_code)
+        await unit.write_register(register_address(WRITE_ACCESS_REGISTER), access_code)
     except ModbusError as err:
         raise TrovisWriteAccessError(
             "Could not refresh TROVIS write access"
@@ -167,7 +212,7 @@ class TrovisComponent(Component):
 
 
 def temperature(
-    address: int,
+    hr_number: int,
     *,
     stride: int = 0,
     writable: bool = False,
@@ -175,7 +220,7 @@ def temperature(
 ) -> RegisterField[float]:
     """A signed 0.1-scaled temperature register with the Trovis NaN sentinel."""
     return gauge(
-        address,
+        hr_number,
         0.1,
         signed=True,
         nan=NAN_INT16,

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from modbus_connection.model import gauge, integer
 
-from .model import TrovisComponent
+from .model import TrovisComponent, gauge, integer
 
 
 class DeviceInformation(TrovisComponent):
@@ -16,11 +16,11 @@ class DeviceInformation(TrovisComponent):
 
     manufacturer = "Samson"
 
-    system = gauge(1, 0.1, signed=False)  # hydraulic-system / "Anlage" code
-    _model_raw = integer(0, signed=False)
-    _firmware_raw = gauge(2, 0.01, signed=False)
-    _hardware_raw = gauge(3, 0.01, signed=False)
-    _serial_raw = integer(5, signed=False)
+    _model_raw = integer(40001, signed=False)
+    system = gauge(40002, 0.1, signed=False)  # hydraulic-system / "Anlage" code
+    _firmware_raw = gauge(40003, 0.01, signed=False)
+    _hardware_raw = gauge(40004, 0.01, signed=False)
+    _serial_raw = integer(40006, signed=False)
 
     @property
     def model(self) -> str:

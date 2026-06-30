@@ -6,16 +6,16 @@ import datetime
 
 from modbus_connection.model import raw_register
 
-from .model import TrovisComponent
+from .model import TrovisComponent, raw_register
 from .utils import time_from_hhmm
 
 
 class Clock(TrovisComponent):
     """Controller clock, exposed as native ``date`` / ``time`` / ``datetime``."""
 
-    _time_raw = raw_register(99, writable=True)
-    _date_raw = raw_register(100, writable=True)
-    year = raw_register(101, writable=True)
+    _time_raw = raw_register(40100, writable=True)
+    _date_raw = raw_register(40101, writable=True)
+    year = raw_register(40102, writable=True)
 
     @property
     def time(self) -> datetime.time | None:
