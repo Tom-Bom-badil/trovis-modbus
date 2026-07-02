@@ -1,126 +1,181 @@
 # trovis-modbus
 
-A standalone Python library that reads a **Samson Trovis 557x** heating
-controller over Modbus, exposed as a normal, object-oriented Python API.
+> [!IMPORTANT]
+> Additional documentation and instructions for contributors are available in the [project wiki](https://github.com/Tom-Bom-badil/trovis-modbus/wiki).
 
-Addresses, scales and data types are taken from the canonical Trovis 557x point
-list (the [Tom-Bom-badil](https://github.com/Tom-Bom-badil/samson_trovis_557x)
-SmartHomeNG plugin) and **verified in tests** against a vendored copy of that
-table (`tests/reference/canonical_points.json`).
+`trovis-modbus` is an asynchronous Python library for reading and writing Samson TROVIS 557x heating controllers over Modbus.
 
-## Design
+The library is backend-neutral: it consumes a [`modbus_connection.ModbusUnit`](https://github.com/home-assistant-libs/modbus-connection) and does not create or own the transport itself. Applications can therefore use `tmodbus`, `pymodbus`, or another backend supported by `modbus-connection`.
 
-- It **consumes the connection abstraction**, not a backend: the API takes a
-  [`modbus_connection.ModbusUnit`](../modbus-connection) and reads/writes through
-  it. You choose the backend (pymodbus, tmodbus, …).
-- A `Trovis557x` is a tree of independently-updatable **sub-systems**, each a
-  `Component` that knows its own registers:
+The Home Assistant integration using this library is maintained separately in [`trovis-modbus-hass`](https://github.com/Tom-Bom-badil/trovis-modbus-hass).
 
-  | Attribute | What |
-  | --- | --- |
-  | `info` | model, firmware/hardware version, serial → `DeviceInfo` |
-  | `controller` | faults, rotary switches, summer mode, frost limit, locks |
-  | `clock` | date/time as native `datetime` objects |
-  | `sensors` | every temperature input (outside, flow, return, room, storage, remote) |
-  | `heating_circuit_1` / `_2` / `_3` | space-heating circuits (RK1-3) |
-  | `hot_water` | domestic hot water (HK4): setpoints, charging, disinfection |
+## Features
 
-- Each sub-system can refresh on its own and has its **own update listeners**, so
-  a single Home Assistant entity can subscribe to just the part it shows
-  (e.g. one climate entity per heating circuit).
-- Units of measurement live in each property's docstring, not in the value.
+- Object-oriented access to controller subsystems
+- Automatic controller-model probe
+- Automatic detection of connected physical sensors
+- Model-aware heating-circuit support
+- Model-specific readable register and coil ranges
+- Grouped and range-aware Modbus reads
+- Maximum read span of 50 registers or coils per request
+- Read and write support for registers and coils
+- TROVIS write-access handling
+- Field-specific write validation
+- Neutral metadata for units, limits, steps, enums, and writable flags
+- TROVIS-specific invalid-value handling
 
-## Use
+## Supported model profiles
+
+The current implementation uses two conservative manufacturer-derived profiles:
+
+| Models | Heating circuits | Register and coil profile |
+| --- | ---: | --- |
+| TROVIS 5573, 5575, 5576 | 2 | TROVIS 5573 Rev. 2.54 |
+| TROVIS 5578, 5579 | 3 | TROVIS 5578 Rev. 2.62 final |
+
+Known gaps and manufacturer block boundaries are preserved. Reads are never planned across those boundaries.
+
+## Device structure
+
+A `Trovis557x` object exposes the following subsystems:
+
+| Attribute | Description |
+| --- | --- |
+| `info` | Model, firmware, hardware version, and serial information |
+| `controller` | Controller-wide status and settings |
+| `clock` | Controller date and time |
+| `sensors` | Physical temperature and remote-control inputs |
+| `heating_circuit_1` | Heating circuit Rk1 |
+| `heating_circuit_2` | Heating circuit Rk2 |
+| `heating_circuit_3` | Heating circuit Rk3 on supported models |
+| `hot_water` | Domestic-hot-water circuit Rk4 |
+
+`device.heating_circuits` contains only the heating circuits supported by the detected model.
+
+## Basic usage
+
+Install the library together with the desired `modbus-connection` backend.
+
+Example using `tmodbus` and transparent RTU over TCP:
 
 ```python
 import asyncio
-from modbus_connection.pymodbus import connect_tcp
-from trovis_modbus import Trovis557x, OperatingMode
+
+from modbus_connection.tmodbus import connect_tcp
+from trovis_modbus import Trovis557x
 
 
 async def main() -> None:
-    conn = await connect_tcp("192.168.1.50", port=502)
+    connection = await connect_tcp(
+        "192.168.1.50",
+        port=502,
+        framer="rtu",
+    )
+
     try:
-        trovis = Trovis557x(conn.for_unit(1))     # unit 1 = the controller's Modbus address
-        await trovis.async_update()
+        unit = connection.for_unit(246)
 
-        print("Outside:", trovis.sensors.outside_1, "°C")
-        print("HK1 mode:", trovis.heating_circuit_1.mode)
-        print("HK1 target:", trovis.heating_circuit_1.room_setpoint_active, "°C")
-        print("HK1 pump:", trovis.heating_circuit_1.pump_running)
-        print("HK1 curve:", trovis.heating_circuit_1.heating_curve())
-        print("Hot water:", trovis.hot_water.setpoint_active, "charging:", trovis.hot_water.charge_pump_running)
-        print("Clock:", trovis.clock.datetime)
+        probe = await Trovis557x.async_probe(unit)
 
-        # Writes (reverse the scaling/encoding automatically)
-        await trovis.heating_circuit_1.set_room_setpoint_day(21.5)
-        await trovis.heating_circuit_1.set_mode(OperatingMode.DAY)
-        await trovis.hot_water.start_forced_charge()
+        device = Trovis557x(
+            unit,
+            model=probe.model,
+            detected_sensors=probe.detected_sensors,
+        )
+
+        await device.async_update()
+
+        print("Model:", device.model)
+        print("Detected sensors:", sorted(device.detected_sensors))
+        print("Outside temperature AF1:", device.sensors.af1)
+        print(
+            "Rk1 day setpoint:",
+            device.heating_circuit_1.room_setpoint_day,
+        )
+
+        await device.async_enable_writing()
+        try:
+            await device.heating_circuit_1.set_room_setpoint_day(21.5)
+        finally:
+            await device.async_disable_writing()
     finally:
-        await conn.close()
+        await connection.close()
 
 
 asyncio.run(main())
 ```
 
-### Updating just one sub-system
+For native Modbus TCP with MBAP framing, use:
 
 ```python
-await trovis.hot_water.async_update()              # only reads the HK4 registers
-unsub = trovis.hot_water.add_update_listener(refresh_my_entity)
+connection = await connect_tcp(
+    "192.168.1.50",
+    port=502,
+    framer="socket",
+)
 ```
 
-## Command-line tool
+Serial transports are opened through the selected backend and may include local serial ports or supported serial URLs.
 
-`script/query.py` connects to a controller, reads it once, and prints every
-value — handy for checking a real device without Home Assistant. It needs a
-concrete backend, so install the `cli` extra (`pip install trovis-modbus[cli]`,
-or run via `uv run --extra cli`):
+## Metadata and writes
+
+The library is the source of truth for neutral TROVIS datapoint metadata:
+
+- register or coil reference
+- value type
+- scaling
+- invalid values
+- unit
+- minimum and maximum
+- step
+- enum options
+- writable state
+
+Writes use:
+
+```python
+await component.async_write_datapoint(field, value)
+```
+
+The library refreshes the TROVIS write-access code before the write, applies field validation, and performs required TROVIS-specific preconditions such as releasing an `Ebene` override coil.
+
+## Address conventions
+
+Catalog definitions use manufacturer references:
+
+- holding registers such as `HR40145`
+- coils such as `CL137`
+
+Conversion to zero-based Modbus addresses is centralized in the library.
+
+## Command-line query tool
+
+The repository contains `script/query.py` for querying a controller without Home Assistant.
+
+Install the CLI backend:
 
 ```bash
-# Network gateway (RTU-over-TCP by default — how Trovis gateways work):
-uv run --extra cli python script/query.py tcp 192.168.1.50 --unit 246
-
-# Serial / USB (defaults to the Trovis 19200 8N1 line):
-uv run --extra cli python script/query.py serial /dev/ttyUSB0 --unit 246
+python -m pip install -e ".[cli]"
 ```
 
-Use `--port`, `--framer {rtu,socket}` (TCP) or `--baudrate`/`--parity`/… (serial)
-to override defaults; `--help` lists them all. Output is grouped by sub-system:
-
-```text
-Device
-------
-  model             Trovis 5579
-  firmware_version  3.05
-  ...
-
-Heating circuit 1
------------------
-  mode                  automatic
-  room_temperature      20.0 °C
-  room_setpoint_active  21.0 °C
-  flow_temperature      55.0 °C
-  pump_running          True
-  ...
-```
-
-## Develop / test
+Examples:
 
 ```bash
+python script/query.py tcp 192.168.1.50 --unit 246
+python script/query.py serial /dev/ttyUSB0 --unit 246
+```
+
+Use `--framer rtu` for transparent RTU over TCP or `--framer socket` for native Modbus TCP.
+
+## Development and tests
+
+```bash
+python -m pip install -e .
 uv sync
 uv run pytest
-```
-
-The suite cross-checks every field against the canonical point list and
-exercises decoding, the heating curve, writes and listeners against the
-in-memory mock backend that ships with `modbus-connection` (its `mock_modbus_unit`
-pytest fixture) — no real Modbus server or backend is needed.
-
-Formatting/linting is [ruff](https://docs.astral.sh/ruff/); install the commit
-hook with [prek](https://github.com/j178/prek):
-
-```bash
-uvx prek install
 uvx prek run --all-files
 ```
+
+The test suite uses the in-memory mock backend provided by `modbus-connection`; no physical controller or external Modbus server is required for the normal unit tests.
+
+Please read the [contributor instructions](https://github.com/Tom-Bom-badil/trovis-modbus/wiki) before opening a pull request.
