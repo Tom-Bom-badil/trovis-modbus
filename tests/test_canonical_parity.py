@@ -49,7 +49,7 @@ def _fields() -> list[tuple[str, int, RegisterField | CoilField]]:
         label = type(component).__name__ + (
             f"[{component._index}]" if component._index != 1 else ""
         )
-        for field in {**component._register_fields, **component._coil_fields}.values():
+        for field in {**component._register_fields, **component._bit_fields}.values():
             out.append((label, component._address(field), field))
     return out
 

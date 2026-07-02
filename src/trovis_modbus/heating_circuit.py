@@ -13,7 +13,11 @@ class HeatingCircuit(TrovisComponent):
     """One space-heating circuit. Construct with ``index`` 1, 2 or 3.
 
     Addresses follow the controller's offset pattern: the 1000-block steps by
-    200 per circuit, mode/control-signal by 2, pumps/manual status by 1.
+    200 per circuit, mode/control-signal by 2, pumps/manual status by 1. Because
+    those per-field strides differ, each circuit stays a per-``index`` instance
+    with a field-level ``stride`` — not a ``repeating_group`` / ``base_offset``
+    block, which shifts every address of an instance by one uniform amount and so
+    can't express the 200/2/1 mix.
     """
 
     # Override coils (mode 88+2n, pump 95+1n) released before a write.

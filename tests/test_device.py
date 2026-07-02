@@ -130,7 +130,7 @@ async def test_full_update_consolidates_reads() -> None:
     device = Trovis557x(unit)  # type: ignore[arg-type]
 
     field_count = sum(
-        len(c._register_fields) + len(c._coil_fields) for c in device.components
+        len(c._register_fields) + len(c._bit_fields) for c in device.components
     )
     await device.async_update()
 
