@@ -9,7 +9,6 @@ from dataclasses import dataclass
 from enum import IntEnum
 from typing import Any, Literal
 
-
 ValueKind = Literal["number", "enum", "boolean", "raw"]
 
 
@@ -78,7 +77,7 @@ def step_from_digits(digits: int | None) -> float | int | None:
     if digits <= 0:
         return 1
 
-    return 10 ** -digits
+    return 10**-digits
 
 
 def attach_metadata(field: Any, metadata: DatapointMetadata) -> Any:

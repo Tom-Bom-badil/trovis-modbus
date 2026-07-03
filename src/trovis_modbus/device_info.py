@@ -6,8 +6,6 @@ sw_version, hw_version, serial_number) directly on the component.
 
 from __future__ import annotations
 
-from modbus_connection.model import gauge, integer
-
 from .model import TrovisComponent, gauge, integer
 
 

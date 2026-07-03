@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import datetime
 
-from modbus_connection.model import raw_register
-
 from .model import TrovisComponent, raw_register
 from .utils import time_from_hhmm
 

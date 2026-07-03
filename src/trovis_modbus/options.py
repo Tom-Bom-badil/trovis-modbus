@@ -5,7 +5,6 @@ from __future__ import annotations
 from .enums import OperatingMode, Weekday
 from .metadata import OptionMetadata
 
-
 # Writable operating-mode fields currently expose the proven user-facing subset.
 # PROGRAM/AUTOMATIC are still part of OperatingMode for read-only rotary-switch
 # values, but are not offered as writable select options here.

@@ -12,7 +12,6 @@ from __future__ import annotations
 
 from .addresses import cl_range, hr_range
 
-
 TWO_HEATING_CIRCUIT_MODELS = frozenset({5573, 5575, 5576})
 THREE_HEATING_CIRCUIT_MODELS = frozenset({5578, 5579})
 SUPPORTED_MODELS = TWO_HEATING_CIRCUIT_MODELS | THREE_HEATING_CIRCUIT_MODELS

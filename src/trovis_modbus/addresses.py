@@ -20,8 +20,7 @@ def register_address(hr_number: int) -> int:
     """
     if hr_number < REGISTER_REFERENCE_BASE or hr_number > REGISTER_REFERENCE_MAX:
         raise ValueError(
-            "Expected TROVIS holding-register reference like 40102, "
-            f"got {hr_number}"
+            f"Expected TROVIS holding-register reference like 40102, got {hr_number}"
         )
 
     return hr_number - REGISTER_REFERENCE_BASE

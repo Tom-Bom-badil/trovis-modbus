@@ -5,7 +5,15 @@ from __future__ import annotations
 import datetime
 
 from .enums import OperatingMode, Weekday
-from .model import TrovisComponent, coil, enum, gauge, integer, raw_register, temperature
+from .model import (
+    TrovisComponent,
+    coil,
+    enum,
+    gauge,
+    integer,
+    raw_register,
+    temperature,
+)
 from .options import OPERATING_MODE_OPTIONS, WEEKDAY_OPTIONS
 from .utils import time_from_hhmm
 

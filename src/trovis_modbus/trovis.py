@@ -86,7 +86,7 @@ class Trovis557x:
             self.heating_circuit_1,
             self.heating_circuit_2,
             self.heating_circuit_3,
-        )[:heating_circuit_count(model)]
+        )[: heating_circuit_count(model)]
 
         self._group = ComponentGroup(unit, self.components)
 

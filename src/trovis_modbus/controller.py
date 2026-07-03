@@ -2,10 +2,16 @@
 
 from __future__ import annotations
 
-from modbus_connection.model import enum, gauge, integer, raw_register
-
 from .enums import OperatingMode
-from .model import TrovisComponent, coil, enum, gauge, integer, raw_register, temperature
+from .model import (
+    TrovisComponent,
+    coil,
+    enum,
+    gauge,
+    integer,
+    raw_register,
+    temperature,
+)
 from .utils import MonthDay
 
 
@@ -57,13 +63,11 @@ class Controller(TrovisComponent):
     manual_levels_locked = coil(150, writable=True)  # CL150 / FB21
     rotary_switch_locked = coil(151, writable=True)  # CL151 / FB22
 
-
     @property
     def summer_start(self) -> MonthDay | None:
         """Start of the summer-mode window (day, month)."""
         raw = self._summer_start_raw
         return MonthDay(raw // 100, raw % 100) if raw else None
-
 
     @property
     def summer_end(self) -> MonthDay | None:
