@@ -109,6 +109,15 @@ class HeatingCircuit(TrovisComponent):
 
     ### coils
 
+    mode_control_autonomous = coil(
+        89,
+        stride=2,
+        false_key="glt",
+        true_key="autonomous",
+        false_label="GLT",
+        true_label="Autark",
+        description="Steuerungsebene Betriebsart",
+    )
     manual_active = coil(5, stride=1)
     pump_running = coil(57, stride=1, writable=True)
     room_control_unit = coil(703, stride=1, writable=True)

@@ -18,7 +18,15 @@ from .addresses import coil_address, register_address
 from .clock import Clock
 from .controller import Controller
 from .device_info import DeviceInformation
-from .enums import OperatingMode, Weekday
+from .enums import (
+    EnergyUnit,
+    FlowRateUnit,
+    HeatMeterReadMode,
+    OperatingMode,
+    PowerUnit,
+    VolumeUnit,
+    Weekday,
+)
 from .exceptions import (
     TrovisValueValidationError,
     TrovisWriteAccessDisabledError,
@@ -46,12 +54,17 @@ __all__ = [
     "Clock",
     "Controller",
     "DeviceInformation",
+    "EnergyUnit",
+    "FlowRateUnit",
     "HeatingCircuit",
+    "HeatMeterReadMode",
     "HotWater",
     "MonthDay",
     "OperatingMode",
+    "PowerUnit",
     "Sensors",
     "Trovis557x",
+    "VolumeUnit",
     "Weekday",
     "heating_curve",
     "DEFAULT_WRITE_ACCESS_CODE",

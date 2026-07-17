@@ -28,6 +28,7 @@ from modbus_connection.model import (
 )
 
 from .addresses import coil_address, register_address
+from .enums import OperatingMode
 from .exceptions import TrovisValueValidationError, TrovisWriteAccessError
 from .metadata import (
     BooleanMetadata,
@@ -445,8 +446,12 @@ class TrovisComponent(Component):
     coil_ranges = COIL_RANGES
     max_span = 50
 
-    # Writable fields whose write must first release an override coil to 0.
+    # Writable fields whose write must first change an Ebene override coil.
     ebene_coils: dict[str, tuple[int, int]] = {}
+
+    # Values that restore autonomous controller operation through the Ebene
+    # coil instead of being written to the corresponding holding register.
+    ebene_autark_values: dict[str, Any] = {"mode": OperatingMode.AUTOMATIC}
 
     def metadata_for(self, field: str) -> DatapointMetadata | None:
         """Return neutral TROVIS metadata for a field."""
@@ -465,13 +470,25 @@ class TrovisComponent(Component):
         return metadata
 
     async def write(self, field: str, value: Any) -> None:
-        """Write a field, applying field-specific TROVIS preconditions."""
+        """Write a field, applying field-specific TROVIS preconditions.
+
+        Most overridden fields first switch their Ebene coil to ``GLT`` and
+        then write the requested register value. Operating mode ``AUTOMATIC``
+        is the inverse operation: it restores ``AUTARK`` and deliberately
+        leaves the holding register untouched.
+        """
         if (override := self.ebene_coils.get(field)) is not None:
             address, stride = override
-            await self._unit.write_coil(
-                coil_address(address + stride * (self._index - 1)),
-                LEVEL_GLT,
-            )
+            coil = coil_address(address + stride * (self._index - 1))
+
+            if (
+                field in self.ebene_autark_values
+                and value == self.ebene_autark_values[field]
+            ):
+                await self._unit.write_coil(coil, LEVEL_AUTARK)
+                return
+
+            await self._unit.write_coil(coil, LEVEL_GLT)
 
         await super().write(field, value)
 

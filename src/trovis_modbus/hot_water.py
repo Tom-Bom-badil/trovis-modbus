@@ -114,13 +114,23 @@ class HotWater(TrovisComponent):
 
     ### coils
 
+    manual_active = coil(8)
+    charge_pump_running = coil(60, writable=True)
+    circulation_pump_running = coil(61, writable=True)
+    mode_control_autonomous = coil(
+        95,
+        false_key="glt",
+        true_key="autonomous",
+        false_label="GLT",
+        true_label="Autark",
+        description="Steuerungsebene Betriebsart Trinkwasser",
+    )
     intermediate_heating_operation = coil(
         407,
         writable=True,
         maker_key="FB07_Zwischenheizen",
         description="Zwischenheizbetrieb",
     )
-
     automatic = coil(1800)
     disinfection_active = coil(1801)
     priority = coil(1802)
@@ -131,9 +141,6 @@ class HotWater(TrovisComponent):
     forced_charge = coil(1807, writable=True)
     solar_pump_running = coil(1808)
 
-    manual_active = coil(8)
-    charge_pump_running = coil(60, writable=True)
-    circulation_pump_running = coil(61, writable=True)
 
     @property
     def disinfection_start(self) -> datetime.time | None:

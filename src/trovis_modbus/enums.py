@@ -1,4 +1,4 @@
-"""Enumerations used across the Trovis model."""
+"""Enumerations used across the TROVIS model."""
 
 from __future__ import annotations
 
@@ -6,10 +6,11 @@ from enum import IntEnum
 
 
 class OperatingMode(IntEnum):
-    """Operating mode of a heating circuit, hot water, or a rotary switch.
+    """Operating mode of a heating circuit, hot water, or rotary switch.
 
-    Matches the controller's switch list (``Liste_Schalter``). The hot-water
-    rotary switch only uses ``PROGRAM``..``MANUAL``.
+    Matches the controller's complete switch list (``Liste_Schalter``). The
+    writable option list intentionally excludes :attr:`PROGRAM`, while every
+    heating and hot-water circuit uses the same enum.
     """
 
     PROGRAM = 0  # timer program ("PA")
@@ -31,3 +32,40 @@ class Weekday(IntEnum):
     FRIDAY = 5
     SATURDAY = 6
     SUNDAY = 7
+
+
+class HeatMeterReadMode(IntEnum):
+    """Read mode used by a connected heat meter."""
+
+    HOURS_24 = 0
+    CONTINUOUS = 1
+    COIL = 2
+
+
+class FlowRateUnit(IntEnum):
+    """Unit selector for heat-meter flow-rate values."""
+
+    CUBIC_METERS_PER_HOUR = 0
+    LITERS_PER_HOUR = 1
+
+
+class VolumeUnit(IntEnum):
+    """Unit selector for heat-meter volume values."""
+
+    CUBIC_METERS = 0
+    LITERS = 1
+
+
+class EnergyUnit(IntEnum):
+    """Unit selector for heat-meter energy values."""
+
+    MEGAWATT_HOURS = 0
+    KILOWATT_HOURS = 1
+    GIGAJOULES = 2
+
+
+class PowerUnit(IntEnum):
+    """Unit selector for heat-meter power values."""
+
+    KILOWATTS = 0
+    MEGAWATTS = 1
