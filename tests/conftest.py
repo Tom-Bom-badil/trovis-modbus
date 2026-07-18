@@ -13,7 +13,7 @@ from modbus_connection.mock import MockModbusUnit
 
 from trovis_modbus import Trovis557x
 
-pytest_plugins = ("modbus_connection.pytest_plugin",)
+# pytest_plugins = ("modbus_connection.pytest_plugin",)
 # run: PYTHONPATH=src:/config/dev/modbus-connection/src python -m pytest
 
 # Raw register words keyed by their (protocol) address; decoded view inline.
