@@ -20,6 +20,16 @@ class Controller(TrovisComponent):
 
     ##### registers
 
+    special_functions = integer(
+        40005,
+        signed=False,
+        min_value=0,
+        max_value=6000,
+        maker_key="Sonderfunktionen",
+        maker_category="ALG-ID",
+        description="Reglerupdate via Modbus / Reglerneustart",
+    )
+
     max_flow_setpoint = temperature(40099)
 
     # The three front-panel rotary switches, top to bottom (RK1 / RK2 / hot water).

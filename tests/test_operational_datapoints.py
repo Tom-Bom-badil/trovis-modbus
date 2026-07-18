@@ -56,3 +56,31 @@ def test_new_writable_fields_have_expected_limits() -> None:
     assert special.number.min_value == 5
     assert special.number.max_value == 90
     assert special.number.step == pytest.approx(0.1)
+
+
+def test_legacy_gap_registers_and_intermediate_heating_points() -> None:
+    device = Trovis557x(unit=None)  # type: ignore[arg-type]
+
+    controller = device.controller
+    hot_water = device.hot_water
+
+    assert controller._address(
+        controller._register_fields["special_functions"]
+    ) == 4
+
+    overrun = hot_water.require_metadata_for("charge_pump_overrun_factor")
+    assert hot_water._address(
+        hot_water._register_fields["charge_pump_overrun_factor"]
+    ) == 1804
+    assert overrun.writable is True
+    assert overrun.number is not None
+    assert overrun.number.min_value == pytest.approx(0.1)
+    assert overrun.number.max_value == pytest.approx(10.0)
+    assert overrun.number.step == pytest.approx(0.1)
+
+    assert hot_water._address(
+        hot_water._bit_fields["intermediate_heating_function_enabled"]
+    ) == 406
+    assert hot_water._address(
+        hot_water._bit_fields["intermediate_heating_operation"]
+    ) == 1830

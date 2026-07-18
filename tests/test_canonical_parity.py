@@ -46,13 +46,13 @@ KNOWN_NON_CANONICAL_COILS = {
         (122, False),
         (123, False),
         (124, False),  # Active room-setpoint control level Rk1-Rk3
-        (407, True),   # Hot-water intermediate heating operation
+        (407, True),  # Hot-water intermediate-heating function block
         (703, True),
         (704, True),
-        (705, True),   # Room control unit Rk1-Rk3
-        (1810, False), # Hot-water storage charging active
+        (705, True),  # Room control unit Rk1-Rk3
+        (1810, False),  # Hot-water storage charging active
         (1811, True),  # Hot-water storage charging enabled
-        (1812, False), # Hot-water storage charging locked
+        (1812, False),  # Hot-water storage charging locked
         (2107, True),
         (2207, True),
         (2307, True),  # Optimization Rk1-Rk3

@@ -99,6 +99,18 @@ class HotWater(TrovisComponent):
         writable=True,
     )
 
+    charge_pump_overrun_factor = gauge(
+        41805,
+        0.1,
+        writable=True,
+        min_value=0.1,
+        max_value=10.0,
+        digits=1,
+        maker_key="Nachlauf_SLP",
+        maker_category="SOL-WW",
+        description="Nachlauffaktor der Speicherladepumpe",
+    )
+
     max_charge_temp = temperature(41806, writable=True)
 
     hold_value = temperature(
@@ -189,11 +201,22 @@ class HotWater(TrovisComponent):
         maker_category="EBN-BTR",
         description="Steuerungsebene Betriebsart Trinkwasser",
     )
-    intermediate_heating_operation = coil(
+    intermediate_heating_function_enabled = coil(
         407,
         writable=True,
-        maker_key="FB07_Zwischenheizen",
-        description="Zwischenheizbetrieb",
+        maker_key="FB07_Zwischenhzg",
+        maker_category="CON-WW",
+        description="Funktionsblock CO4-FB07 Zwischenheizbetrieb",
+    )
+    intermediate_heating_operation = coil(
+        1831,
+        writable=True,
+        maker_key="FB07_Zwischenhzg",
+        maker_category="CON-WW",
+        description=(
+            "Zwischenheizbetrieb; von der 55Pro-App und der bewährten "
+            "Legacy-Konfiguration verwendeter Spiegelpunkt"
+        ),
     )
     automatic = coil(1800)
     disinfection_active = coil(1801)
