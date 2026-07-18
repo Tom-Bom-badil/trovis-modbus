@@ -35,6 +35,9 @@ HARDWARE_VERIFIED_SCALE: dict[int, float] = {117: 0.1}
 # Manufacturer-documented points that are modeled by the library but are not
 # present in the older SmartHomeNG/5576-derived canonical reference file.
 KNOWN_NON_CANONICAL_REGISTERS = {
+    register_address(40028),  # 5578-E AE3 / FG3 input
+    register_address(40042),  # 5578 analog input 0-10 V
+    register_address(40043),  # Summer-operation daily outside average
     register_address(41827),  # Current hot-water storage status
 }
 
@@ -43,6 +46,7 @@ KNOWN_NON_CANONICAL_REGISTERS = {
 KNOWN_NON_CANONICAL_COILS = {
     coil_address(cl_number): writable
     for cl_number, writable in (
+        (159, True),  # GLT timeout monitoring
         (122, False),
         (123, False),
         (124, False),  # Active room-setpoint control level Rk1-Rk3

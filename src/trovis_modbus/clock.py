@@ -3,16 +3,30 @@
 from __future__ import annotations
 
 import datetime
+from typing import Any
 
-from .model import TrovisComponent, raw_register
-from .utils import time_from_hhmm
+from .model import TrovisComponent, date_value, raw_register, time_value
 
 
 class Clock(TrovisComponent):
     """Controller clock, exposed as native ``date`` / ``time`` / ``datetime``."""
 
-    _time_raw = raw_register(40100, writable=True)
-    _date_raw = raw_register(40101, writable=True)
+    time = time_value(
+        40100,
+        writable=True,
+        maker_key="Uhrzeit",
+        maker_category="ALG-DAT",
+        description="Uhrzeit",
+    )
+    date = date_value(
+        40101,
+        min_year=2000,
+        max_year=2098,
+        writable=True,
+        maker_key="Datum",
+        maker_category="ALG-DAT",
+        description="Datum",
+    )
     year = raw_register(
         40102,
         writable=True,
@@ -25,26 +39,40 @@ class Clock(TrovisComponent):
     )
 
     @property
-    def time(self) -> datetime.time | None:
-        """Time of day (the controller stores it packed as HHMM)."""
-        return time_from_hhmm(self._time_raw)
-
-    @property
-    def date(self) -> datetime.date | None:
-        """Calendar date (the controller stores day*100+month and the year)."""
-        raw = self._date_raw
-        year = self.year
-        if not raw or not year:
-            return None
-        try:
-            return datetime.date(year=year, month=raw % 100, day=raw // 100)
-        except ValueError:
-            return None
-
-    @property
     def datetime(self) -> datetime.datetime | None:
-        """Combined date and time."""
+        """Combined local controller date and time."""
         moment = self.time
-        if (day := self.date) is None or moment is None:
+        day = self.date
+        if day is None or moment is None:
             return None
         return datetime.datetime.combine(day, moment)
+
+    async def write(self, field: str, value: Any) -> None:
+        """Write dates in the year-first order used by the TROVIS tools."""
+        if field != "date":
+            await super().write(field, value)
+            return
+
+        descriptor = self._register_fields[field]
+        raw_date, year = descriptor.encode(value)
+        address = self._address(descriptor)
+
+        # 55Pro writes the year first and DDMM afterwards. Keep that proven
+        # sequence instead of relying on one FC16 request across both words.
+        await self._unit.write_register(address + 1, year)
+        await self._unit.write_register(address, raw_date)
+
+    async def set_time(self, value: datetime.time) -> None:
+        """Set the controller clock time at minute resolution."""
+        await self.async_write_datapoint("time", value)
+
+    async def set_date(self, value: datetime.date) -> None:
+        """Set the controller calendar date."""
+        await self.async_write_datapoint("date", value)
+
+    async def set_datetime(self, value: datetime.datetime) -> None:
+        """Set controller date and time from one naive local datetime."""
+        if value.tzinfo is not None:
+            raise ValueError("TROVIS controller datetime must be timezone-naive")
+        await self.set_date(value.date())
+        await self.set_time(value.time())

@@ -12,6 +12,7 @@ from .addresses import register_address
 from .clock import Clock
 from .controller import Controller
 from .device_info import DeviceInformation
+from .enums import PlantActivity
 from .heating_circuit import HeatingCircuit
 from .hot_water import HotWater
 from .model import (
@@ -135,6 +136,27 @@ class Trovis557x:
             *self.heating_circuits,
             self.hot_water,
         )
+
+    @property
+    def activity(self) -> PlantActivity | None:
+        """Return combined heating / hot-water activity from pump states."""
+        heating_states = tuple(
+            circuit.pump_running for circuit in self.heating_circuits
+        )
+        hot_water_state = self.hot_water.charge_pump_running
+
+        if all(state is None for state in (*heating_states, hot_water_state)):
+            return None
+
+        heating = any(state is True for state in heating_states)
+        hot_water = hot_water_state is True
+        if heating and hot_water:
+            return PlantActivity.HEATING_AND_HOT_WATER
+        if heating:
+            return PlantActivity.HEATING
+        if hot_water:
+            return PlantActivity.HOT_WATER
+        return PlantActivity.IDLE
 
     @property
     def writing_enabled(self) -> bool:

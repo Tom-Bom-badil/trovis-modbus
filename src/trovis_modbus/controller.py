@@ -9,7 +9,7 @@ from .model import (
     enum,
     gauge,
     integer,
-    raw_register,
+    month_day_value,
     temperature,
 )
 from .utils import MonthDay
@@ -37,14 +37,92 @@ class Controller(TrovisComponent):
     switch_middle = enum(40104, OperatingMode)
     switch_bottom = enum(40105, OperatingMode)
 
-    _summer_start_raw = raw_register(40113)
-    _summer_end_raw = raw_register(40114)
-    summer_days_on = integer(40115, writable=True)  # days above limit to enter summer
-    summer_days_off = integer(40116, writable=True)  # days below limit to leave summer
+    summer_start = month_day_value(
+        40113,
+        writable=True,
+        maker_key="Sommer_Dat_Anf",
+        maker_category="ALG-SON",
+        description="Datum Beginn Sommerzeitraum",
+    )
+    summer_end = month_day_value(
+        40114,
+        writable=True,
+        maker_key="Sommer_Dat_End",
+        maker_category="ALG-SON",
+        description="Datum Ende Sommerzeitraum",
+    )
+    summer_days_on = integer(
+        40115,
+        signed=False,
+        writable=True,
+        min_value=1,
+        max_value=3,
+        digits=0,
+        maker_key="Sommer_Tagz_ein",
+        maker_category="ALG-SON",
+        description="Anzahl Tage für Sommerbetrieb ein",
+    )
+    summer_days_off = integer(
+        40116,
+        signed=False,
+        writable=True,
+        min_value=1,
+        max_value=3,
+        digits=0,
+        maker_key="Sommer_Tagz_aus",
+        maker_category="ALG-SON",
+        description="Anzahl Tage für Sommerbetrieb aus",
+    )
     summer_outside_limit = temperature(40117, writable=True)
 
-    outside_delay = gauge(40118, 0.1, writable=True, unit="K/h")  # AT adaptation rate
+    outside_delay = gauge(40118, 0.1, writable=True, unit="K/h")
+    temperature_monitoring_deviation = gauge(
+        40121,
+        0.1,
+        signed=False,
+        writable=True,
+        min_value=1,
+        max_value=30,
+        digits=1,
+        unit="K",
+        maker_key="TempüwAbweichung",
+        maker_category="ALG-SON",
+        description="Temperaturüberwachung: Regelabweichung",
+    )
+    temperature_monitoring_window = integer(
+        40122,
+        signed=False,
+        writable=True,
+        min_value=1,
+        max_value=120,
+        digits=0,
+        unit="min",
+        maker_key="TempüwZeitfenstr",
+        maker_category="ALG-SON",
+        description="Temperaturüberwachung: Zeitfenster",
+    )
     frost_limit = temperature(40123, writable=True)
+    outside_input_range_start = temperature(
+        40124,
+        writable=True,
+        min_value=-50,
+        max_value=100,
+        digits=1,
+        maker_key="Anfang_AT_0V",
+        maker_category="FÜH-EA",
+        description="Übertragungsbereichsanfang Außentemperatur bei 0 V",
+    )
+    outside_input_range_end = temperature(
+        40125,
+        writable=True,
+        min_value=-50,
+        max_value=100,
+        digits=1,
+        maker_key="Ende_AT_10V",
+        maker_category="FÜH-EA",
+        description="Übertragungsbereichsende Außentemperatur bei 10 V",
+    )
+
     station_address = integer(40143, signed=False)
     error_status = integer(40150, signed=False)
     error_count = integer(
@@ -60,8 +138,8 @@ class Controller(TrovisComponent):
     ##### coils
 
     general_fault = coil(1)
-    data_entry_active = coil(2)  # CL2 / Dateneing_aktiv
-    data_entry_performed = coil(3)  # CL3 / Dateneing_stattg
+    data_entry_active = coil(2)
+    data_entry_performed = coil(3)
     global_level_autark = coil(
         4,
         false_key="glt",
@@ -83,6 +161,17 @@ class Controller(TrovisComponent):
         maker_category="EBN-AT",
         description="Steuerungsebene Außentemperatur AF1",
     )
+    glt_timeout_active = coil(
+        159,
+        writable=True,
+        false_key="inactive",
+        true_key="active",
+        false_label="Inaktiv",
+        true_label="Aktiv",
+        maker_key="FB07_Timeout_GLT",
+        maker_category="CON-MOD",
+        description="Leitsystemüberwachung / GLT-Timeout",
+    )
     any_circuit_not_automatic = coil(
         998,
         maker_key="Btr_nicht_Auto",
@@ -99,10 +188,10 @@ class Controller(TrovisComponent):
         ),
     )
 
-    delayed_outside_temp_adjustment_falling = coil(134, writable=True)  # CL134 / FB05
-    delayed_outside_temp_adjustment_rising = coil(135, writable=True)  # CL135 / FB06
+    delayed_outside_temp_adjustment_falling = coil(134, writable=True)
+    delayed_outside_temp_adjustment_rising = coil(135, writable=True)
 
-    auto_daylight_saving = coil(  # CL137 / FB08
+    auto_daylight_saving = coil(
         137,
         writable=True,
         false_key="inactive",
@@ -113,17 +202,13 @@ class Controller(TrovisComponent):
         description="Automatische Sommer-/Winterzeitumschaltung",
     )
 
-    manual_levels_locked = coil(150, writable=True)  # CL150 / FB21
-    rotary_switch_locked = coil(151, writable=True)  # CL151 / FB22
+    manual_levels_locked = coil(150, writable=True)
+    rotary_switch_locked = coil(151, writable=True)
 
-    @property
-    def summer_start(self) -> MonthDay | None:
-        """Start of the summer-mode window (day, month)."""
-        raw = self._summer_start_raw
-        return MonthDay(raw // 100, raw % 100) if raw else None
+    async def set_summer_start(self, value: MonthDay) -> None:
+        """Set the recurring summer-mode start date."""
+        await self.async_write_datapoint("summer_start", value)
 
-    @property
-    def summer_end(self) -> MonthDay | None:
-        """End of the summer-mode window (day, month)."""
-        raw = self._summer_end_raw
-        return MonthDay(raw // 100, raw % 100) if raw else None
+    async def set_summer_end(self, value: MonthDay) -> None:
+        """Set the recurring summer-mode end date."""
+        await self.async_write_datapoint("summer_end", value)

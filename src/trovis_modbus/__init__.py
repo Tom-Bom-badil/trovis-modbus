@@ -23,6 +23,7 @@ from .enums import (
     FlowRateUnit,
     HeatMeterReadMode,
     OperatingMode,
+    PlantActivity,
     PowerUnit,
     StorageStatus,
     VolumeUnit,
@@ -42,11 +43,17 @@ from .metadata import (
     EnumMetadata,
     NumberMetadata,
     OptionMetadata,
+    TemporalMetadata,
 )
 from .model import DEFAULT_WRITE_ACCESS_CODE
 from .sensors import Sensors
 from .trovis import Trovis557x
-from .utils import OUTSIDE_TEMPERATURES, MonthDay, heating_curve
+from .utils import (
+    OUTSIDE_TEMPERATURES,
+    MonthDay,
+    TemperatureRange,
+    heating_curve,
+)
 
 __all__ = [
     "coil_address",
@@ -61,7 +68,9 @@ __all__ = [
     "HeatMeterReadMode",
     "HotWater",
     "MonthDay",
+    "TemperatureRange",
     "OperatingMode",
+    "PlantActivity",
     "PowerUnit",
     "Sensors",
     "StorageStatus",
@@ -79,4 +88,5 @@ __all__ = [
     "EnumMetadata",
     "NumberMetadata",
     "OptionMetadata",
+    "TemporalMetadata",
 ]

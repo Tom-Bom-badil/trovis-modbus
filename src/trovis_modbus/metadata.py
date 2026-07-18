@@ -6,10 +6,20 @@ This module intentionally contains no Home Assistant concepts.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import time
 from enum import IntEnum
 from typing import Any, Literal
 
-ValueKind = Literal["number", "enum", "boolean", "raw"]
+ValueKind = Literal[
+    "number",
+    "enum",
+    "boolean",
+    "raw",
+    "date",
+    "time",
+    "month_day",
+]
+TemporalResolution = Literal["day", "minute"]
 
 
 @dataclass(frozen=True)
@@ -55,6 +65,17 @@ class BooleanMetadata:
 
 
 @dataclass(frozen=True)
+class TemporalMetadata:
+    """Metadata for native calendar and clock values."""
+
+    resolution: TemporalResolution
+    min_year: int | None = None
+    max_year: int | None = None
+    min_time: time | None = None
+    max_time: time | None = None
+
+
+@dataclass(frozen=True)
 class DatapointMetadata:
     """Neutral metadata for one TROVIS datapoint."""
 
@@ -67,6 +88,7 @@ class DatapointMetadata:
     number: NumberMetadata | None = None
     enum: EnumMetadata | None = None
     boolean: BooleanMetadata | None = None
+    temporal: TemporalMetadata | None = None
 
 
 def step_from_digits(digits: int | None) -> float | int | None:

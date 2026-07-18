@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 from collections.abc import Callable
 from enum import IntEnum
 from typing import Any
@@ -36,10 +37,20 @@ from .metadata import (
     EnumMetadata,
     NumberMetadata,
     OptionMetadata,
+    TemporalMetadata,
     attach_metadata,
     step_from_digits,
 )
 from .ranges import COIL_RANGES, REGISTER_RANGES
+from .utils import (
+    MonthDay,
+    date_from_ddmm_year,
+    date_to_ddmm_year,
+    month_day_from_ddmm,
+    month_day_to_ddmm,
+    time_from_hhmm,
+    time_to_hhmm,
+)
 
 NAN_INT16 = 0x7FFF  # the value the controller returns for an absent sensor
 
@@ -49,6 +60,117 @@ WRITE_ACCESS_DISABLE_CODE = 0
 
 LEVEL_GLT = False
 LEVEL_AUTARK = True
+
+
+class PackedTimeField(RegisterField[datetime.time]):
+    """A TROVIS HHMM register exposed as a native ``datetime.time``."""
+
+    def __init__(
+        self,
+        address: int,
+        *,
+        min_time: datetime.time = datetime.time.min,
+        max_time: datetime.time = datetime.time(23, 59),
+        writable: bool = False,
+    ) -> None:
+        super().__init__(address, writable=writable)
+        self.min_time = min_time
+        self.max_time = max_time
+
+    def decode(
+        self,
+        words: list[int],
+        scale_exponent: int | None = None,
+    ) -> datetime.time | None:
+        """Decode one packed HHMM word within the documented range."""
+        value = time_from_hhmm(words[0])
+        if value is None or not self.min_time <= value <= self.max_time:
+            return None
+        return value
+
+    def encode(
+        self,
+        value: Any,
+        scale_exponent: int | None = None,
+    ) -> list[int]:
+        """Encode a native time at the regulator's supported precision."""
+        try:
+            raw = time_to_hhmm(value)
+        except (TypeError, ValueError) as err:
+            raise TrovisValueValidationError(str(err)) from err
+
+        if not self.min_time <= value <= self.max_time:
+            raise TrovisValueValidationError(
+                f"Time {value.isoformat()} is outside "
+                f"{self.min_time.isoformat()}..{self.max_time.isoformat()}"
+            )
+        return [raw]
+
+
+class PackedMonthDayField(RegisterField[MonthDay]):
+    """A TROVIS DDMM register exposed as a recurring ``MonthDay``."""
+
+    def decode(
+        self,
+        words: list[int],
+        scale_exponent: int | None = None,
+    ) -> MonthDay | None:
+        """Decode one packed DDMM word."""
+        return month_day_from_ddmm(words[0])
+
+    def encode(
+        self,
+        value: Any,
+        scale_exponent: int | None = None,
+    ) -> list[int]:
+        """Encode a validated recurring date."""
+        try:
+            return [month_day_to_ddmm(value)]
+        except (TypeError, ValueError) as err:
+            raise TrovisValueValidationError(str(err)) from err
+
+
+class PackedDateField(RegisterField[datetime.date]):
+    """A TROVIS DDMM register followed by its separate year register."""
+
+    def __init__(
+        self,
+        address: int,
+        *,
+        min_year: int,
+        max_year: int,
+        writable: bool = False,
+    ) -> None:
+        super().__init__(address, count=2, writable=writable)
+        self.min_year = min_year
+        self.max_year = max_year
+
+    def decode(
+        self,
+        words: list[int],
+        scale_exponent: int | None = None,
+    ) -> datetime.date | None:
+        """Decode ``[DDMM, year]`` into a calendar date."""
+        if len(words) != 2 or not self.min_year <= words[1] <= self.max_year:
+            return None
+        return date_from_ddmm_year(words[0], words[1])
+
+    def encode(
+        self,
+        value: Any,
+        scale_exponent: int | None = None,
+    ) -> list[int]:
+        """Encode a calendar date into ``[DDMM, year]``."""
+        try:
+            raw_date, year = date_to_ddmm_year(value)
+        except (TypeError, ValueError) as err:
+            raise TrovisValueValidationError(str(err)) from err
+
+        if not self.min_year <= year <= self.max_year:
+            raise TrovisValueValidationError(
+                f"Year {year} is outside {self.min_year}..{self.max_year}"
+            )
+        return [raw_date, year]
 
 
 def _number_validator(
@@ -264,6 +386,103 @@ def gauge(
                 unit=unit,
                 raw_min=raw_min,
                 raw_max=raw_max,
+            ),
+        ),
+    )
+
+
+def time_value(
+    hr_number: int,
+    *,
+    min_time: datetime.time = datetime.time.min,
+    max_time: datetime.time = datetime.time(23, 59),
+    writable: bool = False,
+    maker_key: str | None = None,
+    maker_category: str | None = None,
+    description: str | None = None,
+) -> RegisterField[datetime.time]:
+    """Create a native minute-resolution time field from a TROVIS HR."""
+    field = PackedTimeField(
+        register_address(hr_number),
+        min_time=min_time,
+        max_time=max_time,
+        writable=writable,
+    )
+    return attach_metadata(
+        field,
+        DatapointMetadata(
+            value_kind="time",
+            maker_reference=hr_number,
+            maker_key=maker_key,
+            maker_category=maker_category,
+            description=description,
+            writable=writable,
+            temporal=TemporalMetadata(
+                resolution="minute",
+                min_time=min_time,
+                max_time=max_time,
+            ),
+        ),
+    )
+
+
+def month_day_value(
+    hr_number: int,
+    *,
+    writable: bool = False,
+    maker_key: str | None = None,
+    maker_category: str | None = None,
+    description: str | None = None,
+) -> RegisterField[MonthDay]:
+    """Create a native recurring-date field from a packed TROVIS DDMM HR."""
+    field = PackedMonthDayField(
+        register_address(hr_number),
+        writable=writable,
+    )
+    return attach_metadata(
+        field,
+        DatapointMetadata(
+            value_kind="month_day",
+            maker_reference=hr_number,
+            maker_key=maker_key,
+            maker_category=maker_category,
+            description=description,
+            writable=writable,
+            temporal=TemporalMetadata(resolution="day"),
+        ),
+    )
+
+
+def date_value(
+    hr_number: int,
+    *,
+    min_year: int,
+    max_year: int,
+    writable: bool = False,
+    maker_key: str | None = None,
+    maker_category: str | None = None,
+    description: str | None = None,
+) -> RegisterField[datetime.date]:
+    """Create a native date from adjacent TROVIS DDMM and year registers."""
+    field = PackedDateField(
+        register_address(hr_number),
+        min_year=min_year,
+        max_year=max_year,
+        writable=writable,
+    )
+    return attach_metadata(
+        field,
+        DatapointMetadata(
+            value_kind="date",
+            maker_reference=hr_number,
+            maker_key=maker_key,
+            maker_category=maker_category,
+            description=description,
+            writable=writable,
+            temporal=TemporalMetadata(
+                resolution="day",
+                min_year=min_year,
+                max_year=max_year,
             ),
         ),
     )

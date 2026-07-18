@@ -16,4 +16,7 @@ if ! "$PYTHON_BIN" -c "import pytest, pytest_asyncio" >/dev/null 2>&1; then
 fi
 
 export PYTHONPATH="$ROOT_DIR/src:$MODBUS_CONNECTION_SRC${PYTHONPATH:+:$PYTHONPATH}"
+
+cd "$ROOT_DIR"
+
 exec "$PYTHON_BIN" -m pytest -p modbus_connection.pytest_plugin "$@"

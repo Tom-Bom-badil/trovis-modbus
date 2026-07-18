@@ -28,6 +28,10 @@ HOLDING: dict[int, int] = {
     19: 200,  # sensors.rf1 -> 20.0
     22: 450,  # sensors.sf1 -> 45.0
     23: 0x7FFF,  # sensors.sf2 -> NaN -> None
+    27: 125,  # sensors.ae3_fg3 -> 12.5
+    28: 240,  # sensors.pulse_rate -> 240 Imp/h
+    41: 735,  # sensors.analog_input_voltage -> 7.35 V
+    42: 185,  # sensors.summer_outside_average -> 18.5 °C
     98: 900,  # max flow setpoint -> 90.0
     99: 1430,  # time -> 14:30
     100: 2106,  # date -> 21.06
@@ -36,6 +40,13 @@ HOLDING: dict[int, int] = {
     105: 1,  # hc1 mode -> AUTOMATIC
     106: 42,  # hc1 control signal -> 42 %
     112: 1505,  # summer start -> 15.05
+    113: 3009,  # summer end -> 30.09
+    114: 2,  # summer_days_on
+    115: 3,  # summer_days_off
+    120: 50,  # temperature monitoring deviation -> 5.0 K
+    121: 30,  # temperature monitoring window -> 30 min
+    123: 0x10000 - 200,  # 0 V outside-temperature range -> -20.0 °C
+    124: 500,  # 10 V outside-temperature range -> 50.0 °C
     149: 0,  # error status
     999: 550,  # hc1 flow_setpoint -> 55.0
     1000: 800,  # hc1 flow_max -> 80.0
@@ -47,15 +58,20 @@ HOLDING: dict[int, int] = {
     1006: 0,  # hc1 level -> 0.0
     1199: 480,  # hc2 flow_setpoint -> 48.0
     1799: 500,  # hot_water setpoint_day -> 50.0
+    1802: 50,  # hot_water hysteresis -> 5.0 K
+    1806: 450,  # hot_water hold_value -> 45.0 °C
     1807: 500,  # hot_water setpoint_active -> 50.0
     1837: 670,  # hot_water active_charge_setpoint -> 67.0
     1830: 3,  # disinfection weekday -> WEDNESDAY
     1831: 1900,  # disinfection start -> 19:00
+    1832: 2100,  # disinfection stop -> 21:00
+    1838: 30,  # disinfection hold -> 30 min
 }
 
 COILS: dict[int, bool] = {
     3: True,  # CL4 / Sammel_Ebenenbit -> AUTARK by default
     56: True,  # hc1 pump
+    158: False,  # CL159 / GLT timeout inactive
     999: True,  # hc1 automatic
     1000: True,  # hc1 day active
     1799: True,  # hot_water automatic

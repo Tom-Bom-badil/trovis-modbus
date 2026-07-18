@@ -84,3 +84,37 @@ def test_legacy_gap_registers_and_intermediate_heating_points() -> None:
     assert hot_water._address(
         hot_water._bit_fields["intermediate_heating_operation"]
     ) == 1830
+
+
+def test_additional_5578_sensor_addresses() -> None:
+    device = Trovis557x(unit=None)  # type: ignore[arg-type]
+    sensors = device.sensors
+
+    assert sensors._address(sensors._register_fields["ae3_fg3"]) == 27
+    assert sensors._address(sensors._register_fields["pulse_rate"]) == 28
+    assert sensors._address(sensors._register_fields["analog_input_voltage"]) == 41
+    assert sensors._address(sensors._register_fields["summer_outside_average"]) == 42
+
+
+def test_controller_monitoring_metadata_and_timeout() -> None:
+    device = Trovis557x(unit=None)  # type: ignore[arg-type]
+    controller = device.controller
+
+    deviation = controller.require_metadata_for("temperature_monitoring_deviation")
+    assert deviation.writable is True
+    assert deviation.number is not None
+    assert deviation.number.min_value == 1
+    assert deviation.number.max_value == 30
+    assert deviation.number.step == pytest.approx(0.1)
+    assert deviation.number.unit == "K"
+
+    window = controller.require_metadata_for("temperature_monitoring_window")
+    assert window.writable is True
+    assert window.number is not None
+    assert window.number.min_value == 1
+    assert window.number.max_value == 120
+    assert window.number.unit == "min"
+
+    timeout = controller.require_metadata_for("glt_timeout_active")
+    assert timeout.writable is True
+    assert controller._address(controller._bit_fields["glt_timeout_active"]) == 158

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import datetime
+from datetime import time
 
 from .enums import OperatingMode, StorageStatus, Weekday
 from .model import (
@@ -11,11 +11,11 @@ from .model import (
     enum,
     gauge,
     integer,
-    raw_register,
     temperature,
+    time_value,
 )
 from .options import OPERATING_MODE_OPTIONS, WEEKDAY_OPTIONS
-from .utils import time_from_hhmm
+from .utils import TemperatureRange
 
 
 class HotWater(TrovisComponent):
@@ -153,9 +153,34 @@ class HotWater(TrovisComponent):
         options=WEEKDAY_OPTIONS,
     )
 
-    _disinfection_start_raw = raw_register(41832, writable=True)
-    _disinfection_stop_raw = raw_register(41833, writable=True)
-    disinfection_hold = integer(41839, writable=True, unit="min")
+    disinfection_start = time_value(
+        41832,
+        max_time=time(23, 45),
+        writable=True,
+        maker_key="ThermDes_Start",
+        maker_category="SOL-WW",
+        description="Startzeit der thermischen Desinfektion",
+    )
+    disinfection_stop = time_value(
+        41833,
+        max_time=time(23, 45),
+        writable=True,
+        maker_key="ThermDes_Stop",
+        maker_category="SOL-WW",
+        description="Stoppzeit der thermischen Desinfektion",
+    )
+    disinfection_hold = integer(
+        41839,
+        signed=False,
+        writable=True,
+        min_value=0,
+        max_value=255,
+        digits=0,
+        unit="min",
+        maker_key="ThermDes_Halte",
+        maker_category="SOL-WW",
+        description="Haltezeit der Desinfektionstemperatur",
+    )
     control_deviation = gauge(
         41863,
         0.1,
@@ -281,14 +306,24 @@ class HotWater(TrovisComponent):
     )
 
     @property
-    def disinfection_start(self) -> datetime.time | None:
-        """Start time of the thermal-disinfection window."""
-        return time_from_hhmm(self._disinfection_start_raw)
+    def day_temperature_range(self) -> TemperatureRange | None:
+        """Day setpoint range implied by setpoint and hysteresis."""
+        if self.setpoint_day is None or self.hysteresis is None:
+            return None
+        return TemperatureRange(
+            minimum=self.setpoint_day,
+            maximum=round(self.setpoint_day + self.hysteresis, 1),
+        )
 
     @property
-    def disinfection_stop(self) -> datetime.time | None:
-        """End time of the thermal-disinfection window."""
-        return time_from_hhmm(self._disinfection_stop_raw)
+    def night_temperature_range(self) -> TemperatureRange | None:
+        """Night/holding range implied by hold value and hysteresis."""
+        if self.hold_value is None or self.hysteresis is None:
+            return None
+        return TemperatureRange(
+            minimum=self.hold_value,
+            maximum=round(self.hold_value + self.hysteresis, 1),
+        )
 
     async def set_setpoint(self, celsius: float) -> None:
         """Set the hot-water day setpoint (°C)."""
@@ -297,6 +332,14 @@ class HotWater(TrovisComponent):
     async def set_mode(self, mode: OperatingMode) -> None:
         """Set the operating mode."""
         await self.async_write_datapoint("mode", mode)
+
+    async def set_disinfection_start(self, value: time) -> None:
+        """Set the start of the thermal-disinfection window."""
+        await self.async_write_datapoint("disinfection_start", value)
+
+    async def set_disinfection_stop(self, value: time) -> None:
+        """Set the end of the thermal-disinfection window."""
+        await self.async_write_datapoint("disinfection_stop", value)
 
     async def start_forced_charge(self) -> None:
         """Trigger a one-off storage charge."""

@@ -81,3 +81,12 @@ class StorageStatus(IntEnum):
     CHARGING = 4
     PUMP_OVERRUN = 5
     DISCHARGE_PROTECTION = 6
+
+
+class PlantActivity(IntEnum):
+    """Combined heating and domestic-hot-water activity."""
+
+    IDLE = 0
+    HEATING = 1
+    HOT_WATER = 2
+    HEATING_AND_HOT_WATER = 3

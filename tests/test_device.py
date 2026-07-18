@@ -7,7 +7,14 @@ from datetime import date, time
 import pytest
 from modbus_connection.mock import MockModbusConnection, MockModbusUnit
 
-from trovis_modbus import MonthDay, OperatingMode, Trovis557x, Weekday
+from trovis_modbus import (
+    MonthDay,
+    OperatingMode,
+    PlantActivity,
+    TemperatureRange,
+    Trovis557x,
+    Weekday,
+)
 from trovis_modbus.ranges import REGISTER_RANGES
 
 from .conftest import COILS, HOLDING
@@ -57,6 +64,10 @@ async def test_sensors(trovis: Trovis557x) -> None:
     assert trovis.sensors.rf1 == pytest.approx(20.0)
     assert trovis.sensors.sf1 == pytest.approx(45.0)
     assert trovis.sensors.sf2 is None  # NaN sentinel
+    assert trovis.sensors.ae3_fg3 == pytest.approx(12.5)
+    assert trovis.sensors.pulse_rate == 240
+    assert trovis.sensors.analog_input_voltage == pytest.approx(7.35)
+    assert trovis.sensors.summer_outside_average == pytest.approx(18.5)
 
 
 async def test_clock(trovis: Trovis557x) -> None:
@@ -71,6 +82,12 @@ async def test_controller(trovis: Trovis557x) -> None:
     assert trovis.controller.switch_top is OperatingMode.AUTOMATIC
     assert trovis.controller.max_flow_setpoint == pytest.approx(90.0)
     assert trovis.controller.summer_start == MonthDay(day=15, month=5)
+    assert trovis.controller.summer_end == MonthDay(day=30, month=9)
+    assert trovis.controller.temperature_monitoring_deviation == pytest.approx(5.0)
+    assert trovis.controller.temperature_monitoring_window == 30
+    assert trovis.controller.outside_input_range_start == pytest.approx(-20.0)
+    assert trovis.controller.outside_input_range_end == pytest.approx(50.0)
+    assert trovis.controller.glt_timeout_active is False
 
 
 async def test_heating_circuit_reads(trovis: Trovis557x) -> None:
@@ -109,8 +126,16 @@ async def test_hot_water(trovis: Trovis557x) -> None:
     assert hw.active_charge_setpoint == pytest.approx(67.0)
     assert hw.disinfection_weekday is Weekday.WEDNESDAY
     assert hw.disinfection_start == time(19, 0)
+    assert hw.disinfection_stop == time(21, 0)
+    assert hw.day_temperature_range == TemperatureRange(50.0, 55.0)
+    assert hw.night_temperature_range == TemperatureRange(45.0, 50.0)
     assert hw.automatic is True
     assert hw.charge_pump_running is True
+
+
+async def test_combined_activity(trovis: Trovis557x) -> None:
+    await trovis.async_update()
+    assert trovis.activity is PlantActivity.HEATING_AND_HOT_WATER
 
 
 async def test_independent_component_update(trovis: Trovis557x) -> None:
