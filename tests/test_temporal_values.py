@@ -23,9 +23,7 @@ def test_temporal_metadata(trovis: Trovis557x) -> None:
     assert summer_start.temporal is not None
     assert summer_start.temporal.resolution == "day"
 
-    disinfection_start = trovis.hot_water.require_metadata_for(
-        "disinfection_start"
-    )
+    disinfection_start = trovis.hot_water.require_metadata_for("disinfection_start")
     assert disinfection_start.value_kind == "time"
     assert disinfection_start.temporal is not None
     assert disinfection_start.temporal.resolution == "minute"

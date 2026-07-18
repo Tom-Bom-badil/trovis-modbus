@@ -162,8 +162,7 @@ def test_coil_matches_canonical(label: str, address: int, field: CoilField) -> N
     # Heating-circuit 3 status coils (1399-1408) are not in the 5576-based
     # reference; they follow the +200 pattern verified on circuits 1 and 2.
     if "HeatingCircuit[3]" in label and (
-        address in {92, 93, 97, 119, 120}
-        or 1399 <= address <= 1408
+        address in {92, 93, 97, 119, 120} or 1399 <= address <= 1408
     ):
         pytest.skip("circuit-3 coils absent from 5576 reference table")
 

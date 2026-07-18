@@ -183,8 +183,7 @@ class Controller(TrovisComponent):
         maker_key="BtrS_nicht_Auto",
         maker_category="ALG-BTR",
         description=(
-            "Mindestens ein Regelkreis ist über den Betriebsschalter "
-            "nicht in Automatik"
+            "Mindestens ein Regelkreis ist über den Betriebsschalter nicht in Automatik"
         ),
     )
 

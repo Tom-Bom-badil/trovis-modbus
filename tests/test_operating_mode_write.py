@@ -28,9 +28,7 @@ async def test_heating_automatic_restores_autark_without_register_write(
     await trovis.heating_circuit_1.set_mode(OperatingMode.AUTOMATIC)
 
     assert (await unit.read_coils(88, 1))[0] is True
-    assert (await unit.read_holding_registers(105, 1))[0] == int(
-        OperatingMode.DAY
-    )
+    assert (await unit.read_holding_registers(105, 1))[0] == int(OperatingMode.DAY)
 
 
 async def test_hot_water_automatic_uses_its_own_ebene_coil(
@@ -44,6 +42,4 @@ async def test_hot_water_automatic_uses_its_own_ebene_coil(
     await trovis.hot_water.set_mode(OperatingMode.AUTOMATIC)
 
     assert (await unit.read_coils(94, 1))[0] is True
-    assert (await unit.read_holding_registers(111, 1))[0] == int(
-        OperatingMode.NIGHT
-    )
+    assert (await unit.read_holding_registers(111, 1))[0] == int(OperatingMode.NIGHT)
