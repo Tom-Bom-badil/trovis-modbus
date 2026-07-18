@@ -105,6 +105,29 @@ class HeatingCircuit(TrovisComponent):
     return_base_point = temperature(41012, stride=200)
     return_setpoint = temperature(41033, stride=200)
 
+    fixed_setpoint_day = temperature(
+        41042,
+        stride=200,
+        writable=True,
+        min_value=-5,
+        max_value=130,
+        digits=1,
+        maker_key="TagSoll_FW_Rk1",
+        maker_category="SOL-SON",
+        description="Sollwert Tagbetrieb bei Festwertregelung",
+    )
+    fixed_setpoint_night = temperature(
+        41043,
+        stride=200,
+        writable=True,
+        min_value=-5,
+        max_value=130,
+        digits=1,
+        maker_key="NachtSoll_FW_Rk1",
+        maker_category="SOL-SON",
+        description="Sollwert Nachtbetrieb bei Festwertregelung",
+    )
+
     flow_deviation = gauge(41063, 0.1, stride=200, unit="K")
 
     ### coils
@@ -116,10 +139,89 @@ class HeatingCircuit(TrovisComponent):
         true_key="autonomous",
         false_label="GLT",
         true_label="Autark",
+        maker_key="EBN_BetrArt_Rk1",
+        maker_category="EBN-BTR",
         description="Steuerungsebene Betriebsart",
     )
     manual_active = coil(5, stride=1)
     pump_running = coil(57, stride=1, writable=True)
+    valve_closing = coil(
+        62,
+        stride=2,
+        false_key="stopped",
+        true_key="closing",
+        false_label="Halt",
+        true_label="Zu",
+        maker_key="Binärausg_BA6",
+        maker_category="BEA-BA",
+        description="Dreipunkt-Stellsignal Schließen",
+    )
+    valve_opening = coil(
+        63,
+        stride=2,
+        false_key="stopped",
+        true_key="opening",
+        false_label="Halt",
+        true_label="Auf",
+        maker_key="Binärausg_BA7",
+        maker_category="BEA-BA",
+        description="Dreipunkt-Stellsignal Öffnen",
+    )
+    valve_control_autonomous = coil(
+        90,
+        stride=2,
+        false_key="glt",
+        true_key="autonomous",
+        false_label="GLT",
+        true_label="Autark",
+        maker_key="EBN_Stellsig_Rk1",
+        maker_category="EBN-BTR",
+        description="Steuerungsebene Stellsignal",
+    )
+    pump_control_autonomous = coil(
+        96,
+        stride=1,
+        false_key="glt",
+        true_key="autonomous",
+        false_label="GLT",
+        true_label="Autark",
+        maker_key="EBN_Binär_BA1",
+        maker_category="EBN-BA",
+        description="Steuerungsebene Umwälzpumpe",
+    )
+    flow_setpoint_control_autonomous = coil(
+        116,
+        stride=2,
+        false_key="glt",
+        true_key="autonomous",
+        false_label="GLT",
+        true_label="Autark",
+        maker_key="EBN_VorlSoll_Rk1",
+        maker_category="EBN-VL",
+        description="Steuerungsebene Vorlaufsollwert",
+    )
+    return_setpoint_control_autonomous = coil(
+        117,
+        stride=2,
+        false_key="glt",
+        true_key="autonomous",
+        false_label="GLT",
+        true_label="Autark",
+        maker_key="EBN_RückSoll_Rk1",
+        maker_category="EBN-RL",
+        description="Steuerungsebene Rücklaufsollwert",
+    )
+    room_setpoint_control_autonomous = coil(
+        122,
+        stride=1,
+        false_key="glt",
+        true_key="autonomous",
+        false_label="GLT",
+        true_label="Autark",
+        maker_key="EBN_RaumSoll_Rk1",
+        maker_category="EBN-RT",
+        description="Steuerungsebene aktiver Raumsollwert",
+    )
     room_control_unit = coil(703, stride=1, writable=True)
 
     automatic = coil(1000, stride=200)

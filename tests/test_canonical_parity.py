@@ -19,7 +19,7 @@ import pytest
 from modbus_connection.model import CoilField, RegisterField
 
 from trovis_modbus import Trovis557x
-from trovis_modbus.addresses import coil_address
+from trovis_modbus.addresses import coil_address, register_address
 
 _REF = json.loads(
     (Path(__file__).parent / "reference" / "canonical_points.json").read_text()
@@ -34,19 +34,31 @@ HARDWARE_VERIFIED_SCALE: dict[int, float] = {117: 0.1}
 
 # Manufacturer-documented points that are modeled by the library but are not
 # present in the older SmartHomeNG/5576-derived canonical reference file.
+KNOWN_NON_CANONICAL_REGISTERS = {
+    register_address(41827),  # Current hot-water storage status
+}
+
+# Manufacturer-documented 5578 points absent from the older canonical list.
+# Values state the expected writable flag.
 KNOWN_NON_CANONICAL_COILS = {
-    coil_address(cl_number)
-    for cl_number in (
-        407,  # Hot-water intermediate heating operation
-        703,
-        704,
-        705,  # Room control unit Rk1-Rk3
-        2107,
-        2207,
-        2307,  # Optimization Rk1-Rk3
-        2108,
-        2208,
-        2308,  # Adaptation Rk1-Rk3
+    coil_address(cl_number): writable
+    for cl_number, writable in (
+        (122, False),
+        (123, False),
+        (124, False),  # Active room-setpoint control level Rk1-Rk3
+        (407, True),   # Hot-water intermediate heating operation
+        (703, True),
+        (704, True),
+        (705, True),   # Room control unit Rk1-Rk3
+        (1810, False), # Hot-water storage charging active
+        (1811, True),  # Hot-water storage charging enabled
+        (1812, False), # Hot-water storage charging locked
+        (2107, True),
+        (2207, True),
+        (2307, True),  # Optimization Rk1-Rk3
+        (2108, True),
+        (2208, True),
+        (2308, True),  # Adaptation Rk1-Rk3
     )
 }
 
@@ -105,6 +117,9 @@ COIL_CASES = [
 def test_register_matches_canonical(
     label: str, address: int, field: RegisterField
 ) -> None:
+    if address in KNOWN_NON_CANONICAL_REGISTERS:
+        return
+
     assert address in CANON_REG, f"{label}.{field.name} address {address} not in spec"
     entry = CANON_REG[address]
     # Plain scaled numbers (not value-mapped) must match the canonical scale.
@@ -143,15 +158,13 @@ def test_coil_matches_canonical(label: str, address: int, field: CoilField) -> N
     # Heating-circuit 3 status coils (1399-1408) are not in the 5576-based
     # reference; they follow the +200 pattern verified on circuits 1 and 2.
     if "HeatingCircuit[3]" in label and (
-        address == 92 or 1399 <= address <= 1408
+        address in {92, 93, 97, 119, 120}
+        or 1399 <= address <= 1408
     ):
         pytest.skip("circuit-3 coils absent from 5576 reference table")
-        pytest.skip("circuit-3 status coils absent from reference table")
 
     if address in KNOWN_NON_CANONICAL_COILS:
-        assert field.writable, (
-            f"{label}.{field.name} is expected to be a writable manufacturer point"
-        )
+        assert bool(field.writable) is KNOWN_NON_CANONICAL_COILS[address]
         return
 
     assert address in CANON_COIL, f"{label}.{field.name} address {address} not in spec"

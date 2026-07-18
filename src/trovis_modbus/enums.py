@@ -69,3 +69,15 @@ class PowerUnit(IntEnum):
 
     KILOWATTS = 0
     MEGAWATTS = 1
+
+
+class StorageStatus(IntEnum):
+    """Current domestic-hot-water storage operating state (HR41827)."""
+
+    STANDBY = 0
+    MONITORING = 1
+    CIRCULATION = 2
+    DEMAND = 3
+    CHARGING = 4
+    PUMP_OVERRUN = 5
+    DISCHARGE_PROTECTION = 6

@@ -24,6 +24,7 @@ from .enums import (
     HeatMeterReadMode,
     OperatingMode,
     PowerUnit,
+    StorageStatus,
     VolumeUnit,
     Weekday,
 )
@@ -63,6 +64,7 @@ __all__ = [
     "OperatingMode",
     "PowerUnit",
     "Sensors",
+    "StorageStatus",
     "Trovis557x",
     "VolumeUnit",
     "Weekday",

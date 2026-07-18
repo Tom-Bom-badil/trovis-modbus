@@ -37,14 +37,57 @@ class Controller(TrovisComponent):
     frost_limit = temperature(40123, writable=True)
     station_address = integer(40143, signed=False)
     error_status = integer(40150, signed=False)
+    error_count = integer(
+        40154,
+        signed=False,
+        min_value=0,
+        max_value=65535,
+        maker_key="FehlerzählerReg",
+        maker_category="ALG-ERO",
+        description="Fehlerzählerregister",
+    )
 
     ##### coils
 
     general_fault = coil(1)
     data_entry_active = coil(2)  # CL2 / Dateneing_aktiv
     data_entry_performed = coil(3)  # CL3 / Dateneing_stattg
-    global_level_autark = coil(4)  # CL4 / Sammel_Ebenenbit
+    global_level_autark = coil(
+        4,
+        false_key="glt",
+        true_key="autonomous",
+        false_label="GLT",
+        true_label="Autark",
+        maker_key="Sammel_Ebenenbit",
+        maker_category="ALG-BTR",
+        description="Sammel-Ebenenbit CL88 bis CL121",
+    )
     summer_active = coil(9)
+    outside_temperature_control_autonomous = coil(
+        88,
+        false_key="glt",
+        true_key="autonomous",
+        false_label="GLT",
+        true_label="Autark",
+        maker_key="EBN_Außentem_AF1",
+        maker_category="EBN-AT",
+        description="Steuerungsebene Außentemperatur AF1",
+    )
+    any_circuit_not_automatic = coil(
+        998,
+        maker_key="Btr_nicht_Auto",
+        maker_category="ALG-BTR",
+        description="Mindestens ein Regelkreis ist nicht in Automatik",
+    )
+    rotary_switch_not_automatic = coil(
+        999,
+        maker_key="BtrS_nicht_Auto",
+        maker_category="ALG-BTR",
+        description=(
+            "Mindestens ein Regelkreis ist über den Betriebsschalter "
+            "nicht in Automatik"
+        ),
+    )
 
     delayed_outside_temp_adjustment_falling = coil(134, writable=True)  # CL134 / FB05
     delayed_outside_temp_adjustment_rising = coil(135, writable=True)  # CL135 / FB06
