@@ -1,6 +1,5 @@
 """Small helpers shared across sub-systems: curves and native value types."""
 
-
 from __future__ import annotations
 
 from datetime import date, time
@@ -12,6 +11,7 @@ OUTSIDE_TEMPERATURES: list[int] = list(range(-20, 21))
 
 class MonthDay(NamedTuple):
     """A recurring day-of-year without a year (e.g. a summer boundary)."""
+
     day: int
     month: int
 
@@ -22,6 +22,7 @@ class MonthDay(NamedTuple):
 
 class TemperatureRange(NamedTuple):
     """Lower and upper edge of a derived temperature interval."""
+
     minimum: float
     maximum: float
 

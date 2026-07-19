@@ -1,6 +1,5 @@
 """Enumerations used across the TROVIS model."""
 
-
 from __future__ import annotations
 
 from enum import IntEnum

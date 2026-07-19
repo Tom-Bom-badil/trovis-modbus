@@ -22,7 +22,7 @@ definitions to use the same references as the TROVIS documentation:
 """
 
 REGISTER_REFERENCE_BASE = 40001
-REGISTER_REFERENCE_MAX  = 49999
+REGISTER_REFERENCE_MAX = 49999
 
 
 def register_address(hr_number: int) -> int:

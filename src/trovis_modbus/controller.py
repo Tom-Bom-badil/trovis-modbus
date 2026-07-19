@@ -1,6 +1,5 @@
 """Overall controller state: faults, rotary switches, summer mode, locks."""
 
-
 from __future__ import annotations
 
 from .enums import OperatingMode
@@ -321,7 +320,6 @@ class Controller(TrovisComponent):
     manual_levels_locked = coil(150, writable=True)
 
     rotary_switch_locked = coil(151, writable=True)
-
 
     async def set_summer_start(self, value: MonthDay) -> None:
         """Set the recurring summer-mode start date."""

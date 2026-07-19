@@ -1,6 +1,5 @@
 """The heating circuits (Hk (Heizkreis) 1-3, also called Rk (Regelkreis) 1-3)."""
 
-
 from __future__ import annotations
 
 from . import utils
@@ -407,7 +406,6 @@ class HeatingCircuit(TrovisComponent):
 
     # Override coils (mode 89+2n, pump 96+1n) released before a write.
     ebene_coils = {"mode": (89, 2), "pump_running": (96, 1)}
-
 
     def heating_curve(self, mode: str = "active") -> list[float] | None:
         """Flow-temperature curve over outside temps -20..20 °C.

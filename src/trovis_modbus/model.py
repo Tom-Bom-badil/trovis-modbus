@@ -1,6 +1,5 @@
 """Trovis-specific pieces layered on the ``modbus_connection.model`` framework."""
 
-
 from __future__ import annotations
 
 import datetime
@@ -15,16 +14,23 @@ from modbus_connection.model import (
 )
 from modbus_connection.model import (
     coil as _modbus_coil,
+)
+from modbus_connection.model import (
     enum as _modbus_enum,
+)
+from modbus_connection.model import (
     gauge as _modbus_gauge,
+)
+from modbus_connection.model import (
     integer as _modbus_integer,
+)
+from modbus_connection.model import (
     raw_register as _modbus_raw_register,
 )
 
 from .addresses import coil_address, register_address
 from .enums import OperatingMode
 from .exceptions import TrovisValueValidationError, TrovisWriteAccessError
-from .ranges import COIL_RANGES, REGISTER_RANGES
 from .metadata import (
     BooleanMetadata,
     DatapointMetadata,
@@ -35,6 +41,7 @@ from .metadata import (
     attach_metadata,
     step_from_digits,
 )
+from .ranges import COIL_RANGES, REGISTER_RANGES
 from .utils import (
     MonthDay,
     date_from_ddmm_year,
@@ -44,7 +51,6 @@ from .utils import (
     time_from_hhmm,
     time_to_hhmm,
 )
-
 
 NAN_INT16 = 0x7FFF  # the value the controller returns for an absent sensor
 
@@ -241,6 +247,7 @@ def _number_validator(
     step: float | int | None = None,
 ) -> Callable[[Any], Any]:
     """Return a write validator for numeric TROVIS values."""
+
     def validate(value: Any) -> Any:
         number = float(value)
         if min_value is not None and number < min_value:
@@ -254,6 +261,7 @@ def _number_validator(
         # Step is primarily UI metadata for now. Avoid hard float-modulo
         # validation until we see invalid writes slipping through.
         return value
+
     return validate
 
 

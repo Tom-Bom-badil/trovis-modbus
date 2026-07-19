@@ -1,9 +1,7 @@
 """Reusable TROVIS option metadata."""
 
-
 from __future__ import annotations
 
-from .metadata import OptionMetadata
 from .enums import (
     EnergyUnit,
     FlowRateUnit,
@@ -13,7 +11,7 @@ from .enums import (
     VolumeUnit,
     Weekday,
 )
-
+from .metadata import OptionMetadata
 
 # All heating and hot-water circuits share one writable operating-mode list.
 # PROGRAM remains readable through OperatingMode, but it is a timer-program

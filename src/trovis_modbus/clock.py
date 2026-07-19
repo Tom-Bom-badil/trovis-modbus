@@ -1,6 +1,5 @@
 """The controller's date and time, as native ``datetime`` objects."""
 
-
 from __future__ import annotations
 
 import datetime
@@ -48,7 +47,6 @@ class Clock(TrovisComponent):
         maker_category="ALG-DAT",
         description="Jahr",
     )
-
 
     @property
     def datetime(self) -> datetime.datetime | None:

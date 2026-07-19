@@ -9,7 +9,6 @@ from typing import Any, Literal
 
 from .utils import MonthDay
 
-
 ValueKind = Literal[
     "number",
     "enum",

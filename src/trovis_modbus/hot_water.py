@@ -1,6 +1,5 @@
 """The DHW domestic hot water circuit (HK4 / RK4 / WW)."""
 
-
 from __future__ import annotations
 
 from datetime import time
@@ -437,7 +436,6 @@ class HotWater(TrovisComponent):
         "circulation_pump_running": (100, 0),
         "special_setpoint": (112, 0),
     }
-
 
     @property
     def day_temperature_range(self) -> TemperatureRange | None:
