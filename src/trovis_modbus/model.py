@@ -11,20 +11,10 @@ from modbus_connection import ModbusError
 from modbus_connection.model import (
     Component,
     RegisterField,
-)
-from modbus_connection.model import (
     coil as _modbus_coil,
-)
-from modbus_connection.model import (
     enum as _modbus_enum,
-)
-from modbus_connection.model import (
     gauge as _modbus_gauge,
-)
-from modbus_connection.model import (
     integer as _modbus_integer,
-)
-from modbus_connection.model import (
     raw_register as _modbus_raw_register,
 )
 
