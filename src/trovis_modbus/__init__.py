@@ -14,10 +14,16 @@ built on the generic ``Component`` / ``RegisterField`` / ``CoilField`` framework
 in ``modbus_connection.model``.
 """
 
+
+from .trovis import Trovis557x
 from .addresses import coil_address, register_address
 from .clock import Clock
 from .controller import Controller
 from .device_info import DeviceInformation
+from .heating_circuit import HeatingCircuit
+from .hot_water import HotWater
+from .model import DEFAULT_WRITE_ACCESS_CODE
+from .sensors import Sensors
 from .enums import (
     EnergyUnit,
     FlowRateUnit,
@@ -35,8 +41,6 @@ from .exceptions import (
     TrovisWriteAccessError,
     TrovisWriteNotImplementedError,
 )
-from .heating_circuit import HeatingCircuit
-from .hot_water import HotWater
 from .metadata import (
     BooleanMetadata,
     DatapointMetadata,
@@ -45,15 +49,13 @@ from .metadata import (
     OptionMetadata,
     TemporalMetadata,
 )
-from .model import DEFAULT_WRITE_ACCESS_CODE
-from .sensors import Sensors
-from .trovis import Trovis557x
 from .utils import (
     OUTSIDE_TEMPERATURES,
     MonthDay,
     TemperatureRange,
     heating_curve,
 )
+
 
 __all__ = [
     "coil_address",

@@ -1,5 +1,6 @@
 """Trovis-specific pieces layered on the ``modbus_connection.model`` framework."""
 
+
 from __future__ import annotations
 
 import datetime
@@ -14,23 +15,16 @@ from modbus_connection.model import (
 )
 from modbus_connection.model import (
     coil as _modbus_coil,
-)
-from modbus_connection.model import (
     enum as _modbus_enum,
-)
-from modbus_connection.model import (
     gauge as _modbus_gauge,
-)
-from modbus_connection.model import (
     integer as _modbus_integer,
-)
-from modbus_connection.model import (
     raw_register as _modbus_raw_register,
 )
 
 from .addresses import coil_address, register_address
 from .enums import OperatingMode
 from .exceptions import TrovisValueValidationError, TrovisWriteAccessError
+from .ranges import COIL_RANGES, REGISTER_RANGES
 from .metadata import (
     BooleanMetadata,
     DatapointMetadata,
@@ -41,7 +35,6 @@ from .metadata import (
     attach_metadata,
     step_from_digits,
 )
-from .ranges import COIL_RANGES, REGISTER_RANGES
 from .utils import (
     MonthDay,
     date_from_ddmm_year,
@@ -51,6 +44,7 @@ from .utils import (
     time_from_hhmm,
     time_to_hhmm,
 )
+
 
 NAN_INT16 = 0x7FFF  # the value the controller returns for an absent sensor
 
@@ -90,7 +84,6 @@ class PackedTimeField(RegisterField[datetime.time]):
         raw = words[0]
         if not self.raw_min <= raw <= self.raw_max:
             return None
-
         value = time_from_hhmm(raw)
         if value is None or not self.min_value <= value <= self.max_value:
             return None
@@ -106,7 +99,6 @@ class PackedTimeField(RegisterField[datetime.time]):
             raw = time_to_hhmm(value)
         except (TypeError, ValueError) as err:
             raise TrovisValueValidationError(str(err)) from err
-
         if not self.min_value <= value <= self.max_value:
             raise TrovisValueValidationError(
                 f"Time {value.isoformat()} is outside "
@@ -152,7 +144,6 @@ class PackedMonthDayField(RegisterField[MonthDay]):
         raw = words[0]
         if not self.raw_min <= raw <= self.raw_max:
             return None
-
         value = month_day_from_ddmm(raw)
         if value is None:
             return None
@@ -174,7 +165,6 @@ class PackedMonthDayField(RegisterField[MonthDay]):
             raw = month_day_to_ddmm(value)
         except (TypeError, ValueError) as err:
             raise TrovisValueValidationError(str(err)) from err
-
         if not (
             _month_day_key(self.min_value)
             <= _month_day_key(value)
@@ -217,7 +207,6 @@ class PackedDateField(RegisterField[datetime.date]):
         """Decode ``[DDMM, year]`` into a calendar date."""
         if len(words) != 2 or not self.raw_min <= words[0] <= self.raw_max:
             return None
-
         value = date_from_ddmm_year(words[0], words[1])
         if value is None or not self.min_value <= value <= self.max_value:
             return None
@@ -233,7 +222,6 @@ class PackedDateField(RegisterField[datetime.date]):
             raw_date, year = date_to_ddmm_year(value)
         except (TypeError, ValueError) as err:
             raise TrovisValueValidationError(str(err)) from err
-
         if not self.min_value <= value <= self.max_value:
             raise TrovisValueValidationError(
                 f"Date {value.isoformat()} is outside "
@@ -253,24 +241,19 @@ def _number_validator(
     step: float | int | None = None,
 ) -> Callable[[Any], Any]:
     """Return a write validator for numeric TROVIS values."""
-
     def validate(value: Any) -> Any:
         number = float(value)
-
         if min_value is not None and number < min_value:
             raise TrovisValueValidationError(
                 f"Value {value} is below minimum {min_value}"
             )
-
         if max_value is not None and number > max_value:
             raise TrovisValueValidationError(
                 f"Value {value} is above maximum {max_value}"
             )
-
         # Step is primarily UI metadata for now. Avoid hard float-modulo
         # validation until we see invalid writes slipping through.
         return value
-
     return validate
 
 
@@ -284,13 +267,10 @@ def _with_number_validator(
     """Return writable or a validator-backed writable value."""
     if not writable:
         return False
-
     if callable(writable):
         return writable
-
     if min_value is None and max_value is None and step is None:
         return True
-
     return _number_validator(
         min_value=min_value,
         max_value=max_value,
@@ -322,14 +302,12 @@ def raw_register(
         max_value=max_value,
         step=effective_step,
     )
-
     field = _modbus_raw_register(
         register_address(hr_number),
         *args,
         writable=effective_writable,
         **kwargs,
     )
-
     return attach_metadata(
         field,
         DatapointMetadata(
@@ -376,7 +354,6 @@ def integer(
         max_value=max_value,
         step=effective_step,
     )
-
     field = _modbus_integer(
         register_address(hr_number),
         *args,
@@ -384,7 +361,6 @@ def integer(
         unit=unit,
         **kwargs,
     )
-
     return attach_metadata(
         field,
         DatapointMetadata(
@@ -432,7 +408,6 @@ def gauge(
         max_value=max_value,
         step=effective_step,
     )
-
     field = _modbus_gauge(
         register_address(hr_number),
         scale,
@@ -441,7 +416,6 @@ def gauge(
         unit=unit,
         **kwargs,
     )
-
     return attach_metadata(
         field,
         DatapointMetadata(
@@ -606,12 +580,10 @@ def enum(
         writable=writable,
         **kwargs,
     )
-
     resolved_options = options or tuple(
         OptionMetadata(member.name.lower(), int(member), member.name)
         for member in enum_type
     )
-
     return attach_metadata(
         field,
         DatapointMetadata(
@@ -646,7 +618,6 @@ def coil(
         stride=stride,
         writable=writable,
     )
-
     return attach_metadata(
         field,
         DatapointMetadata(

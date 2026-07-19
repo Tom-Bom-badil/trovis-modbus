@@ -1,5 +1,6 @@
 """Small helpers shared across sub-systems: curves and native value types."""
 
+
 from __future__ import annotations
 
 from datetime import date, time
@@ -11,7 +12,6 @@ OUTSIDE_TEMPERATURES: list[int] = list(range(-20, 21))
 
 class MonthDay(NamedTuple):
     """A recurring day-of-year without a year (e.g. a summer boundary)."""
-
     day: int
     month: int
 
@@ -22,7 +22,6 @@ class MonthDay(NamedTuple):
 
 class TemperatureRange(NamedTuple):
     """Lower and upper edge of a derived temperature interval."""
-
     minimum: float
     maximum: float
 
@@ -31,7 +30,6 @@ def time_from_hhmm(raw: int | None) -> time | None:
     """Decode the controller's packed HHMM time (e.g. 1430 -> 14:30)."""
     if raw is None:
         return None
-
     hour, minute = divmod(raw, 100)
     try:
         return time(hour=hour, minute=minute)
@@ -54,7 +52,6 @@ def month_day_from_ddmm(raw: int | None) -> MonthDay | None:
     """Decode a packed DDMM value into a validated recurring date."""
     if raw is None:
         return None
-
     day, month = divmod(raw, 100)
     try:
         # Leap year allows the recurring value 29 February.
@@ -79,7 +76,6 @@ def date_from_ddmm_year(raw_date: int | None, year: int | None) -> date | None:
     """Decode packed DDMM plus a separate year register."""
     if raw_date is None or year is None:
         return None
-
     recurring = month_day_from_ddmm(raw_date)
     if recurring is None:
         return None
@@ -105,7 +101,6 @@ def heating_curve(
     flow_max: float,
 ) -> list[float]:
     """Flow temperatures for outside temps -20..20 °C, clamped to [min, max].
-
     Reproduces the formula from the upstream ``heating_curves.yaml`` exactly,
     including its ``(x - 20)`` reference shift. Pair element ``i`` with
     :data:`OUTSIDE_TEMPERATURES`\\ ``[i]``.

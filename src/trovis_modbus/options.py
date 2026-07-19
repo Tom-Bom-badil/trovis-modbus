@@ -1,7 +1,9 @@
 """Reusable TROVIS option metadata."""
 
+
 from __future__ import annotations
 
+from .metadata import OptionMetadata
 from .enums import (
     EnergyUnit,
     FlowRateUnit,
@@ -11,7 +13,7 @@ from .enums import (
     VolumeUnit,
     Weekday,
 )
-from .metadata import OptionMetadata
+
 
 # All heating and hot-water circuits share one writable operating-mode list.
 # PROGRAM remains readable through OperatingMode, but it is a timer-program
@@ -44,20 +46,6 @@ HEAT_METER_READ_MODE_OPTIONS = (
 )
 
 
-FLOW_RATE_UNIT_OPTIONS = (
-    OptionMetadata(
-        "cubic_meters_per_hour",
-        int(FlowRateUnit.CUBIC_METERS_PER_HOUR),
-        "m³/h",
-    ),
-    OptionMetadata(
-        "liters_per_hour",
-        int(FlowRateUnit.LITERS_PER_HOUR),
-        "l/h",
-    ),
-)
-
-
 VOLUME_UNIT_OPTIONS = (
     OptionMetadata("cubic_meters", int(VolumeUnit.CUBIC_METERS), "m³"),
     OptionMetadata("liters", int(VolumeUnit.LITERS), "l"),
@@ -74,4 +62,18 @@ ENERGY_UNIT_OPTIONS = (
 POWER_UNIT_OPTIONS = (
     OptionMetadata("kilowatts", int(PowerUnit.KILOWATTS), "kW"),
     OptionMetadata("megawatts", int(PowerUnit.MEGAWATTS), "MW"),
+)
+
+
+FLOW_RATE_UNIT_OPTIONS = (
+    OptionMetadata(
+        "cubic_meters_per_hour",
+        int(FlowRateUnit.CUBIC_METERS_PER_HOUR),
+        "m³/h",
+    ),
+    OptionMetadata(
+        "liters_per_hour",
+        int(FlowRateUnit.LITERS_PER_HOUR),
+        "l/h",
+    ),
 )
