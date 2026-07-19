@@ -69,13 +69,17 @@ class PackedTimeField(RegisterField[datetime.time]):
         self,
         address: int,
         *,
-        min_time: datetime.time = datetime.time.min,
-        max_time: datetime.time = datetime.time(23, 59),
+        min_value: datetime.time,
+        max_value: datetime.time,
+        raw_min: int,
+        raw_max: int,
         writable: bool = False,
     ) -> None:
         super().__init__(address, writable=writable)
-        self.min_time = min_time
-        self.max_time = max_time
+        self.min_value = min_value
+        self.max_value = max_value
+        self.raw_min = raw_min
+        self.raw_max = raw_max
 
     def decode(
         self,
@@ -83,8 +87,12 @@ class PackedTimeField(RegisterField[datetime.time]):
         scale_exponent: int | None = None,
     ) -> datetime.time | None:
         """Decode one packed HHMM word within the documented range."""
-        value = time_from_hhmm(words[0])
-        if value is None or not self.min_time <= value <= self.max_time:
+        raw = words[0]
+        if not self.raw_min <= raw <= self.raw_max:
+            return None
+
+        value = time_from_hhmm(raw)
+        if value is None or not self.min_value <= value <= self.max_value:
             return None
         return value
 
@@ -99,24 +107,62 @@ class PackedTimeField(RegisterField[datetime.time]):
         except (TypeError, ValueError) as err:
             raise TrovisValueValidationError(str(err)) from err
 
-        if not self.min_time <= value <= self.max_time:
+        if not self.min_value <= value <= self.max_value:
             raise TrovisValueValidationError(
                 f"Time {value.isoformat()} is outside "
-                f"{self.min_time.isoformat()}..{self.max_time.isoformat()}"
+                f"{self.min_value.isoformat()}..{self.max_value.isoformat()}"
+            )
+        if not self.raw_min <= raw <= self.raw_max:
+            raise TrovisValueValidationError(
+                f"Packed time {raw} is outside {self.raw_min}..{self.raw_max}"
             )
         return [raw]
 
 
+def _month_day_key(value: MonthDay) -> tuple[int, int]:
+    """Return a calendar-order key for a recurring month/day value."""
+    return value.month, value.day
+
+
 class PackedMonthDayField(RegisterField[MonthDay]):
     """A TROVIS DDMM register exposed as a recurring ``MonthDay``."""
+
+    def __init__(
+        self,
+        address: int,
+        *,
+        min_value: MonthDay,
+        max_value: MonthDay,
+        raw_min: int,
+        raw_max: int,
+        writable: bool = False,
+    ) -> None:
+        super().__init__(address, writable=writable)
+        self.min_value = min_value
+        self.max_value = max_value
+        self.raw_min = raw_min
+        self.raw_max = raw_max
 
     def decode(
         self,
         words: list[int],
         scale_exponent: int | None = None,
     ) -> MonthDay | None:
-        """Decode one packed DDMM word."""
-        return month_day_from_ddmm(words[0])
+        """Decode one packed DDMM word within the documented range."""
+        raw = words[0]
+        if not self.raw_min <= raw <= self.raw_max:
+            return None
+
+        value = month_day_from_ddmm(raw)
+        if value is None:
+            return None
+        if not (
+            _month_day_key(self.min_value)
+            <= _month_day_key(value)
+            <= _month_day_key(self.max_value)
+        ):
+            return None
+        return value
 
     def encode(
         self,
@@ -125,9 +171,23 @@ class PackedMonthDayField(RegisterField[MonthDay]):
     ) -> list[int]:
         """Encode a validated recurring date."""
         try:
-            return [month_day_to_ddmm(value)]
+            raw = month_day_to_ddmm(value)
         except (TypeError, ValueError) as err:
             raise TrovisValueValidationError(str(err)) from err
+
+        if not (
+            _month_day_key(self.min_value)
+            <= _month_day_key(value)
+            <= _month_day_key(self.max_value)
+        ):
+            raise TrovisValueValidationError(
+                f"Recurring date {value} is outside {self.min_value}..{self.max_value}"
+            )
+        if not self.raw_min <= raw <= self.raw_max:
+            raise TrovisValueValidationError(
+                f"Packed recurring date {raw} is outside {self.raw_min}..{self.raw_max}"
+            )
+        return [raw]
 
 
 class PackedDateField(RegisterField[datetime.date]):
@@ -137,13 +197,17 @@ class PackedDateField(RegisterField[datetime.date]):
         self,
         address: int,
         *,
-        min_year: int,
-        max_year: int,
+        min_value: datetime.date,
+        max_value: datetime.date,
+        raw_min: int,
+        raw_max: int,
         writable: bool = False,
     ) -> None:
         super().__init__(address, count=2, writable=writable)
-        self.min_year = min_year
-        self.max_year = max_year
+        self.min_value = min_value
+        self.max_value = max_value
+        self.raw_min = raw_min
+        self.raw_max = raw_max
 
     def decode(
         self,
@@ -151,9 +215,13 @@ class PackedDateField(RegisterField[datetime.date]):
         scale_exponent: int | None = None,
     ) -> datetime.date | None:
         """Decode ``[DDMM, year]`` into a calendar date."""
-        if len(words) != 2 or not self.min_year <= words[1] <= self.max_year:
+        if len(words) != 2 or not self.raw_min <= words[0] <= self.raw_max:
             return None
-        return date_from_ddmm_year(words[0], words[1])
+
+        value = date_from_ddmm_year(words[0], words[1])
+        if value is None or not self.min_value <= value <= self.max_value:
+            return None
+        return value
 
     def encode(
         self,
@@ -166,9 +234,14 @@ class PackedDateField(RegisterField[datetime.date]):
         except (TypeError, ValueError) as err:
             raise TrovisValueValidationError(str(err)) from err
 
-        if not self.min_year <= year <= self.max_year:
+        if not self.min_value <= value <= self.max_value:
             raise TrovisValueValidationError(
-                f"Year {year} is outside {self.min_year}..{self.max_year}"
+                f"Date {value.isoformat()} is outside "
+                f"{self.min_value.isoformat()}..{self.max_value.isoformat()}"
+            )
+        if not self.raw_min <= raw_date <= self.raw_max:
+            raise TrovisValueValidationError(
+                f"Packed date {raw_date} is outside {self.raw_min}..{self.raw_max}"
             )
         return [raw_date, year]
 
@@ -394,8 +467,10 @@ def gauge(
 def time_value(
     hr_number: int,
     *,
-    min_time: datetime.time = datetime.time.min,
-    max_time: datetime.time = datetime.time(23, 59),
+    min_value: datetime.time,
+    max_value: datetime.time,
+    raw_min: int,
+    raw_max: int,
     writable: bool = False,
     maker_key: str | None = None,
     maker_category: str | None = None,
@@ -404,8 +479,10 @@ def time_value(
     """Create a native minute-resolution time field from a TROVIS HR."""
     field = PackedTimeField(
         register_address(hr_number),
-        min_time=min_time,
-        max_time=max_time,
+        min_value=min_value,
+        max_value=max_value,
+        raw_min=raw_min,
+        raw_max=raw_max,
         writable=writable,
     )
     return attach_metadata(
@@ -419,8 +496,10 @@ def time_value(
             writable=writable,
             temporal=TemporalMetadata(
                 resolution="minute",
-                min_time=min_time,
-                max_time=max_time,
+                min_value=min_value,
+                max_value=max_value,
+                raw_min=raw_min,
+                raw_max=raw_max,
             ),
         ),
     )
@@ -429,6 +508,10 @@ def time_value(
 def month_day_value(
     hr_number: int,
     *,
+    min_value: MonthDay,
+    max_value: MonthDay,
+    raw_min: int,
+    raw_max: int,
     writable: bool = False,
     maker_key: str | None = None,
     maker_category: str | None = None,
@@ -437,6 +520,10 @@ def month_day_value(
     """Create a native recurring-date field from a packed TROVIS DDMM HR."""
     field = PackedMonthDayField(
         register_address(hr_number),
+        min_value=min_value,
+        max_value=max_value,
+        raw_min=raw_min,
+        raw_max=raw_max,
         writable=writable,
     )
     return attach_metadata(
@@ -448,7 +535,13 @@ def month_day_value(
             maker_category=maker_category,
             description=description,
             writable=writable,
-            temporal=TemporalMetadata(resolution="day"),
+            temporal=TemporalMetadata(
+                resolution="day",
+                min_value=min_value,
+                max_value=max_value,
+                raw_min=raw_min,
+                raw_max=raw_max,
+            ),
         ),
     )
 
@@ -456,8 +549,10 @@ def month_day_value(
 def date_value(
     hr_number: int,
     *,
-    min_year: int,
-    max_year: int,
+    min_value: datetime.date,
+    max_value: datetime.date,
+    raw_min: int,
+    raw_max: int,
     writable: bool = False,
     maker_key: str | None = None,
     maker_category: str | None = None,
@@ -466,8 +561,10 @@ def date_value(
     """Create a native date from adjacent TROVIS DDMM and year registers."""
     field = PackedDateField(
         register_address(hr_number),
-        min_year=min_year,
-        max_year=max_year,
+        min_value=min_value,
+        max_value=max_value,
+        raw_min=raw_min,
+        raw_max=raw_max,
         writable=writable,
     )
     return attach_metadata(
@@ -481,8 +578,10 @@ def date_value(
             writable=writable,
             temporal=TemporalMetadata(
                 resolution="day",
-                min_year=min_year,
-                max_year=max_year,
+                min_value=min_value,
+                max_value=max_value,
+                raw_min=raw_min,
+                raw_max=raw_max,
             ),
         ),
     )

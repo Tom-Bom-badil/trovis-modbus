@@ -10,25 +10,43 @@ from trovis_modbus import MonthDay, Trovis557x, TrovisValueValidationError
 
 
 def test_temporal_metadata(trovis: Trovis557x) -> None:
+    clock_time = trovis.clock.require_metadata_for("time")
+    assert clock_time.value_kind == "time"
+    assert clock_time.writable is True
+    assert clock_time.temporal is not None
+    assert clock_time.temporal.resolution == "minute"
+    assert clock_time.temporal.min_value == time(0, 0)
+    assert clock_time.temporal.max_value == time(23, 59)
+    assert clock_time.temporal.raw_min == 0
+    assert clock_time.temporal.raw_max == 2359
+
     clock_date = trovis.clock.require_metadata_for("date")
     assert clock_date.value_kind == "date"
     assert clock_date.writable is True
     assert clock_date.temporal is not None
     assert clock_date.temporal.resolution == "day"
-    assert clock_date.temporal.min_year == 2000
-    assert clock_date.temporal.max_year == 2098
+    assert clock_date.temporal.min_value == date(2000, 1, 1)
+    assert clock_date.temporal.max_value == date(2098, 12, 31)
+    assert clock_date.temporal.raw_min == 101
+    assert clock_date.temporal.raw_max == 3112
 
     summer_start = trovis.controller.require_metadata_for("summer_start")
     assert summer_start.value_kind == "month_day"
     assert summer_start.temporal is not None
     assert summer_start.temporal.resolution == "day"
+    assert summer_start.temporal.min_value == MonthDay(1, 1)
+    assert summer_start.temporal.max_value == MonthDay(31, 12)
+    assert summer_start.temporal.raw_min == 101
+    assert summer_start.temporal.raw_max == 3112
 
     disinfection_start = trovis.hot_water.require_metadata_for("disinfection_start")
     assert disinfection_start.value_kind == "time"
     assert disinfection_start.temporal is not None
     assert disinfection_start.temporal.resolution == "minute"
-    assert disinfection_start.temporal.min_time == time(0, 0)
-    assert disinfection_start.temporal.max_time == time(23, 45)
+    assert disinfection_start.temporal.min_value == time(0, 0)
+    assert disinfection_start.temporal.max_value == time(23, 45)
+    assert disinfection_start.temporal.raw_min == 0
+    assert disinfection_start.temporal.raw_max == 2345
 
 
 def test_temporal_codecs(trovis: Trovis557x) -> None:

@@ -1,5 +1,6 @@
 """The controller's date and time, as native ``datetime`` objects."""
 
+
 from __future__ import annotations
 
 import datetime
@@ -14,29 +15,40 @@ class Clock(TrovisComponent):
     time = time_value(
         40100,
         writable=True,
+        min_value=datetime.time(0, 0),
+        max_value=datetime.time(23, 59),
+        raw_min=0,
+        raw_max=2359,
         maker_key="Uhrzeit",
         maker_category="ALG-DAT",
         description="Uhrzeit",
     )
+
     date = date_value(
         40101,
-        min_year=2000,
-        max_year=2098,
         writable=True,
+        min_value=datetime.date(2000, 1, 1),
+        max_value=datetime.date(2098, 12, 31),
+        raw_min=101,
+        raw_max=3112,
         maker_key="Datum",
         maker_category="ALG-DAT",
         description="Datum",
     )
+
     year = raw_register(
         40102,
         writable=True,
         min_value=2000,
         max_value=2098,
+        raw_min=2000,
+        raw_max=2098,
         digits=0,
         maker_key="Jahr",
         maker_category="ALG-DAT",
         description="Jahr",
     )
+
 
     @property
     def datetime(self) -> datetime.datetime | None:
