@@ -60,7 +60,7 @@ class HeatingCircuit(TrovisComponent):
         description="Vorlaufsollwert Rk",
     )
 
-    flow_max = temperature(
+    maximum_flow_temperature = temperature(
         41001,
         stride=200,
         writable=True,
@@ -74,7 +74,7 @@ class HeatingCircuit(TrovisComponent):
         description="Maximale Vorlauftemperatur Rk",
     )
 
-    flow_min = temperature(
+    minimum_flow_temperature = temperature(
         41002,
         stride=200,
         writable=True,
@@ -120,7 +120,7 @@ class HeatingCircuit(TrovisComponent):
     # the final 5578 register table. Do not invent manufacturer limits here.
     room_setpoint_active = temperature(41005, stride=200)
 
-    slope = gauge(
+    gradient = gauge(
         41006,
         0.1,
         stride=200,
@@ -151,7 +151,7 @@ class HeatingCircuit(TrovisComponent):
         description="Niveau VL Heizkennlinie",
     )
 
-    return_slope = gauge(
+    return_flow_gradient = gauge(
         41009,
         0.1,
         stride=200,
@@ -165,7 +165,7 @@ class HeatingCircuit(TrovisComponent):
         description="Steigung Rücklaufkennlinie",
     )
 
-    return_level = gauge(
+    return_flow_level = gauge(
         41010,
         0.1,
         stride=200,
@@ -180,7 +180,7 @@ class HeatingCircuit(TrovisComponent):
         description="Niveau Rücklaufkennlinie",
     )
 
-    return_max = temperature(
+    maximum_return_flow_temperature = temperature(
         41011,
         stride=200,
         writable=True,
@@ -194,7 +194,7 @@ class HeatingCircuit(TrovisComponent):
         description="Maximale Rücklauftemperatur Rk",
     )
 
-    return_base_point = temperature(
+    return_flow_base_point = temperature(
         41012,
         stride=200,
         min_value=5,
@@ -207,7 +207,7 @@ class HeatingCircuit(TrovisComponent):
         description="Fußpunkt Rücklauftemperatur Rk",
     )
 
-    return_setpoint = temperature(
+    return_flow_temperature_setpoint = temperature(
         41033,
         stride=200,
         min_value=5,
@@ -248,7 +248,7 @@ class HeatingCircuit(TrovisComponent):
         description="Sollwert Nachtbetrieb bei Festwertregelung",
     )
 
-    flow_deviation = gauge(
+    flow_control_deviation = gauge(
         41063,
         0.1,
         stride=200,
@@ -342,7 +342,7 @@ class HeatingCircuit(TrovisComponent):
         description="Steuerungsebene Vorlaufsollwert",
     )
 
-    return_setpoint_control_autonomous = coil(
+    return_flow_temperature_setpoint_control_autonomous = coil(
         117,
         stride=2,
         false_key="glt",
@@ -382,7 +382,7 @@ class HeatingCircuit(TrovisComponent):
 
     return_limit_active = coil(1006, stride=200)
 
-    outside_shutdown = coil(1007, stride=200)
+    outdoor_temperature_deactivation = coil(1007, stride=200)
 
     standby = coil(1008, stride=200)
 
@@ -407,8 +407,8 @@ class HeatingCircuit(TrovisComponent):
     # Override coils (mode 89+2n, pump 96+1n) released before a write.
     ebene_coils = {"mode": (89, 2), "pump_running": (96, 1)}
 
-    def heating_curve(self, mode: str = "active") -> list[float] | None:
-        """Flow-temperature curve over outside temps -20..20 °C.
+    def heating_characteristic(self, mode: str = "active") -> list[float] | None:
+        """Flow-temperature characteristic over outdoor temperatures -20..20 °C.
 
         ``mode``: ``"active"`` (follow day/night state), ``"day"`` or
         ``"night"``. Returns ``None`` if a required value is missing.
@@ -418,18 +418,27 @@ class HeatingCircuit(TrovisComponent):
         else:
             room = self.room_setpoint_night
 
-        slope, level = self.slope, self.level
-        flow_min, flow_max = self.flow_min, self.flow_max
+        gradient, level = self.gradient, self.level
+        minimum_flow_temperature, maximum_flow_temperature = (
+            self.minimum_flow_temperature,
+            self.maximum_flow_temperature,
+        )
 
-        if None in (room, slope, level, flow_min, flow_max):
+        if None in (
+            room,
+            gradient,
+            level,
+            minimum_flow_temperature,
+            maximum_flow_temperature,
+        ):
             return None
 
-        return utils.heating_curve(
+        return utils.heating_characteristic(
             room_setpoint=room,  # type: ignore[arg-type]
-            slope=slope,  # type: ignore[arg-type]
+            gradient=gradient,  # type: ignore[arg-type]
             level=level,  # type: ignore[arg-type]
-            flow_min=flow_min,  # type: ignore[arg-type]
-            flow_max=flow_max,  # type: ignore[arg-type]
+            minimum_flow_temperature=minimum_flow_temperature,  # type: ignore[arg-type]
+            maximum_flow_temperature=maximum_flow_temperature,  # type: ignore[arg-type]
         )
 
     async def set_mode(self, mode: OperatingMode) -> None:

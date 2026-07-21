@@ -39,7 +39,7 @@ def test_temporal_metadata(trovis: Trovis557x) -> None:
     assert summer_start.temporal.raw_min == 101
     assert summer_start.temporal.raw_max == 3112
 
-    disinfection_start = trovis.hot_water.require_metadata_for("disinfection_start")
+    disinfection_start = trovis.ww.require_metadata_for("disinfection_start")
     assert disinfection_start.value_kind == "time"
     assert disinfection_start.temporal is not None
     assert disinfection_start.temporal.resolution == "minute"
@@ -95,8 +95,8 @@ async def test_recurring_date_and_disinfection_writes(
     await trovis.controller.set_summer_start(MonthDay(1, 4))
     assert (await unit.read_holding_registers(112, 1))[0] == 104
 
-    await trovis.hot_water.set_disinfection_start(time(20, 15))
-    await trovis.hot_water.set_disinfection_stop(time(22, 0))
+    await trovis.ww.set_disinfection_start(time(20, 15))
+    await trovis.ww.set_disinfection_stop(time(22, 0))
     assert (await unit.read_holding_registers(1831, 1))[0] == 2015
     assert (await unit.read_holding_registers(1832, 1))[0] == 2200
 
@@ -117,7 +117,7 @@ def test_time_rejects_subminute_precision(
 def test_disinfection_time_rejects_out_of_range_value(
     trovis: Trovis557x,
 ) -> None:
-    field = trovis.hot_water._register_fields["disinfection_start"]
+    field = trovis.ww._register_fields["disinfection_start"]
     assert field.decode([2350]) is None
     with pytest.raises(TrovisValueValidationError):
         field.encode(time(23, 50))

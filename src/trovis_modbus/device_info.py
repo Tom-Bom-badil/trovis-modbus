@@ -13,7 +13,9 @@ class DeviceInformation(TrovisComponent):
     """Controller identity and firmware/hardware versions."""
 
     _model_raw = integer(40001, signed=False)
-    system = gauge(40002, 0.1, signed=False)  # hydraulic-system / "Anlage" code
+    system_code = gauge(
+        40002, 0.1, signed=False
+    )  # Anlagenkennziffer / system code number
     _firmware_raw = gauge(40003, 0.01, signed=False)
     _hardware_raw = gauge(40004, 0.01, signed=False)
     _serial_raw = integer(40006, signed=False)
@@ -21,13 +23,13 @@ class DeviceInformation(TrovisComponent):
     @property
     def manufacturer(self) -> str:
         """Controller manufacturer."""
-        return "Samson"
+        return "SAMSON"
 
     @property
     def model(self) -> str:
-        """Model name, e.g. 'Trovis 5579'."""
+        """Model name, e.g. 'TROVIS 5579'."""
         value = self._model_raw
-        return f"Trovis {value}" if value else "Trovis 557x"
+        return f"TROVIS {value}" if value else "TROVIS 557x"
 
     @property
     def firmware_version(self) -> str | None:

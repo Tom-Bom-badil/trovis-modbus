@@ -19,4 +19,4 @@ export PYTHONPATH="$ROOT_DIR/src:$MODBUS_CONNECTION_SRC${PYTHONPATH:+:$PYTHONPAT
 
 cd "$ROOT_DIR"
 
-exec "$PYTHON_BIN" -m pytest -p modbus_connection.pytest_plugin "$@"
+exec "$PYTHON_BIN" -m pytest "$@"

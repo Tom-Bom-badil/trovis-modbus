@@ -12,17 +12,17 @@ from trovis_modbus import MonthDay, Trovis557x
 @pytest.mark.parametrize(
     ("component_name", "field", "minimum", "maximum", "raw_min", "raw_max"),
     [
-        ("controller", "summer_outside_limit", 0, 30, 0, 300),
-        ("controller", "outside_delay", 1, 6, 10, 60),
-        ("controller", "frost_limit", -15, 3, -150, 30),
-        ("heating_circuit_1", "flow_min", -5, 150, -50, 1500),
-        ("heating_circuit_1", "flow_max", 5, 150, 50, 1500),
-        ("heating_circuit_1", "return_max", 5, 90, 50, 900),
-        ("hot_water", "hysteresis", 0, 30, 0, 300),
-        ("hot_water", "charge_overshoot", 0, 50, 0, 500),
-        ("hot_water", "max_charge_temp", 0, 90, 0, 900),
-        ("hot_water", "return_max", 5, 90, 50, 900),
-        ("hot_water", "disinfection_temp", 60, 90, 600, 900),
+        ("controller", "summer_outdoor_temperature_limit", 0, 30, 0, 300),
+        ("controller", "outdoor_temperature_delay", 1, 6, 10, 60),
+        ("controller", "frost_protection_limit", -15, 3, -150, 30),
+        ("hk1", "minimum_flow_temperature", -5, 150, -50, 1500),
+        ("hk1", "maximum_flow_temperature", 5, 150, 50, 1500),
+        ("hk1", "maximum_return_flow_temperature", 5, 90, 50, 900),
+        ("ww", "hysteresis", 0, 30, 0, 300),
+        ("ww", "charging_temperature_boost", 0, 50, 0, 500),
+        ("ww", "maximum_charging_temperature", 0, 90, 0, 900),
+        ("ww", "maximum_return_flow_temperature", 5, 90, 50, 900),
+        ("ww", "disinfection_temperature", 60, 90, 600, 900),
     ],
 )
 def test_number_ranges_from_reference_data(
@@ -44,9 +44,9 @@ def test_number_ranges_from_reference_data(
     assert metadata.number.raw_max == raw_max
 
 
-def test_corrected_hot_water_setpoint_limits(trovis: Trovis557x) -> None:
+def test_corrected_domestic_hot_water_setpoint_limits(trovis: Trovis557x) -> None:
     for field in ("setpoint_min", "setpoint_max"):
-        metadata = trovis.hot_water.require_metadata_for(field)
+        metadata = trovis.ww.require_metadata_for(field)
         assert metadata.number is not None
         assert metadata.number.min_value == 5
         assert metadata.number.max_value == 90
@@ -54,10 +54,10 @@ def test_corrected_hot_water_setpoint_limits(trovis: Trovis557x) -> None:
         assert metadata.number.raw_max == 900
 
 
-def test_outside_delay_uses_hardware_verified_scale(
+def test_outdoor_temperature_delay_uses_hardware_verified_scale(
     trovis: Trovis557x,
 ) -> None:
-    field = trovis.controller._register_fields["outside_delay"]
+    field = trovis.controller._register_fields["outdoor_temperature_delay"]
 
     assert field.decode([30]) == pytest.approx(3.0)
     assert field.encode(3) == [30]

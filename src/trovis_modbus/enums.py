@@ -6,11 +6,11 @@ from enum import IntEnum
 
 
 class OperatingMode(IntEnum):
-    """Operating mode of a heating circuit, hot water, or rotary switch.
+    """Operating mode of a heating circuit, domestic hot water, or rotary switch.
 
     Matches the controller's complete switch list (``Liste_Schalter``). The
     writable option list intentionally excludes :attr:`PROGRAM`, while every
-    heating and hot-water circuit uses the same enum.
+    heating and domestic-hot-water circuit uses the same enum.
     """
 
     PROGRAM = 0  # timer program ("PA")
@@ -83,10 +83,10 @@ class StorageStatus(IntEnum):
     DISCHARGE_PROTECTION = 6
 
 
-class PlantActivity(IntEnum):
-    """Combined heating and domestic-hot-water activity."""
+class SystemActivity(IntEnum):
+    """Combined heating and domestic-hot-water system activity."""
 
     IDLE = 0
     HEATING = 1
-    HOT_WATER = 2
-    HEATING_AND_HOT_WATER = 3
+    DOMESTIC_HOT_WATER = 2
+    HEATING_AND_DOMESTIC_HOT_WATER = 3

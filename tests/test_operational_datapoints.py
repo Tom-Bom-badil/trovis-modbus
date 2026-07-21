@@ -14,43 +14,43 @@ def test_storage_status_enum_matches_firmware_values() -> None:
 def test_heating_circuit_stride_patterns() -> None:
     device = Trovis557x(unit=None)  # type: ignore[arg-type]
 
-    hc1 = device.heating_circuit_1
-    hc2 = device.heating_circuit_2
-    hc3 = device.heating_circuit_3
+    hk1 = device.hk1
+    hk2 = device.hk2
+    hk3 = device.hk3
 
-    assert hc1._address(hc1._bit_fields["valve_closing"]) == 61
-    assert hc2._address(hc2._bit_fields["valve_closing"]) == 63
-    assert hc3._address(hc3._bit_fields["valve_closing"]) == 65
+    assert hk1._address(hk1._bit_fields["valve_closing"]) == 61
+    assert hk2._address(hk2._bit_fields["valve_closing"]) == 63
+    assert hk3._address(hk3._bit_fields["valve_closing"]) == 65
 
-    assert hc1._address(hc1._register_fields["fixed_setpoint_day"]) == 1041
-    assert hc2._address(hc2._register_fields["fixed_setpoint_day"]) == 1241
-    assert hc3._address(hc3._register_fields["fixed_setpoint_day"]) == 1441
+    assert hk1._address(hk1._register_fields["fixed_setpoint_day"]) == 1041
+    assert hk2._address(hk2._register_fields["fixed_setpoint_day"]) == 1241
+    assert hk3._address(hk3._register_fields["fixed_setpoint_day"]) == 1441
 
-    assert hc1._address(hc1._bit_fields["room_setpoint_control_autonomous"]) == 121
-    assert hc2._address(hc2._bit_fields["room_setpoint_control_autonomous"]) == 122
-    assert hc3._address(hc3._bit_fields["room_setpoint_control_autonomous"]) == 123
+    assert hk1._address(hk1._bit_fields["room_setpoint_control_autonomous"]) == 121
+    assert hk2._address(hk2._bit_fields["room_setpoint_control_autonomous"]) == 122
+    assert hk3._address(hk3._bit_fields["room_setpoint_control_autonomous"]) == 123
 
 
-def test_hot_water_special_setpoint_is_distinct_from_active_setpoint() -> None:
+def test_domestic_hot_water_special_setpoint_is_distinct_from_active_setpoint() -> None:
     device = Trovis557x(unit=None)  # type: ignore[arg-type]
-    hot_water = device.hot_water
+    ww = device.ww
 
-    assert hot_water._address(hot_water._register_fields["setpoint_active"]) == 1807
-    assert hot_water._address(hot_water._register_fields["special_setpoint"]) == 1808
-    assert hot_water.ebene_coils["special_setpoint"] == (112, 0)
+    assert ww._address(ww._register_fields["setpoint_active"]) == 1807
+    assert ww._address(ww._register_fields["special_setpoint"]) == 1808
+    assert ww.ebene_coils["special_setpoint"] == (112, 0)
 
 
 def test_new_writable_fields_have_expected_limits() -> None:
     device = Trovis557x(unit=None)  # type: ignore[arg-type]
 
-    fixed = device.heating_circuit_1.require_metadata_for("fixed_setpoint_day")
+    fixed = device.hk1.require_metadata_for("fixed_setpoint_day")
     assert fixed.writable is True
     assert fixed.number is not None
     assert fixed.number.min_value == -5
     assert fixed.number.max_value == 130
     assert fixed.number.step == pytest.approx(0.1)
 
-    special = device.hot_water.require_metadata_for("special_setpoint")
+    special = device.ww.require_metadata_for("special_setpoint")
     assert special.writable is True
     assert special.number is not None
     assert special.number.min_value == 5
@@ -62,13 +62,13 @@ def test_legacy_gap_registers_and_intermediate_heating_points() -> None:
     device = Trovis557x(unit=None)  # type: ignore[arg-type]
 
     controller = device.controller
-    hot_water = device.hot_water
+    ww = device.ww
 
     assert controller._address(controller._register_fields["special_functions"]) == 4
 
-    overrun = hot_water.require_metadata_for("charge_pump_overrun_factor")
+    overrun = ww.require_metadata_for("storage_tank_charging_pump_lag_factor")
     assert (
-        hot_water._address(hot_water._register_fields["charge_pump_overrun_factor"])
+        ww._address(ww._register_fields["storage_tank_charging_pump_lag_factor"])
         == 1804
     )
     assert overrun.writable is True
@@ -77,16 +77,8 @@ def test_legacy_gap_registers_and_intermediate_heating_points() -> None:
     assert overrun.number.max_value == pytest.approx(10.0)
     assert overrun.number.step == pytest.approx(0.1)
 
-    assert (
-        hot_water._address(
-            hot_water._bit_fields["intermediate_heating_function_enabled"]
-        )
-        == 406
-    )
-    assert (
-        hot_water._address(hot_water._bit_fields["intermediate_heating_operation"])
-        == 1830
-    )
+    assert ww._address(ww._bit_fields["intermediate_heating_function_enabled"]) == 406
+    assert ww._address(ww._bit_fields["intermediate_heating_operation"]) == 1830
 
 
 def test_additional_5578_sensor_addresses() -> None:
@@ -96,7 +88,10 @@ def test_additional_5578_sensor_addresses() -> None:
     assert sensors._address(sensors._register_fields["ae3_fg3"]) == 27
     assert sensors._address(sensors._register_fields["pulse_rate"]) == 28
     assert sensors._address(sensors._register_fields["analog_input_voltage"]) == 41
-    assert sensors._address(sensors._register_fields["summer_outside_average"]) == 42
+    assert (
+        sensors._address(sensors._register_fields["summer_outdoor_temperature_average"])
+        == 42
+    )
 
 
 def test_controller_monitoring_metadata_and_timeout() -> None:

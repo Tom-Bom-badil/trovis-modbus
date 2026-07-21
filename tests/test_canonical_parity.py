@@ -37,8 +37,8 @@ HARDWARE_VERIFIED_SCALE: dict[int, float] = {117: 0.1}
 KNOWN_NON_CANONICAL_REGISTERS = {
     register_address(40028),  # 5578-E AE3 / FG3 input
     register_address(40042),  # 5578 analog input 0-10 V
-    register_address(40043),  # Summer-operation daily outside average
-    register_address(41827),  # Current hot-water storage status
+    register_address(40043),  # Summer-operation daily outdoor-temperature average
+    register_address(41827),  # Current domestic hot-water storage status
 }
 
 # Manufacturer-documented 5578 points absent from the older canonical list.
@@ -54,9 +54,9 @@ KNOWN_NON_CANONICAL_COILS = {
         (703, True),
         (704, True),
         (705, True),  # Room control unit Rk1-Rk3
-        (1810, False),  # Hot-water storage charging active
-        (1811, True),  # Hot-water storage charging enabled
-        (1812, False),  # Hot-water storage charging locked
+        (1810, False),  # Domestic hot-water storage tank charging active
+        (1811, True),  # Domestic hot-water storage tank charging enabled
+        (1812, False),  # Domestic hot-water storage tank charging locked
         (2107, True),
         (2207, True),
         (2307, True),  # Optimization Rk1-Rk3

@@ -13,7 +13,8 @@ from .enums import (
 )
 from .metadata import OptionMetadata
 
-# All heating and hot-water circuits share one writable operating-mode list.
+# All heating circuits and the domestic-hot-water circuit share one
+# writable operating-mode list.
 # PROGRAM remains readable through OperatingMode, but it is a timer-program
 # state rather than a normal mode selected through a writable field.
 OPERATING_MODE_OPTIONS = (

@@ -12,9 +12,9 @@ from .addresses import register_address
 from .clock import Clock
 from .controller import Controller
 from .device_info import DeviceInformation
-from .enums import PlantActivity
+from .domestic_hot_water import DomesticHotWater
+from .enums import SystemActivity
 from .heating_circuit import HeatingCircuit
-from .hot_water import HotWater
 from .model import (
     DEFAULT_WRITE_ACCESS_CODE,
     async_disable_writing,
@@ -60,11 +60,11 @@ class Trovis557x:
         self.clock = Clock(unit)
         self.sensors = Sensors(unit)
 
-        self.heating_circuit_1 = HeatingCircuit(unit, index=1)
-        self.heating_circuit_2 = HeatingCircuit(unit, index=2)
-        self.heating_circuit_3 = HeatingCircuit(unit, index=3)
+        self.hk1 = HeatingCircuit(unit, index=1)
+        self.hk2 = HeatingCircuit(unit, index=2)
+        self.hk3 = HeatingCircuit(unit, index=3)
 
-        self.hot_water = HotWater(unit)
+        self.ww = DomesticHotWater(unit)
         self._writing_enabled = False
 
         all_components = (
@@ -72,10 +72,10 @@ class Trovis557x:
             self.controller,
             self.clock,
             self.sensors,
-            self.heating_circuit_1,
-            self.heating_circuit_2,
-            self.heating_circuit_3,
-            self.hot_water,
+            self.hk1,
+            self.hk2,
+            self.hk3,
+            self.ww,
         )
 
         register_ranges, coil_ranges = ranges_for_model(model)
@@ -84,9 +84,9 @@ class Trovis557x:
             component.coil_ranges = coil_ranges
 
         self._heating_circuits = (
-            self.heating_circuit_1,
-            self.heating_circuit_2,
-            self.heating_circuit_3,
+            self.hk1,
+            self.hk2,
+            self.hk3,
         )[: heating_circuit_count(model)]
 
         self._group = ComponentGroup(unit, self.components)
@@ -134,29 +134,29 @@ class Trovis557x:
             self.clock,
             self.sensors,
             *self.heating_circuits,
-            self.hot_water,
+            self.ww,
         )
 
     @property
-    def activity(self) -> PlantActivity | None:
-        """Return combined heating / hot-water activity from pump states."""
+    def system_activity(self) -> SystemActivity | None:
+        """Return combined heating and WW system activity from pump states."""
         heating_states = tuple(
             circuit.pump_running for circuit in self.heating_circuits
         )
-        hot_water_state = self.hot_water.charge_pump_running
+        ww_state = self.ww.storage_tank_charging_pump_running
 
-        if all(state is None for state in (*heating_states, hot_water_state)):
+        if all(state is None for state in (*heating_states, ww_state)):
             return None
 
         heating = any(state is True for state in heating_states)
-        hot_water = hot_water_state is True
-        if heating and hot_water:
-            return PlantActivity.HEATING_AND_HOT_WATER
+        ww_active = ww_state is True
+        if heating and ww_active:
+            return SystemActivity.HEATING_AND_DOMESTIC_HOT_WATER
         if heating:
-            return PlantActivity.HEATING
-        if hot_water:
-            return PlantActivity.HOT_WATER
-        return PlantActivity.IDLE
+            return SystemActivity.HEATING
+        if ww_active:
+            return SystemActivity.DOMESTIC_HOT_WATER
+        return SystemActivity.IDLE
 
     @property
     def writing_enabled(self) -> bool:

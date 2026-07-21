@@ -66,7 +66,7 @@ class Sensors(TrovisComponent):
         maker_category="FÜH-EA",
         description="Analogeingang 0 bis 10 V",
     )
-    summer_outside_average = temperature(
+    summer_outdoor_temperature_average = temperature(
         40043,
         maker_key="Sommer_AT-Mittel",
         maker_category="ALG-SON",

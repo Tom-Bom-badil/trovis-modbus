@@ -45,7 +45,7 @@ class Controller(TrovisComponent):
         description="Maximaler Vorlaufsollwert des Reglers",
     )
 
-    # The three front-panel rotary switches, top to bottom (RK1 / RK2 / hot water).
+    # The three front-panel rotary switches, top to bottom (Hk1 / Hk2 / WW).
     switch_top = enum(40103, OperatingMode)
 
     switch_middle = enum(40104, OperatingMode)
@@ -104,7 +104,7 @@ class Controller(TrovisComponent):
         description="Anzahl Tage für Sommerbetrieb aus",
     )
 
-    summer_outside_limit = temperature(
+    summer_outdoor_temperature_limit = temperature(
         40117,
         writable=True,
         min_value=0,
@@ -117,7 +117,7 @@ class Controller(TrovisComponent):
         description="Außentemperatur-Grenzwert für den Sommerbetrieb",
     )
 
-    outside_delay = gauge(
+    outdoor_temperature_delay = gauge(
         40118,
         0.1,
         writable=True,
@@ -164,7 +164,7 @@ class Controller(TrovisComponent):
         description="Temperaturüberwachung: Zeitfenster",
     )
 
-    frost_limit = temperature(
+    frost_protection_limit = temperature(
         40123,
         writable=True,
         min_value=-15,
@@ -177,7 +177,7 @@ class Controller(TrovisComponent):
         description="Frostschutzgrenzwert",
     )
 
-    outside_input_range_start = temperature(
+    outdoor_temperature_input_range_start = temperature(
         40124,
         writable=True,
         min_value=-50,
@@ -190,7 +190,7 @@ class Controller(TrovisComponent):
         description="Übertragungsbereichsanfang Außentemperatur bei 0 V",
     )
 
-    outside_input_range_end = temperature(
+    outdoor_temperature_input_range_end = temperature(
         40125,
         writable=True,
         min_value=-50,
@@ -263,7 +263,7 @@ class Controller(TrovisComponent):
 
     summer_active = coil(9)
 
-    outside_temperature_control_autonomous = coil(
+    outdoor_temperature_control_autonomous = coil(
         88,
         false_key="glt",
         true_key="autonomous",
@@ -302,11 +302,11 @@ class Controller(TrovisComponent):
         ),
     )
 
-    delayed_outside_temp_adjustment_falling = coil(134, writable=True)
+    delayed_outdoor_temperature_adaptation_falling = coil(134, writable=True)
 
-    delayed_outside_temp_adjustment_rising = coil(135, writable=True)
+    delayed_outdoor_temperature_adaptation_rising = coil(135, writable=True)
 
-    auto_daylight_saving = coil(
+    automatic_summer_standard_time_switchover = coil(
         137,
         writable=True,
         false_key="inactive",

@@ -23,7 +23,7 @@ HOLDING: dict[int, int] = {
     2: 305,  # firmware -> 3.05
     3: 110,  # hardware -> 1.10
     5: 12345,  # serial
-    9: 0x10000 - 50,  # sensors.af1 -> -5.0 (signed, outside)
+    9: 0x10000 - 50,  # sensors.af1 -> -5.0 (signed, outdoor temperature)
     12: 300,  # sensors.vf1 -> 30.0 -> unsigned, the water in your pipes
     19: 200,  # sensors.rf1 -> 20.0
     22: 450,  # sensors.sf1 -> 45.0
@@ -31,37 +31,37 @@ HOLDING: dict[int, int] = {
     27: 125,  # sensors.ae3_fg3 -> 12.5
     28: 240,  # sensors.pulse_rate -> 240 Imp/h
     41: 735,  # sensors.analog_input_voltage -> 7.35 V
-    42: 185,  # sensors.summer_outside_average -> 18.5 °C
+    42: 185,  # sensors.summer_outdoor_temperature_average -> 18.5 °C
     98: 900,  # max flow setpoint -> 90.0
     99: 1430,  # time -> 14:30
     100: 2106,  # date -> 21.06
     101: 2026,  # year
     102: 1,  # switch_top -> AUTOMATIC
-    105: 1,  # hc1 mode -> AUTOMATIC
-    106: 42,  # hc1 control signal -> 42 %
+    105: 1,  # hk1 mode -> AUTOMATIC
+    106: 42,  # hk1 control signal -> 42 %
     112: 1505,  # summer start -> 15.05
     113: 3009,  # summer end -> 30.09
     114: 2,  # summer_days_on
     115: 3,  # summer_days_off
     120: 50,  # temperature monitoring deviation -> 5.0 K
     121: 30,  # temperature monitoring window -> 30 min
-    123: 0x10000 - 200,  # 0 V outside-temperature range -> -20.0 °C
-    124: 500,  # 10 V outside-temperature range -> 50.0 °C
+    123: 0x10000 - 200,  # 0 V outdoor-temperature range -> -20.0 °C
+    124: 500,  # 10 V outdoor-temperature range -> 50.0 °C
     149: 0,  # error status
-    999: 550,  # hc1 flow_setpoint -> 55.0
-    1000: 800,  # hc1 flow_max -> 80.0
-    1001: 200,  # hc1 flow_min -> 20.0
-    1002: 210,  # hc1 room_setpoint_day -> 21.0
-    1003: 180,  # hc1 room_setpoint_night -> 18.0
-    1004: 210,  # hc1 room_setpoint_active -> 21.0
-    1005: 12,  # hc1 slope -> 1.2
-    1006: 0,  # hc1 level -> 0.0
-    1199: 480,  # hc2 flow_setpoint -> 48.0
-    1799: 500,  # hot_water setpoint_day -> 50.0
-    1802: 50,  # hot_water hysteresis -> 5.0 K
-    1806: 450,  # hot_water hold_value -> 45.0 °C
-    1807: 500,  # hot_water setpoint_active -> 50.0
-    1837: 670,  # hot_water active_charge_setpoint -> 67.0
+    999: 550,  # hk1 flow_setpoint -> 55.0
+    1000: 800,  # hk1 maximum_flow_temperature -> 80.0
+    1001: 200,  # hk1 minimum_flow_temperature -> 20.0
+    1002: 210,  # hk1 room_setpoint_day -> 21.0
+    1003: 180,  # hk1 room_setpoint_night -> 18.0
+    1004: 210,  # hk1 room_setpoint_active -> 21.0
+    1005: 12,  # hk1 gradient -> 1.2
+    1006: 0,  # hk1 level -> 0.0
+    1199: 480,  # hk2 flow_setpoint -> 48.0
+    1799: 500,  # ww setpoint_day -> 50.0
+    1802: 50,  # ww hysteresis -> 5.0 K
+    1806: 450,  # ww setpoint_night -> 45.0 °C
+    1807: 500,  # ww setpoint_active -> 50.0
+    1837: 670,  # ww active_charging_setpoint -> 67.0
     1830: 3,  # disinfection weekday -> WEDNESDAY
     1831: 1900,  # disinfection start -> 19:00
     1832: 2100,  # disinfection stop -> 21:00
@@ -70,12 +70,12 @@ HOLDING: dict[int, int] = {
 
 COILS: dict[int, bool] = {
     3: True,  # CL4 / Sammel_Ebenenbit -> AUTARK by default
-    56: True,  # hc1 pump
+    56: True,  # hk1 pump
     158: False,  # CL159 / GLT timeout inactive
-    999: True,  # hc1 automatic
-    1000: True,  # hc1 day active
-    1799: True,  # hot_water automatic
-    59: True,  # hot_water charge pump
+    999: True,  # hk1 automatic
+    1000: True,  # hk1 day active
+    1799: True,  # ww automatic
+    59: True,  # WW storage tank charging pump
 }
 
 

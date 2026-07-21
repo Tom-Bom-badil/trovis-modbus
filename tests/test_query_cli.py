@@ -45,7 +45,7 @@ def test_values_lists_every_subsystem_field(mock_modbus_unit: MockModbusUnit) ->
     """Each sub-system's public fields are enumerated, methods excluded."""
     device = Trovis557x(mock_modbus_unit)
 
-    circuit_rows = field_rows(device.heating_circuit_1)
+    circuit_rows = field_rows(device.hk1)
     circuit_names = {name for name, _value in circuit_rows}
 
     assert {"mode", "pump_running", "room_setpoint_active"} <= circuit_names
@@ -77,7 +77,7 @@ def test_values_lists_every_subsystem_field(mock_modbus_unit: MockModbusUnit) ->
     } <= sensor_names
 
     # Methods / private helpers are not data rows.
-    assert "heating_curve" not in circuit_names
+    assert "heating_characteristic" not in circuit_names
     assert "async_update" not in circuit_names
     assert all(not n.startswith("_") for n in circuit_names)
     assert all(not n.startswith("_") for n in sensor_names)
@@ -90,5 +90,5 @@ def test_print_runs(
     query._print(device)
     out = capsys.readouterr().out
     assert "Device" in out
-    assert "Heating circuit 1" in out
-    assert "Hot water" in out
+    assert "Hk1 - Heating circuit 1" in out
+    assert "WW - Domestic hot water" in out

@@ -1,4 +1,4 @@
-"""The DHW domestic hot water circuit (HK4 / RK4 / WW)."""
+"""The domestic hot-water circuit (WW)."""
 
 from __future__ import annotations
 
@@ -18,8 +18,8 @@ from .options import OPERATING_MODE_OPTIONS, WEEKDAY_OPTIONS
 from .utils import TemperatureRange
 
 
-class HotWater(TrovisComponent):
-    """Domestic hot water: setpoints, charging and thermal disinfection."""
+class DomesticHotWater(TrovisComponent):
+    """Domestic hot water, storage-tank charging and thermal disinfection."""
 
     ### registers
 
@@ -78,7 +78,7 @@ class HotWater(TrovisComponent):
         description="Schaltdifferenz Trinkwasser",
     )
 
-    charge_overshoot = gauge(
+    charging_temperature_boost = gauge(
         41804,
         0.1,
         signed=False,
@@ -94,7 +94,7 @@ class HotWater(TrovisComponent):
         description="Ladetemperaturüberhöhung",
     )
 
-    charge_pump_overrun_factor = gauge(
+    storage_tank_charging_pump_lag_factor = gauge(
         41805,
         0.1,
         signed=False,
@@ -109,7 +109,7 @@ class HotWater(TrovisComponent):
         description="Nachlauffaktor der Speicherladepumpe",
     )
 
-    max_charge_temp = temperature(
+    maximum_charging_temperature = temperature(
         41806,
         writable=True,
         min_value=0,
@@ -122,7 +122,7 @@ class HotWater(TrovisComponent):
         description="Maximale Ladetemperatur Trinkwasser",
     )
 
-    hold_value = temperature(
+    setpoint_night = temperature(
         41807,
         writable=True,
         min_value=20,
@@ -192,7 +192,7 @@ class HotWater(TrovisComponent):
         description="Betriebszustand der Trinkwasserspeicherung",
     )
 
-    return_max = temperature(
+    maximum_return_flow_temperature = temperature(
         41828,
         writable=True,
         min_value=5,
@@ -205,7 +205,7 @@ class HotWater(TrovisComponent):
         description="Maximale Rücklauftemperatur Trinkwasser",
     )
 
-    disinfection_temp = temperature(
+    disinfection_temperature = temperature(
         41830,
         writable=True,
         min_value=60,
@@ -252,7 +252,7 @@ class HotWater(TrovisComponent):
         description="Stoppzeit der thermischen Desinfektion",
     )
 
-    active_charge_setpoint = temperature(
+    active_charging_setpoint = temperature(
         41838,
         min_value=20,
         max_value=90,
@@ -264,7 +264,7 @@ class HotWater(TrovisComponent):
         description="Aktiver Ladetemperatur-Sollwert",
     )
 
-    disinfection_hold = integer(
+    disinfection_hold_time = integer(
         41839,
         signed=False,
         writable=True,
@@ -298,11 +298,11 @@ class HotWater(TrovisComponent):
 
     manual_active = coil(8)
 
-    charge_pump_running = coil(60, writable=True)
+    storage_tank_charging_pump_running = coil(60, writable=True)
 
     circulation_pump_running = coil(61, writable=True)
 
-    charge_pump_control_autonomous = coil(
+    storage_tank_charging_pump_control_autonomous = coil(
         99,
         false_key="glt",
         true_key="autonomous",
@@ -360,7 +360,7 @@ class HotWater(TrovisComponent):
 
     priority = coil(1802)
 
-    max_charge_limit_active = coil(1803)
+    maximum_charging_temperature_limit_active = coil(1803)
 
     return_limit_active = coil(1804)
 
@@ -368,11 +368,11 @@ class HotWater(TrovisComponent):
 
     frost_protection = coil(1806)
 
-    forced_charge = coil(1807, writable=True)
+    forced_charging = coil(1807, writable=True)
 
-    solar_pump_running = coil(1808)
+    solar_circuit_pump_running = coil(1808)
 
-    forced_charge_uses_sensor_2 = coil(
+    forced_charging_uses_storage_tank_sensor_2 = coil(
         1809,
         writable=True,
         false_key="inactive",
@@ -384,7 +384,7 @@ class HotWater(TrovisComponent):
         description="Zwangsladung durch Umschaltung von SF1 auf SF2",
     )
 
-    storage_charging_active = coil(
+    storage_tank_charging_active = coil(
         1810,
         false_key="inactive",
         true_key="active",
@@ -395,7 +395,7 @@ class HotWater(TrovisComponent):
         description="Speicherladung aktiv",
     )
 
-    storage_charging_enabled = coil(
+    storage_tank_charging_enabled = coil(
         1811,
         writable=True,
         false_key="inactive",
@@ -407,7 +407,7 @@ class HotWater(TrovisComponent):
         description="Freigabe Speicherladung",
     )
 
-    storage_charging_locked = coil(
+    storage_tank_charging_locked = coil(
         1812,
         false_key="inactive",
         true_key="active",
@@ -432,7 +432,7 @@ class HotWater(TrovisComponent):
     # Override coils released before a write (no per-index stride here).
     ebene_coils = {
         "mode": (95, 0),
-        "charge_pump_running": (99, 0),
+        "storage_tank_charging_pump_running": (99, 0),
         "circulation_pump_running": (100, 0),
         "special_setpoint": (112, 0),
     }
@@ -450,15 +450,15 @@ class HotWater(TrovisComponent):
     @property
     def night_temperature_range(self) -> TemperatureRange | None:
         """Night/holding range implied by hold value and hysteresis."""
-        if self.hold_value is None or self.hysteresis is None:
+        if self.setpoint_night is None or self.hysteresis is None:
             return None
         return TemperatureRange(
-            minimum=self.hold_value,
-            maximum=round(self.hold_value + self.hysteresis, 1),
+            minimum=self.setpoint_night,
+            maximum=round(self.setpoint_night + self.hysteresis, 1),
         )
 
     async def set_setpoint(self, celsius: float) -> None:
-        """Set the hot-water day setpoint (°C)."""
+        """Set the domestic hot-water day setpoint (°C)."""
         await self.async_write_datapoint("setpoint_day", celsius)
 
     async def set_mode(self, mode: OperatingMode) -> None:
@@ -473,6 +473,6 @@ class HotWater(TrovisComponent):
         """Set the end of the thermal-disinfection window."""
         await self.async_write_datapoint("disinfection_stop", value)
 
-    async def start_forced_charge(self) -> None:
+    async def start_forced_charging(self) -> None:
         """Trigger a one-off storage charge."""
-        await self.async_write_datapoint("forced_charge", True)
+        await self.async_write_datapoint("forced_charging", True)
