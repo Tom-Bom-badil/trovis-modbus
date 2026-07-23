@@ -29,8 +29,7 @@ MODEL_DEFINITIONS = MappingProxyType(
 )
 
 # Register 40002 is assumed to report the concrete raw model values below.
-# In particular, 55731 identifies TROVIS 5573-1 and 55781 identifies
-# TROVIS 5578-E, so the registry no longer needs an ambiguous 5578 candidate.
+# In particular, 55731 identifies TROVIS 5573-1 and 55781 identifies TROVIS 5578-E
 _REPORTED_MODEL_CANDIDATES = MappingProxyType(
     {
         5573: (TROVIS_5573,),
@@ -46,6 +45,7 @@ _REPORTED_MODEL_CANDIDATES = MappingProxyType(
 
 def get_model_definition(model: ControllerModel | str) -> ModelDefinition:
     """Return the exact static definition for a concrete controller model."""
+
     try:
         controller_model = ControllerModel(model)
     except ValueError as err:
@@ -63,4 +63,5 @@ def model_candidates_for_reported_model(
     reported_model: int,
 ) -> tuple[ModelDefinition, ...]:
     """Return static candidates for the raw model value read from register 40002."""
+
     return _REPORTED_MODEL_CANDIDATES.get(reported_model, ())
