@@ -146,7 +146,13 @@ TROVIS_5576 = ModelDefinition(
             "FG1",
             "BE15",
             possible_roles=_POTENTIOMETER_OR_BINARY,
-            register_views=(register_view("ae1_fg1", 40026, InputRole.POTENTIOMETER),),
+            register_views=(
+                register_view(
+                    "fg1",
+                    40026,
+                    InputRole.POTENTIOMETER,
+                ),
+            ),
             paired_common=18,
         ),
         physical_input(
@@ -154,7 +160,13 @@ TROVIS_5576 = ModelDefinition(
             "FG2",
             "BE16",
             possible_roles=_POTENTIOMETER_OR_BINARY,
-            register_views=(register_view("ae2_fg2", 40027, InputRole.POTENTIOMETER),),
+            register_views=(
+                register_view(
+                    "fg2",
+                    40027,
+                    InputRole.POTENTIOMETER,
+                ),
+            ),
             paired_common=18,
         ),
         physical_input(
@@ -176,6 +188,10 @@ TROVIS_5576 = ModelDefinition(
                     "analog_input_voltage",
                     40042,
                     InputRole.ANALOG_VOLTAGE,
+                ),
+                register_view(
+                    "analog_input_current",
+                    40042,
                     InputRole.ANALOG_CURRENT,
                 ),
             ),

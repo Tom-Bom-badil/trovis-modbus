@@ -129,14 +129,26 @@ TROVIS_5579 = ModelDefinition(
             15,
             "FG1",
             possible_roles=(InputRole.POTENTIOMETER, InputRole.BINARY_INPUT),
-            register_views=(register_view("ae1_fg1", 40026, InputRole.POTENTIOMETER),),
+            register_views=(
+                register_view(
+                    "fg1",
+                    40026,
+                    InputRole.POTENTIOMETER,
+                ),
+            ),
             paired_common=18,
         ),
         physical_input(
             16,
             "FG2",
             possible_roles=(InputRole.POTENTIOMETER, InputRole.BINARY_INPUT),
-            register_views=(register_view("ae2_fg2", 40027, InputRole.POTENTIOMETER),),
+            register_views=(
+                register_view(
+                    "fg2",
+                    40027,
+                    InputRole.POTENTIOMETER,
+                ),
+            ),
             paired_common=18,
         ),
         physical_input(
@@ -154,12 +166,21 @@ TROVIS_5579 = ModelDefinition(
             ),
             register_views=(
                 register_view("sf3", 40025, InputRole.RESISTANCE_SENSOR),
-                register_view("ae3_fg3", 40028, InputRole.POTENTIOMETER),
+                register_view(
+                    "fg3",
+                    40028,
+                    InputRole.POTENTIOMETER,
+                ),
                 register_view("pulse_rate", 40029, InputRole.PULSE_INPUT),
                 register_view(
                     "analog_input_voltage",
                     40042,
                     InputRole.ANALOG_VOLTAGE,
+                ),
+                register_view(
+                    "analog_input_current",
+                    40042,
+                    InputRole.ANALOG_CURRENT,
                 ),
             ),
             paired_common=18,

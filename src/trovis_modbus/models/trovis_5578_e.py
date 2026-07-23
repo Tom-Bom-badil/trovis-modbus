@@ -36,7 +36,14 @@ TROVIS_5578_E = ModelDefinition(
             "AF2",
             "RüF4",
             possible_roles=_RESISTANCE_OR_BINARY,
-            register_views=(register_view("af2", 40011, InputRole.RESISTANCE_SENSOR),),
+            register_views=(
+                register_view("af2", 40011, InputRole.RESISTANCE_SENSOR),
+                register_view(
+                    "ruef4",
+                    40011,
+                    InputRole.RESISTANCE_SENSOR,
+                ),
+            ),
             paired_common=18,
         ),
         physical_input(
@@ -136,9 +143,13 @@ TROVIS_5578_E = ModelDefinition(
             possible_roles=_ANALOG_POTENTIOMETER_OR_BINARY,
             register_views=(
                 register_view(
-                    "ae1_fg1",
+                    "ae1",
                     40026,
                     InputRole.ANALOG_VOLTAGE,
+                ),
+                register_view(
+                    "fg1",
+                    40026,
                     InputRole.POTENTIOMETER,
                 ),
             ),
@@ -151,9 +162,13 @@ TROVIS_5578_E = ModelDefinition(
             possible_roles=_ANALOG_POTENTIOMETER_OR_BINARY,
             register_views=(
                 register_view(
-                    "ae2_fg2",
+                    "ae2",
                     40027,
                     InputRole.ANALOG_VOLTAGE,
+                ),
+                register_view(
+                    "fg2",
+                    40027,
                     InputRole.POTENTIOMETER,
                 ),
             ),
@@ -174,9 +189,13 @@ TROVIS_5578_E = ModelDefinition(
             register_views=(
                 register_view("sf3", 40025, InputRole.RESISTANCE_SENSOR),
                 register_view(
-                    "ae3_fg3",
+                    "ae3",
                     40028,
                     InputRole.ANALOG_VOLTAGE,
+                ),
+                register_view(
+                    "fg3",
+                    40028,
                     InputRole.POTENTIOMETER,
                 ),
                 register_view("pulse_rate", 40029, InputRole.PULSE_INPUT),

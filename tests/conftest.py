@@ -32,11 +32,11 @@ HOLDING: dict[int, int] = {
     22: 450,  # sensors.sf1 -> 45.0
     23: 0x7FFF,  # sensors.sf2 -> NaN -> None
     24: 650,  # sensors.sf3 -> 65.0
-    25: 952,  # sensors.ae1_fg1 -> 95.2
-    26: 3250,  # sensors.ae2_fg2 -> 325.0
-    27: 125,  # sensors.ae3_fg3 -> 12.5
+    25: 952,  # sensors.ae1 / sensors.fg1 -> 95.2
+    26: 3250,  # sensors.ae2 / sensors.fg2 -> 325.0
+    27: 125,  # sensors.ae3 / sensors.fg3 -> 12.5
     28: 240,  # sensors.pulse_rate -> 240 Imp/h
-    41: 735,  # sensors.analog_input_voltage -> 7.35 V
+    41: 735,  # sensors.analog_input_voltage -> 7.35 V / current view -> 147.0 mA
     42: 185,  # sensors.summer_outdoor_temperature_average -> 18.5 °C
     98: 900,  # max flow setpoint -> 90.0
     99: 1430,  # time -> 14:30

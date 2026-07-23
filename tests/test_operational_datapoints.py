@@ -85,20 +85,37 @@ def test_additional_5578_sensor_addresses() -> None:
     device = Trovis557x(unit=None)  # type: ignore[arg-type]
     sensors = device.sensors
 
+    assert sensors._address(sensors._register_fields["af2"]) == 10
+    assert sensors._address(sensors._register_fields["ruef4"]) == 10
     assert sensors._address(sensors._register_fields["sf3"]) == 24
-    assert sensors._address(sensors._register_fields["ae1_fg1"]) == 25
-    assert sensors._address(sensors._register_fields["ae2_fg2"]) == 26
-    assert sensors._address(sensors._register_fields["ae3_fg3"]) == 27
+    assert sensors._address(sensors._register_fields["ae1"]) == 25
+    assert sensors._address(sensors._register_fields["fg1"]) == 25
+    assert sensors._address(sensors._register_fields["ae2"]) == 26
+    assert sensors._address(sensors._register_fields["fg2"]) == 26
+    assert sensors._address(sensors._register_fields["ae3"]) == 27
+    assert sensors._address(sensors._register_fields["fg3"]) == 27
     assert sensors._address(sensors._register_fields["pulse_rate"]) == 28
     assert sensors._address(sensors._register_fields["analog_input_voltage"]) == 41
+    assert sensors._address(sensors._register_fields["analog_input_current"]) == 41
 
-    for field in ("ae1_fg1", "ae2_fg2", "ae3_fg3"):
+    assert "ae1_fg1" not in sensors._register_fields
+    assert "ae2_fg2" not in sensors._register_fields
+    assert "ae3_fg3" not in sensors._register_fields
+
+    for field in ("ae1", "fg1", "ae2", "fg2", "ae3", "fg3"):
         metadata = sensors.require_metadata_for(field)
         assert metadata.number is not None
         assert metadata.number.min_value == pytest.approx(-5)
         assert metadata.number.max_value == pytest.approx(2000)
         assert metadata.number.step == pytest.approx(0.1)
         assert metadata.number.unit is None
+
+    current = sensors.require_metadata_for("analog_input_current")
+    assert current.number is not None
+    assert current.number.min_value == 0
+    assert current.number.max_value == 20
+    assert current.number.step == pytest.approx(0.1)
+    assert current.number.unit == "mA"
 
 
 def test_controller_monitoring_metadata_and_timeout() -> None:

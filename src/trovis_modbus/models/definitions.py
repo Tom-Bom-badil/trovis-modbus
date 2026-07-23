@@ -21,14 +21,7 @@ class InputRole(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class RegisterViewDefinition:
-    """One firmware register view of a physical input.
-
-    ``measurement_key`` names the existing descriptor exposed by
-    :class:`trovis_modbus.subsystems.sensors.Sensors`. A register view may be
-    valid for more than one electrical role. This is needed, for example, when
-    the same measured voltage represents a 0-to-10-V input directly or a
-    0(4)-to-20-mA input through the documented shunt resistor.
-    """
+    """One logical measurement view of a physical input."""
 
     measurement_key: str
     register: int
@@ -94,7 +87,7 @@ class PhysicalInputDefinition:
                 )
 
     def view_for_key(self, measurement_key: str) -> RegisterViewDefinition | None:
-        """Return the register view for ``measurement_key``, if present."""
+        """Return the logical register view for ``measurement_key``, if present."""
         return next(
             (
                 view
@@ -137,6 +130,15 @@ class ModelDefinition:
         if len(set(measurement_keys)) != len(measurement_keys):
             raise ValueError(f"duplicate measurement keys in model {self.model.value}")
 
+    @property
+    def measurement_keys(self) -> tuple[str, ...]:
+        """Return every logical sensor name supported by the model."""
+        return tuple(
+            view.measurement_key
+            for input_definition in self.inputs
+            for view in input_definition.register_views
+        )
+
     def input_for_terminal(self, terminal: int) -> PhysicalInputDefinition | None:
         """Return the physical input starting at ``terminal``, if present."""
         return next(
@@ -167,7 +169,7 @@ def register_view(
     register: int,
     *roles: InputRole,
 ) -> RegisterViewDefinition:
-    """Create a concise immutable register-view definition."""
+    """Create a concise immutable logical register-view definition."""
     return RegisterViewDefinition(measurement_key, register, roles)
 
 

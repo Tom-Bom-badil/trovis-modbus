@@ -31,8 +31,16 @@ TROVIS_5578 = ModelDefinition(
         physical_input(
             2,
             "AF2",
+            "RüF4",
             possible_roles=_RESISTANCE_OR_BINARY,
-            register_views=(register_view("af2", 40011, InputRole.RESISTANCE_SENSOR),),
+            register_views=(
+                register_view("af2", 40011, InputRole.RESISTANCE_SENSOR),
+                register_view(
+                    "ruef4",
+                    40011,
+                    InputRole.RESISTANCE_SENSOR,
+                ),
+            ),
             paired_common=18,
         ),
         physical_input(
@@ -129,14 +137,26 @@ TROVIS_5578 = ModelDefinition(
             15,
             "FG1",
             possible_roles=(InputRole.POTENTIOMETER, InputRole.BINARY_INPUT),
-            register_views=(register_view("ae1_fg1", 40026, InputRole.POTENTIOMETER),),
+            register_views=(
+                register_view(
+                    "fg1",
+                    40026,
+                    InputRole.POTENTIOMETER,
+                ),
+            ),
             paired_common=18,
         ),
         physical_input(
             16,
             "FG2",
             possible_roles=(InputRole.POTENTIOMETER, InputRole.BINARY_INPUT),
-            register_views=(register_view("ae2_fg2", 40027, InputRole.POTENTIOMETER),),
+            register_views=(
+                register_view(
+                    "fg2",
+                    40027,
+                    InputRole.POTENTIOMETER,
+                ),
+            ),
             paired_common=18,
         ),
         physical_input(
@@ -151,7 +171,11 @@ TROVIS_5578 = ModelDefinition(
             ),
             register_views=(
                 register_view("sf3", 40025, InputRole.RESISTANCE_SENSOR),
-                register_view("ae3_fg3", 40028, InputRole.POTENTIOMETER),
+                register_view(
+                    "fg3",
+                    40028,
+                    InputRole.POTENTIOMETER,
+                ),
                 register_view("pulse_rate", 40029, InputRole.PULSE_INPUT),
             ),
             paired_common=18,

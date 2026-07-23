@@ -59,6 +59,7 @@ def test_values_lists_every_subsystem_field(mock_modbus_unit: MockModbusUnit) ->
     assert {
         "af1",
         "af2",
+        "ruef4",
         "vf1",
         "vf2",
         "vf3",
@@ -72,9 +73,15 @@ def test_values_lists_every_subsystem_field(mock_modbus_unit: MockModbusUnit) ->
         "sf1",
         "sf2",
         "sf3",
-        "ae1_fg1",
-        "ae2_fg2",
-        "ae3_fg3",
+        "ae1",
+        "ae2",
+        "ae3",
+        "fg1",
+        "fg2",
+        "fg3",
+        "pulse_rate",
+        "analog_input_voltage",
+        "analog_input_current",
     } <= sensor_names
 
     # Methods / private helpers are not data rows.

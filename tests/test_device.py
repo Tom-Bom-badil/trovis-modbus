@@ -60,16 +60,21 @@ async def test_device_info(trovis: Trovis557x) -> None:
 async def test_sensors(trovis: Trovis557x) -> None:
     await trovis.async_update()
     assert trovis.sensors.af1 == pytest.approx(-5.0)  # signed, outdoor temperature
+    assert trovis.sensors.ruef4 == trovis.sensors.af2
     assert trovis.sensors.vf1 == pytest.approx(30.0)  # unsigned, water in pipes
     assert trovis.sensors.rf1 == pytest.approx(20.0)
     assert trovis.sensors.sf1 == pytest.approx(45.0)
     assert trovis.sensors.sf2 is None  # NaN sentinel
     assert trovis.sensors.sf3 == pytest.approx(65.0)
-    assert trovis.sensors.ae1_fg1 == pytest.approx(95.2)
-    assert trovis.sensors.ae2_fg2 == pytest.approx(325.0)
-    assert trovis.sensors.ae3_fg3 == pytest.approx(12.5)
+    assert trovis.sensors.ae1 == pytest.approx(95.2)
+    assert trovis.sensors.fg1 == pytest.approx(95.2)
+    assert trovis.sensors.ae2 == pytest.approx(325.0)
+    assert trovis.sensors.fg2 == pytest.approx(325.0)
+    assert trovis.sensors.ae3 == pytest.approx(12.5)
+    assert trovis.sensors.fg3 == pytest.approx(12.5)
     assert trovis.sensors.pulse_rate == 240
     assert trovis.sensors.analog_input_voltage == pytest.approx(7.35)
+    assert trovis.sensors.analog_input_current == pytest.approx(147.0)
 
 
 async def test_clock(trovis: Trovis557x) -> None:

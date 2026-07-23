@@ -97,7 +97,13 @@ TROVIS_5573 = ModelDefinition(
             "BE1",
             "FG1",
             possible_roles=_BINARY_OR_POTENTIOMETER,
-            register_views=(register_view("ae1_fg1", 40026, InputRole.POTENTIOMETER),),
+            register_views=(
+                register_view(
+                    "fg1",
+                    40026,
+                    InputRole.POTENTIOMETER,
+                ),
+            ),
             paired_common=12,
         ),
         physical_input(
@@ -105,7 +111,13 @@ TROVIS_5573 = ModelDefinition(
             "BE2",
             "FG2",
             possible_roles=_BINARY_OR_POTENTIOMETER,
-            register_views=(register_view("ae2_fg2", 40027, InputRole.POTENTIOMETER),),
+            register_views=(
+                register_view(
+                    "fg2",
+                    40027,
+                    InputRole.POTENTIOMETER,
+                ),
+            ),
             paired_common=12,
         ),
         physical_input(

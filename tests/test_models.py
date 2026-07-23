@@ -96,6 +96,9 @@ def test_5573_family_uses_documented_reduced_sensor_matrix() -> None:
             "vf4",
         }
 
+        assert definition.input_for_measurement("fg1") is not None
+        assert definition.input_for_measurement("fg2") is not None
+        assert definition.input_for_measurement("ae1") is None
         assert definition.input_for_measurement("af2") is None
         assert definition.input_for_measurement("sf3") is None
 
@@ -117,7 +120,12 @@ def test_5575_terminal_3_is_one_multi_purpose_input() -> None:
         "rf2": 40021,
         "pulse_rate": 40029,
         "analog_input_voltage": 40042,
+        "analog_input_current": 40042,
     }
+    voltage = terminal_3.view_for_key("analog_input_voltage")
+    current = terminal_3.view_for_key("analog_input_current")
+    assert voltage is not None
+    assert current is not None
 
 
 def test_5576_keeps_binary_only_terminals_and_terminal_17_conflict() -> None:
@@ -143,10 +151,56 @@ def test_5576_keeps_binary_only_terminals_and_terminal_17_conflict() -> None:
         "sf3": 40025,
         "pulse_rate": 40029,
         "analog_input_voltage": 40042,
+        "analog_input_current": 40042,
     }
 
 
-def test_5578_e_terminal_17_keeps_one_physical_conflict_group() -> None:
+def test_5578_keeps_af2_ruef4_and_sf3_fg3_as_logical_alternatives() -> None:
+    terminal_2 = TROVIS_5578.input_for_terminal(2)
+    assert terminal_2 is not None
+    assert {view.measurement_key for view in terminal_2.register_views} == {
+        "af2",
+        "ruef4",
+    }
+    af2 = terminal_2.view_for_key("af2")
+    ruef4 = terminal_2.view_for_key("ruef4")
+    assert af2 is not None
+    assert ruef4 is not None
+
+    terminal_17 = TROVIS_5578.input_for_terminal(17)
+    assert terminal_17 is not None
+    assert {view.measurement_key for view in terminal_17.register_views} == {
+        "sf3",
+        "fg3",
+        "pulse_rate",
+    }
+    fg3 = terminal_17.view_for_key("fg3")
+    assert fg3 is not None
+    assert fg3.register == 40028
+
+
+def test_5578_e_keeps_separate_ae_and_fg_measurements() -> None:
+    terminal_2 = TROVIS_5578_E.input_for_terminal(2)
+    assert terminal_2 is not None
+    assert {view.measurement_key for view in terminal_2.register_views} == {
+        "af2",
+        "ruef4",
+    }
+
+    terminal_15 = TROVIS_5578_E.input_for_terminal(15)
+    assert terminal_15 is not None
+    assert {view.measurement_key for view in terminal_15.register_views} == {
+        "ae1",
+        "fg1",
+    }
+
+    terminal_16 = TROVIS_5578_E.input_for_terminal(16)
+    assert terminal_16 is not None
+    assert {view.measurement_key for view in terminal_16.register_views} == {
+        "ae2",
+        "fg2",
+    }
+
     terminal_17 = TROVIS_5578_E.input_for_terminal(17)
     assert terminal_17 is not None
     assert terminal_17.paired_common == 18
@@ -161,7 +215,8 @@ def test_5578_e_terminal_17_keeps_one_physical_conflict_group() -> None:
         view.measurement_key: view.register for view in terminal_17.register_views
     } == {
         "sf3": 40025,
-        "ae3_fg3": 40028,
+        "ae3": 40028,
+        "fg3": 40028,
         "pulse_rate": 40029,
     }
 
@@ -175,26 +230,41 @@ def test_5578_has_separate_additional_voltage_input() -> None:
     assert voltage_input.register_views[0].register == 40042
 
 
-def test_5579_terminal_17_contains_voltage_and_current_roles() -> None:
+def test_5579_terminal_17_contains_distinct_voltage_and_current_views() -> None:
     terminal_17 = TROVIS_5579.input_for_terminal(17)
     assert terminal_17 is not None
     assert terminal_17.paired_common == 18
     assert InputRole.ANALOG_CURRENT in terminal_17.possible_roles
 
-    analog_view = terminal_17.view_for_key("analog_input_voltage")
-    assert analog_view is not None
-    assert analog_view.register == 40042
-    assert analog_view.roles == (InputRole.ANALOG_VOLTAGE,)
+    voltage = terminal_17.view_for_key("analog_input_voltage")
+    current = terminal_17.view_for_key("analog_input_current")
+    assert voltage is not None
+    assert current is not None
+    assert voltage.register == current.register == 40042
+    assert voltage.roles == (InputRole.ANALOG_VOLTAGE,)
+    assert current.roles == (InputRole.ANALOG_CURRENT,)
+
+
+@pytest.mark.parametrize("definition", MODEL_DEFINITIONS.values())
+def test_model_definitions_use_only_canonical_logical_sensor_names(definition) -> None:
+    combined_keys = {
+        "ae1_fg1",
+        "ae2_fg2",
+        "ae3_fg3",
+        "af2_ruef4",
+        "sf2_rf2",
+        "sf3_fg3",
+        "vf2_3_4",
+    }
+    assert not (set(definition.measurement_keys) & combined_keys)
 
 
 @pytest.mark.parametrize("definition", MODEL_DEFINITIONS.values())
 def test_all_register_views_match_existing_sensor_descriptor_keys(definition) -> None:
-    # This list mirrors subsystems/sensors.py without importing the component
-    # framework. It protects the static model block from inventing new runtime
-    # sensor descriptors before the later resolver/profile work.
     existing_sensor_keys = {
         "af1",
         "af2",
+        "ruef4",
         "vf1",
         "vf2",
         "vf3",
@@ -208,14 +278,14 @@ def test_all_register_views_match_existing_sensor_descriptor_keys(definition) ->
         "sf1",
         "sf2",
         "sf3",
-        "ae1_fg1",
-        "ae2_fg2",
-        "ae3_fg3",
+        "ae1",
+        "fg1",
+        "ae2",
+        "fg2",
+        "ae3",
+        "fg3",
         "pulse_rate",
         "analog_input_voltage",
+        "analog_input_current",
     }
-    assert {
-        view.measurement_key
-        for input_definition in definition.inputs
-        for view in input_definition.register_views
-    } <= existing_sensor_keys
+    assert set(definition.measurement_keys) <= existing_sensor_keys

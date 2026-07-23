@@ -19,6 +19,7 @@ class Sensors(TrovisComponent):
     ruef1 = temperature(40017)  # Rücklauffühler 1
     ruef2 = temperature(40018)  # Rücklauffühler 2
     ruef3 = temperature(40019)  # Rücklauffühler 3
+    ruef4 = temperature(40011)  # Rücklauffühler 4 (alternative af2)
 
     rf1 = temperature(40020)  # Raumfühler 1
     rf2 = temperature(40021)  # Raumfühler 2
@@ -28,7 +29,7 @@ class Sensors(TrovisComponent):
     sf2 = temperature(40024)  # Speicherfühler 2
     sf3 = temperature(40025)  # Speicherfühler 3
 
-    ae1_fg1 = gauge(
+    ae1 = gauge(  # AnalogEingang 0-10V 1
         40026,
         0.1,
         signed=True,
@@ -36,11 +37,24 @@ class Sensors(TrovisComponent):
         min_value=-5,
         max_value=2000,
         digits=1,
-        maker_key="AE1_FG1",
+        maker_key="AE1",
         maker_category="FÜH-FG",
-        description="Analogeingang AE1 (5578-E) / Ferngeber FG1",
+        description="Analogeingang AE1",
     )
-    ae2_fg2 = gauge(
+    fg1 = gauge(  # FernGeber 1 (alternative ae1)
+        40026,
+        0.1,
+        signed=True,
+        nan=NAN_INT16,
+        min_value=-5,
+        max_value=2000,
+        digits=1,
+        maker_key="FG1",
+        maker_category="FÜH-FG",
+        description="Ferngeber FG1",
+    )
+
+    ae2 = gauge(
         40027,
         0.1,
         signed=True,
@@ -48,11 +62,24 @@ class Sensors(TrovisComponent):
         min_value=-5,
         max_value=2000,
         digits=1,
-        maker_key="AE2_FG2",
+        maker_key="AE2",
         maker_category="FÜH-FG",
-        description="Analogeingang AE2 (5578-E) / Ferngeber FG2",
+        description="Analogeingang AE2",
     )
-    ae3_fg3 = gauge(
+    fg2 = gauge(
+        40027,
+        0.1,
+        signed=True,
+        nan=NAN_INT16,
+        min_value=-5,
+        max_value=2000,
+        digits=1,
+        maker_key="FG2",
+        maker_category="FÜH-FG",
+        description="Ferngeber FG2",
+    )
+
+    ae3 = gauge(
         40028,
         0.1,
         signed=True,
@@ -60,9 +87,21 @@ class Sensors(TrovisComponent):
         min_value=-5,
         max_value=2000,
         digits=1,
-        maker_key="AE3_FG3",
+        maker_key="AE3",
         maker_category="FÜH-FG",
-        description="Analogeingang AE3 (5578-E) / Ferngeber FG3",
+        description="Analogeingang AE3",
+    )
+    fg3 = gauge(
+        40028,
+        0.1,
+        signed=True,
+        nan=NAN_INT16,
+        min_value=-5,
+        max_value=2000,
+        digits=1,
+        maker_key="FG3",
+        maker_category="FÜH-FG",
+        description="Ferngeber FG3",
     )
 
     pulse_rate = integer(
@@ -88,6 +127,17 @@ class Sensors(TrovisComponent):
         maker_key="AE_0-10V",
         maker_category="FÜH-EA",
         description="Analogeingang 0 bis 10 V",
+    )
+    analog_input_current = gauge(
+        40042,
+        0.2,
+        signed=False,
+        min_value=0,
+        max_value=20,
+        digits=1,
+        unit="mA",
+        maker_category="FÜH-EA",
+        description="Analogeingang 0 bis 20 mA über 50-Ω-Shunt",
     )
 
     @property
