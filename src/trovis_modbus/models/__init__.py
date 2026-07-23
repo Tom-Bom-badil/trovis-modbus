@@ -1,7 +1,7 @@
 """Static hardware descriptions for supported TROVIS controller models."""
 
+from ..enums import ControllerModel
 from .definitions import (
-    ControllerModel,
     InputRole,
     ModelDefinition,
     PhysicalInputDefinition,

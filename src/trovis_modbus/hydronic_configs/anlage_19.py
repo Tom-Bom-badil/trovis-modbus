@@ -1,7 +1,5 @@
 """Static hydronic configurations for TROVIS Anlage 19.x.
-
-Anlage 19.0 is sourced from ``layout_expert.xml``. The current EB 5578-E
-3.10.xx appendix sequence jumps from Anlage 18.1 to Anlage 20.0.
+Note: The current manuals skip 19.x and jump from Anlage 18.1 to Anlage 20.0.
 """
 
 from __future__ import annotations

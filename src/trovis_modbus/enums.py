@@ -2,7 +2,19 @@
 
 from __future__ import annotations
 
-from enum import IntEnum
+from enum import IntEnum, StrEnum
+
+
+class ControllerModel(StrEnum):
+    """Supported TROVIS controller model designation."""
+
+    TROVIS_5573 = "5573"
+    TROVIS_5573_1 = "5573-1"
+    TROVIS_5575 = "5575"
+    TROVIS_5576 = "5576"
+    TROVIS_5578 = "5578"
+    TROVIS_5578_E = "5578-E"
+    TROVIS_5579 = "5579"
 
 
 class OperatingMode(IntEnum):

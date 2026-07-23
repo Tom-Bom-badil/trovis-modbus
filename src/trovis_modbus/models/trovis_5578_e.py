@@ -1,7 +1,7 @@
 """Static physical-input definition for the TROVIS 5578-E."""
 
+from ..enums import ControllerModel
 from .definitions import (
-    ControllerModel,
     InputRole,
     ModelDefinition,
     physical_input,

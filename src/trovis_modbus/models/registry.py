@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from types import MappingProxyType
 
-from .definitions import ControllerModel, ModelDefinition
+from ..enums import ControllerModel
+from .definitions import ModelDefinition
 from .trovis_5573 import TROVIS_5573
 from .trovis_5573_1 import TROVIS_5573_1
 from .trovis_5575 import TROVIS_5575

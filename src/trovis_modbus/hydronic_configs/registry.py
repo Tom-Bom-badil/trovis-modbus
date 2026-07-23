@@ -55,9 +55,11 @@ _ALL_CONFIGURATIONS = (
     *ANLAGEN_27,
 )
 
+
 HYDRONIC_CONFIGURATIONS = MappingProxyType(
     {definition.code: definition for definition in _ALL_CONFIGURATIONS}
 )
+
 
 if len(HYDRONIC_CONFIGURATIONS) != len(_ALL_CONFIGURATIONS):
     raise RuntimeError("duplicate TROVIS system code numbers in hydronic registry")

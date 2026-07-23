@@ -2,6 +2,7 @@
 
 import pytest
 
+from trovis_modbus.enums import ControllerModel
 from trovis_modbus.models import (
     MODEL_DEFINITIONS,
     TROVIS_5573,
@@ -11,11 +12,19 @@ from trovis_modbus.models import (
     TROVIS_5578,
     TROVIS_5578_E,
     TROVIS_5579,
-    ControllerModel,
+    ControllerModel as ModelsControllerModel,
     InputRole,
     get_model_definition,
     model_candidates_for_reported_model,
 )
+from trovis_modbus.models.definitions import (
+    ControllerModel as DefinitionsControllerModel,
+)
+
+
+def test_controller_model_import_paths_share_the_canonical_enum() -> None:
+    assert ModelsControllerModel is ControllerModel
+    assert DefinitionsControllerModel is ControllerModel
 
 
 @pytest.mark.parametrize(

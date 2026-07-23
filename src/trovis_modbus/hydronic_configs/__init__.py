@@ -9,8 +9,8 @@ from .registry import HYDRONIC_CONFIGURATIONS, get_configuration_definition
 
 __all__ = [
     "FUNCTIONAL_SENSOR_ROLE_KEYS",
-    "ConfigurationDefinition",
-    "ConfigurationTopology",
     "HYDRONIC_CONFIGURATIONS",
+    "ConfigurationTopology",
+    "ConfigurationDefinition",
     "get_configuration_definition",
 ]
