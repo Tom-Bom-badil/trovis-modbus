@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from .enums import OperatingMode
-from .model import (
+from ..data_model import (
     TrovisComponent,
     coil,
     enum,
@@ -12,7 +11,8 @@ from .model import (
     month_day_value,
     temperature,
 )
-from .utils import MonthDay
+from ..enums import OperatingMode
+from ..utils import MonthDay
 
 
 class Controller(TrovisComponent):
@@ -31,6 +31,13 @@ class Controller(TrovisComponent):
         maker_key="Sonderfunktionen",
         maker_category="ALG-ID",
         description="Reglerupdate via Modbus / Reglerneustart",
+    )
+
+    summer_outdoor_temperature_average = temperature(
+        40043,
+        maker_key="Sommer_AT-Mittel",
+        maker_category="ALG-SON",
+        description="Tagesdurchschnittstemperatur im Sommerbetrieb",
     )
 
     max_flow_setpoint = temperature(

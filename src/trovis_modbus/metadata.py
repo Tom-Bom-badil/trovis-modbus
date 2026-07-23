@@ -24,11 +24,7 @@ TemporalValue = date | time | MonthDay
 
 @dataclass(frozen=True)
 class NumberMetadata:
-    """Metadata for numeric TROVIS values.
-
-    ``raw_min`` / ``raw_max`` mirror the manufacturer's ``ÜBer`` bus range;
-    ``min_value`` / ``max_value`` mirror the decoded ``ABer`` real-value range.
-    """
+    """Metadata for numeric TROVIS values."""
 
     min_value: float | int | None = None
     max_value: float | int | None = None
@@ -70,12 +66,7 @@ class BooleanMetadata:
 
 @dataclass(frozen=True)
 class TemporalMetadata:
-    """Metadata for native calendar and clock values.
-
-    Temporal definitions use the same ``min_value`` / ``max_value`` names as
-    numeric definitions, but retain their native ``date``, ``time`` or
-    ``MonthDay`` type. ``raw_min`` / ``raw_max`` describe the packed register.
-    """
+    """Metadata for native calendar and clock values."""
 
     resolution: TemporalResolution
     min_value: TemporalValue | None = None
@@ -102,6 +93,7 @@ class DatapointMetadata:
 
 def step_from_digits(digits: int | None) -> float | int | None:
     """Return the natural UI/write step from decimal precision."""
+
     if digits is None:
         return None
     if digits <= 0:
@@ -111,5 +103,6 @@ def step_from_digits(digits: int | None) -> float | int | None:
 
 def attach_metadata(field: Any, metadata: DatapointMetadata) -> Any:
     """Attach TROVIS metadata to a modbus-connection field."""
+
     field.trovis_metadata = metadata
     return field

@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from . import utils
-from .enums import OperatingMode
-from .model import TrovisComponent, coil, enum, gauge, integer, temperature
-from .options import OPERATING_MODE_OPTIONS
+from .. import utils
+from ..data_model import TrovisComponent, coil, enum, gauge, integer, temperature
+from ..enum_options import OPERATING_MODE_OPTIONS
+from ..enums import OperatingMode
 
 
 class HeatingCircuit(TrovisComponent):
@@ -407,8 +407,8 @@ class HeatingCircuit(TrovisComponent):
     # Override coils (mode 89+2n, pump 96+1n) released before a write.
     ebene_coils = {"mode": (89, 2), "pump_running": (96, 1)}
 
-    def heating_characteristic(self, mode: str = "active") -> list[float] | None:
-        """Flow-temperature characteristic over outdoor temperatures -20..20 °C.
+    def heating_curve(self, mode: str = "active") -> list[float] | None:
+        """Calculate the heating curve for outdoor temperatures -20..20 °C.
 
         ``mode``: ``"active"`` (follow day/night state), ``"day"`` or
         ``"night"``. Returns ``None`` if a required value is missing.
@@ -418,7 +418,7 @@ class HeatingCircuit(TrovisComponent):
         else:
             room = self.room_setpoint_night
 
-        gradient, level = self.gradient, self.level
+        slope, offset = self.gradient, self.level
         minimum_flow_temperature, maximum_flow_temperature = (
             self.minimum_flow_temperature,
             self.maximum_flow_temperature,
@@ -426,17 +426,17 @@ class HeatingCircuit(TrovisComponent):
 
         if None in (
             room,
-            gradient,
-            level,
+            slope,
+            offset,
             minimum_flow_temperature,
             maximum_flow_temperature,
         ):
             return None
 
-        return utils.heating_characteristic(
+        return utils.heating_curve(
             room_setpoint=room,  # type: ignore[arg-type]
-            gradient=gradient,  # type: ignore[arg-type]
-            level=level,  # type: ignore[arg-type]
+            slope=slope,  # type: ignore[arg-type]
+            offset=offset,  # type: ignore[arg-type]
             minimum_flow_temperature=minimum_flow_temperature,  # type: ignore[arg-type]
             maximum_flow_temperature=maximum_flow_temperature,  # type: ignore[arg-type]
         )

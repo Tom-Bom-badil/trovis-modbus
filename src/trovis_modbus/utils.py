@@ -93,27 +93,23 @@ def date_to_ddmm_year(value: date) -> tuple[int, int]:
     return value.day * 100 + value.month, value.year
 
 
-def heating_characteristic(
+def heating_curve(
     *,
     room_setpoint: float,
-    gradient: float,
-    level: float,
+    slope: float,
+    offset: float,
     minimum_flow_temperature: float,
     maximum_flow_temperature: float,
 ) -> list[float]:
-    """Flow temperatures for outdoor temperatures -20..20 °C, clamped to [min, max].
-    Reproduces the formula from the upstream ``heating_characteristics.yaml`` exactly,
-    including its ``(x - 20)`` reference shift. Pair element ``i`` with
-    :data:`OUTDOOR_TEMPERATURES`\\ ``[i]``.
-    """
+    """Calculate flow temperatures for outdoor temperatures from -20 to 20 °C."""
     curve: list[float] = []
     for outdoor_temperature in OUTDOOR_TEMPERATURES:
         shifted = outdoor_temperature - 20
         flow = (
             24
-            + level
-            + 2 * gradient * (room_setpoint - 20)
-            - (0.1 + 0.9 * gradient) * (1.5 * shifted + 0.01 * (shifted * shifted))
+            + offset
+            + 2 * slope * (room_setpoint - 20)
+            - (0.1 + 0.9 * slope) * (1.5 * shifted + 0.01 * (shifted * shifted))
         )
         curve.append(
             round(max(minimum_flow_temperature, min(maximum_flow_temperature, flow)), 2)

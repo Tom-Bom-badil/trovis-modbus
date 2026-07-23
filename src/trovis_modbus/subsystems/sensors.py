@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-from .model import NAN_INT16, TrovisComponent, gauge, integer, temperature
+from ..data_model import NAN_INT16, TrovisComponent, gauge, integer, temperature
 
 
 class Sensors(TrovisComponent):
-    """Physical sensor inputs, e.g. Pt1000 and optional analog inputs.
-
-    Naming follows the manufacturer abbreviations.
-    """
+    """Physical sensors. Naming follows the manufacturer abbreviations."""
 
     af1 = temperature(40010)  # Außenfühler 1
     af2 = temperature(40011)  # Außenfühler 2
@@ -29,20 +26,45 @@ class Sensors(TrovisComponent):
 
     sf1 = temperature(40023)  # Speicherfühler 1
     sf2 = temperature(40024)  # Speicherfühler 2
-    sf3_fg3 = temperature(40025)  # Speicherfühler/Ferngeber 3
+    sf3 = temperature(40025)  # Speicherfühler 3
 
-    fg1 = temperature(40026, unit="K")  # Ferngeber 1 / AE1 on 5578-E
-    fg2 = temperature(40027, unit="K")  # Ferngeber 2 / AE2 on 5578-E
+    ae1_fg1 = gauge(
+        40026,
+        0.1,
+        signed=True,
+        nan=NAN_INT16,
+        min_value=-5,
+        max_value=2000,
+        digits=1,
+        maker_key="AE1_FG1",
+        maker_category="FÜH-FG",
+        description="Analogeingang AE1 (5578-E) / Ferngeber FG1",
+    )
+    ae2_fg2 = gauge(
+        40027,
+        0.1,
+        signed=True,
+        nan=NAN_INT16,
+        min_value=-5,
+        max_value=2000,
+        digits=1,
+        maker_key="AE2_FG2",
+        maker_category="FÜH-FG",
+        description="Analogeingang AE2 (5578-E) / Ferngeber FG2",
+    )
     ae3_fg3 = gauge(
         40028,
         0.1,
         signed=True,
         nan=NAN_INT16,
+        min_value=-5,
+        max_value=2000,
         digits=1,
         maker_key="AE3_FG3",
         maker_category="FÜH-FG",
         description="Analogeingang AE3 (5578-E) / Ferngeber FG3",
     )
+
     pulse_rate = integer(
         40029,
         signed=False,
@@ -54,6 +76,7 @@ class Sensors(TrovisComponent):
         maker_category="ALG-VOL",
         description="Impulsrate am Eingang Klemme 17/18",
     )
+
     analog_input_voltage = gauge(
         40042,
         0.01,
@@ -65,12 +88,6 @@ class Sensors(TrovisComponent):
         maker_key="AE_0-10V",
         maker_category="FÜH-EA",
         description="Analogeingang 0 bis 10 V",
-    )
-    summer_outdoor_temperature_average = temperature(
-        40043,
-        maker_key="Sommer_AT-Mittel",
-        maker_category="ALG-SON",
-        description="Tagesdurchschnittstemperatur während Sommerbetrieb",
     )
 
     @property

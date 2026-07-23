@@ -6,16 +6,14 @@ sw_version, hw_version, serial_number) directly on the component.
 
 from __future__ import annotations
 
-from .model import TrovisComponent, gauge, integer
+from .data_model import TrovisComponent, gauge, integer
 
 
 class DeviceInformation(TrovisComponent):
     """Controller identity and firmware/hardware versions."""
 
     _model_raw = integer(40001, signed=False)
-    system_code = gauge(
-        40002, 0.1, signed=False
-    )  # Anlagenkennziffer / system code number
+    system_code = gauge(40002, 0.1, signed=False)
     _firmware_raw = gauge(40003, 0.01, signed=False)
     _hardware_raw = gauge(40004, 0.01, signed=False)
     _serial_raw = integer(40006, signed=False)

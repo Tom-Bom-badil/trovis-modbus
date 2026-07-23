@@ -4,8 +4,7 @@ from __future__ import annotations
 
 from datetime import time
 
-from .enums import OperatingMode, StorageStatus, Weekday
-from .model import (
+from ..data_model import (
     TrovisComponent,
     coil,
     enum,
@@ -14,8 +13,9 @@ from .model import (
     temperature,
     time_value,
 )
-from .options import OPERATING_MODE_OPTIONS, WEEKDAY_OPTIONS
-from .utils import TemperatureRange
+from ..enum_options import OPERATING_MODE_OPTIONS, WEEKDAY_OPTIONS
+from ..enums import OperatingMode, StorageStatus, Weekday
+from ..utils import TemperatureRange
 
 
 class DomesticHotWater(TrovisComponent):

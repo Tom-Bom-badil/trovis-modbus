@@ -9,20 +9,22 @@ from typing import TYPE_CHECKING
 from modbus_connection.model import Component, ComponentGroup
 
 from .addresses import register_address
-from .clock import Clock
-from .controller import Controller
-from .device_info import DeviceInformation
-from .domestic_hot_water import DomesticHotWater
-from .enums import SystemActivity
-from .heating_circuit import HeatingCircuit
-from .model import (
+from .data_model import (
     DEFAULT_WRITE_ACCESS_CODE,
     async_disable_writing,
     async_enable_writing,
     async_read_writing_enabled,
 )
+from .device_info import DeviceInformation
+from .enums import SystemActivity
 from .ranges import heating_circuit_count, ranges_for_model
-from .sensors import Sensors
+from .subsystems import (
+    Clock,
+    Controller,
+    DomesticHotWater,
+    HeatingCircuit,
+    Sensors,
+)
 
 if TYPE_CHECKING:
     from modbus_connection import ModbusUnit

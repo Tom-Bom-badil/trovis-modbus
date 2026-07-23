@@ -8,17 +8,15 @@ objects::
     device.hk1.room_setpoint_active
     device.ww.storage_tank_charging_pump_running
 
-The library is organized by sub-system — one file each for ``device_info``,
-``controller``, ``clock``, ``sensors``, ``heating_circuit`` and ``domestic_hot_water`` —
-built on the generic ``Component`` / ``RegisterField`` / ``CoilField`` framework
-in ``modbus_connection.model``.
+Shared infrastructure remains at package level. Controller domains live in
+``subsystems``; model descriptions and hydronic configurations have dedicated
+packages for the upcoming model and capability work. The public imports and
+``Trovis557x`` object API remain unchanged.
 """
 
 from .addresses import coil_address, register_address
-from .clock import Clock
-from .controller import Controller
+from .data_model import DEFAULT_WRITE_ACCESS_CODE
 from .device_info import DeviceInformation
-from .domestic_hot_water import DomesticHotWater
 from .enums import (
     EnergyUnit,
     FlowRateUnit,
@@ -36,7 +34,6 @@ from .exceptions import (
     TrovisWriteAccessError,
     TrovisWriteNotImplementedError,
 )
-from .heating_circuit import HeatingCircuit
 from .metadata import (
     BooleanMetadata,
     DatapointMetadata,
@@ -45,14 +42,19 @@ from .metadata import (
     OptionMetadata,
     TemporalMetadata,
 )
-from .model import DEFAULT_WRITE_ACCESS_CODE
-from .sensors import Sensors
+from .subsystems import (
+    Clock,
+    Controller,
+    DomesticHotWater,
+    HeatingCircuit,
+    Sensors,
+)
 from .trovis import Trovis557x
 from .utils import (
     OUTDOOR_TEMPERATURES,
     MonthDay,
     TemperatureRange,
-    heating_characteristic,
+    heating_curve,
 )
 
 __all__ = [
@@ -77,7 +79,7 @@ __all__ = [
     "Trovis557x",
     "VolumeUnit",
     "Weekday",
-    "heating_characteristic",
+    "heating_curve",
     "DEFAULT_WRITE_ACCESS_CODE",
     "TrovisWriteNotImplementedError",
     "TrovisWriteAccessDisabledError",

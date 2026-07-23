@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime
 from typing import Any
 
-from .model import TrovisComponent, date_value, raw_register, time_value
+from ..data_model import TrovisComponent, date_value, raw_register, time_value
 
 
 class Clock(TrovisComponent):

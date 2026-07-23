@@ -1,19 +1,22 @@
 """Fixtures: a Trovis557x over modbus-connection's in-memory mock backend.
 
-The mock backend (and its ``mock_modbus_unit`` fixture) ship with
-``modbus-connection`` as an auto-registered pytest plugin, so there is no real
-server, socket, or backend here — just an address-keyed store the test loads
-with Trovis-shaped register/coil values.
+The mock backend and its fixtures ship with ``modbus-connection``. They are
+imported explicitly below so the test suite does not depend on pytest entry-point
+autoloading. There is no real server, socket, or backend here — just an
+address-keyed store loaded with TROVIS-shaped register and coil values.
 """
 
 from __future__ import annotations
 
 import pytest
 from modbus_connection.mock import MockModbusUnit
+from modbus_connection.pytest_plugin import (
+    mock_modbus_connection as mock_modbus_connection,
+    mock_modbus_unit as mock_modbus_unit,
+)
 
 from trovis_modbus import Trovis557x
 
-# pytest_plugins = ("modbus_connection.pytest_plugin",)
 # run: PYTHONPATH=src:/config/dev/modbus-connection/src python -m pytest
 
 # Raw register words keyed by their (protocol) address; decoded view inline.
@@ -28,6 +31,9 @@ HOLDING: dict[int, int] = {
     19: 200,  # sensors.rf1 -> 20.0
     22: 450,  # sensors.sf1 -> 45.0
     23: 0x7FFF,  # sensors.sf2 -> NaN -> None
+    24: 650,  # sensors.sf3 -> 65.0
+    25: 952,  # sensors.ae1_fg1 -> 95.2
+    26: 3250,  # sensors.ae2_fg2 -> 325.0
     27: 125,  # sensors.ae3_fg3 -> 12.5
     28: 240,  # sensors.pulse_rate -> 240 Imp/h
     41: 735,  # sensors.analog_input_voltage -> 7.35 V

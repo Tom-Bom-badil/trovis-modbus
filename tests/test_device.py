@@ -64,10 +64,12 @@ async def test_sensors(trovis: Trovis557x) -> None:
     assert trovis.sensors.rf1 == pytest.approx(20.0)
     assert trovis.sensors.sf1 == pytest.approx(45.0)
     assert trovis.sensors.sf2 is None  # NaN sentinel
+    assert trovis.sensors.sf3 == pytest.approx(65.0)
+    assert trovis.sensors.ae1_fg1 == pytest.approx(95.2)
+    assert trovis.sensors.ae2_fg2 == pytest.approx(325.0)
     assert trovis.sensors.ae3_fg3 == pytest.approx(12.5)
     assert trovis.sensors.pulse_rate == 240
     assert trovis.sensors.analog_input_voltage == pytest.approx(7.35)
-    assert trovis.sensors.summer_outdoor_temperature_average == pytest.approx(18.5)
 
 
 async def test_clock(trovis: Trovis557x) -> None:
@@ -89,6 +91,7 @@ async def test_controller(trovis: Trovis557x) -> None:
         -20.0
     )
     assert trovis.controller.outdoor_temperature_input_range_end == pytest.approx(50.0)
+    assert trovis.controller.summer_outdoor_temperature_average == pytest.approx(18.5)
     assert trovis.controller.glt_timeout_active is False
 
 
@@ -111,13 +114,13 @@ async def test_circuit_offset_pattern(trovis: Trovis557x) -> None:
     assert trovis.hk1.flow_setpoint == pytest.approx(55.0)
 
 
-async def test_heating_characteristic(trovis: Trovis557x) -> None:
+async def test_heating_curve(trovis: Trovis557x) -> None:
     await trovis.async_update()
-    curve = trovis.hk1.heating_characteristic()
+    curve = trovis.hk1.heating_curve()
     assert curve is not None and len(curve) == 41
-    # day active, room 21, gradient 1.2, level 0, clamp [20, 80]
+    # day active, room 21, slope 1.2, offset 0, clamp [20, 80]
     assert curve[-1] == pytest.approx(26.4)  # outdoor temperature +20 °C
-    assert trovis.hk1.heating_characteristic("night") is not None
+    assert trovis.hk1.heating_curve("night") is not None
 
 
 async def test_domestic_hot_water(trovis: Trovis557x) -> None:

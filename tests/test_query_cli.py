@@ -71,13 +71,14 @@ def test_values_lists_every_subsystem_field(mock_modbus_unit: MockModbusUnit) ->
         "rf3",
         "sf1",
         "sf2",
-        "sf3_fg3",
-        "fg1",
-        "fg2",
+        "sf3",
+        "ae1_fg1",
+        "ae2_fg2",
+        "ae3_fg3",
     } <= sensor_names
 
     # Methods / private helpers are not data rows.
-    assert "heating_characteristic" not in circuit_names
+    assert "heating_curve" not in circuit_names
     assert "async_update" not in circuit_names
     assert all(not n.startswith("_") for n in circuit_names)
     assert all(not n.startswith("_") for n in sensor_names)

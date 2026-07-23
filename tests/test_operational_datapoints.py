@@ -85,13 +85,20 @@ def test_additional_5578_sensor_addresses() -> None:
     device = Trovis557x(unit=None)  # type: ignore[arg-type]
     sensors = device.sensors
 
+    assert sensors._address(sensors._register_fields["sf3"]) == 24
+    assert sensors._address(sensors._register_fields["ae1_fg1"]) == 25
+    assert sensors._address(sensors._register_fields["ae2_fg2"]) == 26
     assert sensors._address(sensors._register_fields["ae3_fg3"]) == 27
     assert sensors._address(sensors._register_fields["pulse_rate"]) == 28
     assert sensors._address(sensors._register_fields["analog_input_voltage"]) == 41
-    assert (
-        sensors._address(sensors._register_fields["summer_outdoor_temperature_average"])
-        == 42
-    )
+
+    for field in ("ae1_fg1", "ae2_fg2", "ae3_fg3"):
+        metadata = sensors.require_metadata_for(field)
+        assert metadata.number is not None
+        assert metadata.number.min_value == pytest.approx(-5)
+        assert metadata.number.max_value == pytest.approx(2000)
+        assert metadata.number.step == pytest.approx(0.1)
+        assert metadata.number.unit is None
 
 
 def test_controller_monitoring_metadata_and_timeout() -> None:
@@ -116,3 +123,10 @@ def test_controller_monitoring_metadata_and_timeout() -> None:
     timeout = controller.require_metadata_for("glt_timeout_active")
     assert timeout.writable is True
     assert controller._address(controller._bit_fields["glt_timeout_active"]) == 158
+
+    assert (
+        controller._address(
+            controller._register_fields["summer_outdoor_temperature_average"]
+        )
+        == 42
+    )

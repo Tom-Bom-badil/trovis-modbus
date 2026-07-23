@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from trovis_modbus import OperatingMode, Trovis557x
-from trovis_modbus.options import OPERATING_MODE_OPTIONS
+from trovis_modbus.enum_options import OPERATING_MODE_OPTIONS
 
 
 def test_circuits_share_operating_mode_metadata(trovis: Trovis557x) -> None:

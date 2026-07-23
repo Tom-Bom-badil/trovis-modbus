@@ -10,8 +10,7 @@ from trovis_modbus import (
     PowerUnit,
     VolumeUnit,
 )
-from trovis_modbus.metadata import OptionMetadata
-from trovis_modbus.options import (
+from trovis_modbus.enum_options import (
     ENERGY_UNIT_OPTIONS,
     FLOW_RATE_UNIT_OPTIONS,
     HEAT_METER_READ_MODE_OPTIONS,
@@ -19,6 +18,7 @@ from trovis_modbus.options import (
     POWER_UNIT_OPTIONS,
     VOLUME_UNIT_OPTIONS,
 )
+from trovis_modbus.metadata import OptionMetadata
 
 
 def _option_values(options: tuple[OptionMetadata, ...]) -> tuple[int, ...]:
