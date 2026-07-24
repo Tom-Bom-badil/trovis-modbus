@@ -19,7 +19,6 @@ class Sensors(TrovisComponent):
     ruef1 = temperature(40017)  # Rücklauffühler 1
     ruef2 = temperature(40018)  # Rücklauffühler 2
     ruef3 = temperature(40019)  # Rücklauffühler 3
-    ruef4 = temperature(40011)  # Rücklauffühler 4 (alternative af2)
 
     rf1 = temperature(40020)  # Raumfühler 1
     rf2 = temperature(40021)  # Raumfühler 2
@@ -54,7 +53,7 @@ class Sensors(TrovisComponent):
         description="Ferngeber FG1",
     )
 
-    ae2 = gauge(
+    ae2 = gauge(  # AnalogEingang 0-10V 2
         40027,
         0.1,
         signed=True,
@@ -66,7 +65,7 @@ class Sensors(TrovisComponent):
         maker_category="FÜH-FG",
         description="Analogeingang AE2",
     )
-    fg2 = gauge(
+    fg2 = gauge(  # FernGeber 2 (alternative ae2)
         40027,
         0.1,
         signed=True,
@@ -79,7 +78,7 @@ class Sensors(TrovisComponent):
         description="Ferngeber FG2",
     )
 
-    ae3 = gauge(
+    ae3 = gauge(  # AnalogEingang 0-10V 3
         40028,
         0.1,
         signed=True,
@@ -91,7 +90,7 @@ class Sensors(TrovisComponent):
         maker_category="FÜH-FG",
         description="Analogeingang AE3",
     )
-    fg3 = gauge(
+    fg3 = gauge(  # FernGeber 3 (alternative ae3)
         40028,
         0.1,
         signed=True,

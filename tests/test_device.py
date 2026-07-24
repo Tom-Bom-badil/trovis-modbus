@@ -60,7 +60,6 @@ async def test_device_info(trovis: Trovis557x) -> None:
 async def test_sensors(trovis: Trovis557x) -> None:
     await trovis.async_update()
     assert trovis.sensors.af1 == pytest.approx(-5.0)  # signed, outdoor temperature
-    assert trovis.sensors.ruef4 == trovis.sensors.af2
     assert trovis.sensors.vf1 == pytest.approx(30.0)  # unsigned, water in pipes
     assert trovis.sensors.rf1 == pytest.approx(20.0)
     assert trovis.sensors.sf1 == pytest.approx(45.0)

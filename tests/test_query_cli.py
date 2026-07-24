@@ -59,7 +59,6 @@ def test_values_lists_every_subsystem_field(mock_modbus_unit: MockModbusUnit) ->
     assert {
         "af1",
         "af2",
-        "ruef4",
         "vf1",
         "vf2",
         "vf3",

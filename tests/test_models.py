@@ -4,6 +4,7 @@ import pytest
 
 from trovis_modbus.enums import ControllerModel
 from trovis_modbus.models import (
+    COMMON_SENSOR_KEYS,
     MODEL_DEFINITIONS,
     TROVIS_5573,
     TROVIS_5573_1,
@@ -13,13 +14,19 @@ from trovis_modbus.models import (
     TROVIS_5578_E,
     TROVIS_5579,
     ControllerModel as ModelsControllerModel,
-    InputRole,
+    ModelDefinition,
+    SensorVariant,
     get_model_definition,
     model_candidates_for_reported_model,
+    sensor_variant,
 )
 from trovis_modbus.models.definitions import (
     ControllerModel as DefinitionsControllerModel,
 )
+
+
+def _variant_keys(definition: ModelDefinition) -> set[tuple[str, ...]]:
+    return {variant.sensor_keys for variant in definition.sensor_variants}
 
 
 def test_controller_model_import_paths_share_the_canonical_enum() -> None:
@@ -28,26 +35,24 @@ def test_controller_model_import_paths_share_the_canonical_enum() -> None:
 
 
 @pytest.mark.parametrize(
-    ("definition", "expected_heating_circuits", "expected_input_count"),
+    ("definition", "expected_heating_circuits"),
     (
-        (TROVIS_5573, 2, 11),
-        (TROVIS_5573_1, 2, 11),
-        (TROVIS_5575, 2, 10),
-        (TROVIS_5576, 2, 17),
-        (TROVIS_5578, 3, 18),
-        (TROVIS_5578_E, 3, 17),
-        (TROVIS_5579, 3, 17),
+        (TROVIS_5573, 2),
+        (TROVIS_5573_1, 2),
+        (TROVIS_5575, 2),
+        (TROVIS_5576, 2),
+        (TROVIS_5578, 3),
+        (TROVIS_5578_E, 3),
+        (TROVIS_5579, 3),
     ),
 )
-def test_model_definitions_have_unique_inputs(
-    definition, expected_heating_circuits, expected_input_count
+def test_model_definitions_have_unique_sensor_keys(
+    definition: ModelDefinition,
+    expected_heating_circuits: int,
 ) -> None:
     assert definition.heating_circuits == expected_heating_circuits
-    assert len(definition.inputs) == expected_input_count
-    assert len({item.terminal for item in definition.inputs}) == expected_input_count
-    assert (
-        len({item.conflict_group for item in definition.inputs}) == expected_input_count
-    )
+    assert len(definition.sensor_keys) == len(set(definition.sensor_keys))
+    assert definition.measurement_keys == definition.sensor_keys
 
 
 def test_registry_contains_all_supported_model_designations() -> None:
@@ -69,7 +74,8 @@ def test_registry_contains_all_supported_model_designations() -> None:
     ),
 )
 def test_reported_model_values_resolve_exactly(
-    reported_model, expected_definition
+    reported_model: int,
+    expected_definition: ModelDefinition,
 ) -> None:
     assert model_candidates_for_reported_model(reported_model) == (expected_definition,)
 
@@ -78,175 +84,94 @@ def test_unknown_reported_model_has_no_candidates() -> None:
     assert model_candidates_for_reported_model(9999) == ()
 
 
-def test_5573_family_uses_documented_reduced_sensor_matrix() -> None:
-    for definition in (TROVIS_5573, TROVIS_5573_1):
-        terminal_3 = definition.input_for_terminal(3)
-        assert terminal_3 is not None
-        assert terminal_3.paired_common == 12
-        assert {view.measurement_key for view in terminal_3.register_views} == {
-            "sf2",
-            "rf2",
-        }
-
-        terminal_8 = definition.input_for_terminal(8)
-        assert terminal_8 is not None
-        assert {view.measurement_key for view in terminal_8.register_views} == {
-            "vf2",
-            "vf3",
-            "vf4",
-        }
-
-        assert definition.input_for_measurement("fg1") is not None
-        assert definition.input_for_measurement("fg2") is not None
-        assert definition.input_for_measurement("ae1") is None
-        assert definition.input_for_measurement("af2") is None
-        assert definition.input_for_measurement("sf3") is None
-
-
-def test_5575_terminal_3_is_one_multi_purpose_input() -> None:
-    terminal_3 = TROVIS_5575.input_for_terminal(3)
-    assert terminal_3 is not None
-    assert terminal_3.paired_common == 12
-    assert set(terminal_3.possible_roles) == {
-        InputRole.RESISTANCE_SENSOR,
-        InputRole.ANALOG_VOLTAGE,
-        InputRole.ANALOG_CURRENT,
-        InputRole.PULSE_INPUT,
-    }
-    assert {
-        view.measurement_key: view.register for view in terminal_3.register_views
-    } == {
-        "sf2": 40024,
-        "rf2": 40021,
-        "pulse_rate": 40029,
-        "analog_input_voltage": 40042,
-        "analog_input_current": 40042,
-    }
-    voltage = terminal_3.view_for_key("analog_input_voltage")
-    current = terminal_3.view_for_key("analog_input_current")
-    assert voltage is not None
-    assert current is not None
-
-
-def test_5576_keeps_binary_only_terminals_and_terminal_17_conflict() -> None:
-    for terminal in (7, 14):
-        binary_input = TROVIS_5576.input_for_terminal(terminal)
-        assert binary_input is not None
-        assert binary_input.possible_roles == (InputRole.BINARY_INPUT,)
-        assert binary_input.register_views == ()
-
-    terminal_17 = TROVIS_5576.input_for_terminal(17)
-    assert terminal_17 is not None
-    assert terminal_17.paired_common == 18
-    assert set(terminal_17.possible_roles) == {
-        InputRole.RESISTANCE_SENSOR,
-        InputRole.BINARY_INPUT,
-        InputRole.PULSE_INPUT,
-        InputRole.ANALOG_VOLTAGE,
-        InputRole.ANALOG_CURRENT,
-    }
-    assert {
-        view.measurement_key: view.register for view in terminal_17.register_views
-    } == {
-        "sf3": 40025,
-        "pulse_rate": 40029,
-        "analog_input_voltage": 40042,
-        "analog_input_current": 40042,
-    }
-
-
-def test_5578_keeps_af2_ruef4_and_sf3_fg3_as_logical_alternatives() -> None:
-    terminal_2 = TROVIS_5578.input_for_terminal(2)
-    assert terminal_2 is not None
-    assert {view.measurement_key for view in terminal_2.register_views} == {
-        "af2",
-        "ruef4",
-    }
-    af2 = terminal_2.view_for_key("af2")
-    ruef4 = terminal_2.view_for_key("ruef4")
-    assert af2 is not None
-    assert ruef4 is not None
-
-    terminal_17 = TROVIS_5578.input_for_terminal(17)
-    assert terminal_17 is not None
-    assert {view.measurement_key for view in terminal_17.register_views} == {
-        "sf3",
-        "fg3",
-        "pulse_rate",
-    }
-    fg3 = terminal_17.view_for_key("fg3")
-    assert fg3 is not None
-    assert fg3.register == 40028
-
-
-def test_5578_e_keeps_separate_ae_and_fg_measurements() -> None:
-    terminal_2 = TROVIS_5578_E.input_for_terminal(2)
-    assert terminal_2 is not None
-    assert {view.measurement_key for view in terminal_2.register_views} == {
-        "af2",
-        "ruef4",
-    }
-
-    terminal_15 = TROVIS_5578_E.input_for_terminal(15)
-    assert terminal_15 is not None
-    assert {view.measurement_key for view in terminal_15.register_views} == {
-        "ae1",
-        "fg1",
-    }
-
-    terminal_16 = TROVIS_5578_E.input_for_terminal(16)
-    assert terminal_16 is not None
-    assert {view.measurement_key for view in terminal_16.register_views} == {
-        "ae2",
-        "fg2",
-    }
-
-    terminal_17 = TROVIS_5578_E.input_for_terminal(17)
-    assert terminal_17 is not None
-    assert terminal_17.paired_common == 18
-    assert set(terminal_17.possible_roles) == {
-        InputRole.ANALOG_VOLTAGE,
-        InputRole.POTENTIOMETER,
-        InputRole.RESISTANCE_SENSOR,
-        InputRole.PULSE_INPUT,
-        InputRole.BINARY_INPUT,
-    }
-    assert {
-        view.measurement_key: view.register for view in terminal_17.register_views
-    } == {
-        "sf3": 40025,
-        "ae3": 40028,
-        "fg3": 40028,
-        "pulse_rate": 40029,
-    }
-
-
-def test_5578_has_separate_additional_voltage_input() -> None:
-    voltage_input = TROVIS_5578.input_for_terminal(23)
-    assert voltage_input is not None
-    assert voltage_input.paired_common == 24
-    assert voltage_input.possible_roles == (InputRole.ANALOG_VOLTAGE,)
-    assert voltage_input.register_views[0].measurement_key == "analog_input_voltage"
-    assert voltage_input.register_views[0].register == 40042
-
-
-def test_5579_terminal_17_contains_distinct_voltage_and_current_views() -> None:
-    terminal_17 = TROVIS_5579.input_for_terminal(17)
-    assert terminal_17 is not None
-    assert terminal_17.paired_common == 18
-    assert InputRole.ANALOG_CURRENT in terminal_17.possible_roles
-
-    voltage = terminal_17.view_for_key("analog_input_voltage")
-    current = terminal_17.view_for_key("analog_input_current")
-    assert voltage is not None
-    assert current is not None
-    assert voltage.register == current.register == 40042
-    assert voltage.roles == (InputRole.ANALOG_VOLTAGE,)
-    assert current.roles == (InputRole.ANALOG_CURRENT,)
+@pytest.mark.parametrize("definition", MODEL_DEFINITIONS.values())
+def test_every_model_uses_the_common_557x_sensor_base(
+    definition: ModelDefinition,
+) -> None:
+    assert set(COMMON_SENSOR_KEYS) <= set(definition.sensor_keys)
 
 
 @pytest.mark.parametrize("definition", MODEL_DEFINITIONS.values())
-def test_model_definitions_use_only_canonical_logical_sensor_names(definition) -> None:
+def test_model_definitions_use_only_supported_sensor_variants(
+    definition: ModelDefinition,
+) -> None:
+    variant_sensor_keys = [
+        sensor_key
+        for variant in definition.sensor_variants
+        for sensor_key in variant.sensor_keys
+    ]
+    assert set(variant_sensor_keys) <= set(definition.sensor_keys)
+    assert len(variant_sensor_keys) == len(set(variant_sensor_keys))
+
+
+def test_sensor_variant_may_describe_one_configurable_sensor() -> None:
+    variant = sensor_variant("fg1")
+    assert variant == SensorVariant(sensor_keys=("fg1",))
+    assert variant.contains("fg1")
+    assert not variant.contains("fg2")
+
+
+def test_model_definition_exposes_fixed_and_variant_sensor_keys() -> None:
+    assert TROVIS_5573.sensor_variant_for("sf2") == sensor_variant("sf2", "rf2")
+    assert TROVIS_5573.sensor_variant_for("af1") is None
+    assert "sf2" in TROVIS_5573.variant_sensor_keys
+    assert "af1" in TROVIS_5573.fixed_sensor_keys
+    assert TROVIS_5573.supports_sensor("analog_input_voltage")
+    assert not TROVIS_5573.supports_sensor("rf3")
+
+
+def test_5573_family_uses_the_reduced_sensor_variants() -> None:
+    expected = {
+        ("sf2", "rf2"),
+        ("vf2", "vf3", "vf4"),
+        ("fg1",),
+        ("fg2",),
+    }
+    assert _variant_keys(TROVIS_5573) == expected
+    assert _variant_keys(TROVIS_5573_1) == expected
+
+
+def test_5575_keeps_the_multi_purpose_sensor_variant() -> None:
+    assert _variant_keys(TROVIS_5575) == {
+        ("sf2", "rf2", "analog_input_voltage"),
+        ("vf2", "vf3", "vf4"),
+        ("fg1",),
+        ("fg2",),
+    }
+
+
+def test_5576_adds_af2_and_sf3_without_a_third_heating_circuit() -> None:
+    assert TROVIS_5576.heating_circuits == 2
+    assert TROVIS_5576.supports_sensor("af2")
+    assert TROVIS_5576.supports_sensor("sf3")
+    assert not TROVIS_5576.supports_sensor("rf3")
+    assert ("sf3", "analog_input_voltage") in _variant_keys(TROVIS_5576)
+
+
+def test_5578_has_no_ruef4_sensor_key() -> None:
+    assert TROVIS_5578.supports_sensor("af2")
+    assert not TROVIS_5578.supports_sensor("ruef4")
+    assert ("sf3", "fg3") in _variant_keys(TROVIS_5578)
+
+
+def test_5578_e_keeps_separate_ae_and_fg_sensor_keys() -> None:
+    for sensor_key in ("ae1", "ae2", "ae3", "fg1", "fg2", "fg3"):
+        assert TROVIS_5578_E.supports_sensor(sensor_key)
+
+    assert ("ae1", "fg1") in _variant_keys(TROVIS_5578_E)
+    assert ("ae2", "fg2") in _variant_keys(TROVIS_5578_E)
+    assert ("ae3", "fg3", "sf3") in _variant_keys(TROVIS_5578_E)
+    assert not TROVIS_5578_E.supports_sensor("ruef4")
+
+
+def test_5579_keeps_the_sf3_fg3_analog_sensor_variant() -> None:
+    assert ("sf3", "fg3", "analog_input_voltage") in _variant_keys(TROVIS_5579)
+
+
+@pytest.mark.parametrize("definition", MODEL_DEFINITIONS.values())
+def test_model_definitions_use_only_canonical_logical_sensor_names(
+    definition: ModelDefinition,
+) -> None:
     combined_keys = {
         "ae1_fg1",
         "ae2_fg2",
@@ -256,36 +181,22 @@ def test_model_definitions_use_only_canonical_logical_sensor_names(definition) -
         "sf3_fg3",
         "vf2_3_4",
     }
-    assert not (set(definition.measurement_keys) & combined_keys)
+    assert not (set(definition.sensor_keys) & combined_keys)
 
 
-@pytest.mark.parametrize("definition", MODEL_DEFINITIONS.values())
-def test_all_register_views_match_existing_sensor_descriptor_keys(definition) -> None:
-    existing_sensor_keys = {
-        "af1",
-        "af2",
-        "ruef4",
-        "vf1",
-        "vf2",
-        "vf3",
-        "vf4",
-        "ruef1",
-        "ruef2",
-        "ruef3",
-        "rf1",
-        "rf2",
-        "rf3",
-        "sf1",
-        "sf2",
-        "sf3",
-        "ae1",
-        "fg1",
-        "ae2",
-        "fg2",
-        "ae3",
-        "fg3",
-        "pulse_rate",
-        "analog_input_voltage",
-        "analog_input_current",
-    }
-    assert set(definition.measurement_keys) <= existing_sensor_keys
+def test_invalid_sensor_variant_is_rejected() -> None:
+    with pytest.raises(ValueError, match="at least one"):
+        sensor_variant()
+
+    with pytest.raises(ValueError, match="unique"):
+        sensor_variant("fg1", "fg1")
+
+
+def test_model_rejects_an_unsupported_variant_sensor() -> None:
+    with pytest.raises(ValueError, match="unsupported sensor keys"):
+        ModelDefinition(
+            model=ControllerModel.TROVIS_5573,
+            heating_circuits=2,
+            sensor_keys=("af1",),
+            sensor_variants=(sensor_variant("fg1"),),
+        )

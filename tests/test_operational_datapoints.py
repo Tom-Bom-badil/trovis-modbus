@@ -86,7 +86,6 @@ def test_additional_5578_sensor_addresses() -> None:
     sensors = device.sensors
 
     assert sensors._address(sensors._register_fields["af2"]) == 10
-    assert sensors._address(sensors._register_fields["ruef4"]) == 10
     assert sensors._address(sensors._register_fields["sf3"]) == 24
     assert sensors._address(sensors._register_fields["ae1"]) == 25
     assert sensors._address(sensors._register_fields["fg1"]) == 25

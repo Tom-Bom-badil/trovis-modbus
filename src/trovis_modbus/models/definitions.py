@@ -1,192 +1,126 @@
-"""Static controller-model and physical-input definitions."""
+"""Static logical sensor capabilities for TROVIS controller models."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import StrEnum
 
 from ..enums import ControllerModel
 
 
-class InputRole(StrEnum):
-    """Possible electrical role of one physical controller input."""
-
-    RESISTANCE_SENSOR = "resistance_sensor"
-    BINARY_INPUT = "binary_input"
-    ANALOG_VOLTAGE = "analog_voltage"
-    ANALOG_CURRENT = "analog_current"
-    POTENTIOMETER = "potentiometer"
-    PULSE_INPUT = "pulse_input"
-
-
 @dataclass(frozen=True, slots=True)
-class RegisterViewDefinition:
-    """One logical measurement view of a physical input."""
+class SensorVariant:
+    """Logical sensors whose meaning depends on the controller configuration.
 
-    measurement_key: str
-    register: int
-    roles: tuple[InputRole, ...]
+    A variant may contain one sensor key. In that case, the sensor is available
+    only for one of the configurable input modes; another mode may use the same
+    input for a non-sensor function such as a binary input.
+
+    A variant with several sensor keys describes alternative logical sensor
+    meanings. The later resolver selects the active sensor from the controller's
+    configuration, functions, parameters, and relevant coils.
+    """
+
+    sensor_keys: tuple[str, ...]
 
     def __post_init__(self) -> None:
-        if not self.measurement_key:
-            raise ValueError("measurement_key must not be empty")
-        if not 40001 <= self.register <= 49999:
-            raise ValueError(
-                f"register must be a holding-register reference: {self.register}"
-            )
-        if not self.roles:
-            raise ValueError("a register view must support at least one input role")
-        if len(set(self.roles)) != len(self.roles):
-            raise ValueError(
-                f"duplicate roles for register view {self.measurement_key!r}"
-            )
+        if not self.sensor_keys:
+            raise ValueError("sensor variant must contain at least one sensor key")
+        if any(not sensor_key for sensor_key in self.sensor_keys):
+            raise ValueError("sensor variant keys must not be empty")
+        if len(set(self.sensor_keys)) != len(self.sensor_keys):
+            raise ValueError("sensor variant keys must be unique")
 
-
-@dataclass(frozen=True, slots=True)
-class PhysicalInputDefinition:
-    """Static electrical description of one physical controller input."""
-
-    terminal: int
-    paired_common: int | None
-    manufacturer_labels: tuple[str, ...]
-    possible_roles: tuple[InputRole, ...]
-    conflict_group: str
-    register_views: tuple[RegisterViewDefinition, ...]
-
-    def __post_init__(self) -> None:
-        if self.terminal <= 0:
-            raise ValueError("terminal must be positive")
-        if self.paired_common is not None and self.paired_common <= 0:
-            raise ValueError("paired_common must be positive")
-        if self.paired_common == self.terminal:
-            raise ValueError("paired_common must differ from terminal")
-        if not self.manufacturer_labels:
-            raise ValueError("manufacturer_labels must not be empty")
-        if not self.possible_roles:
-            raise ValueError("possible_roles must not be empty")
-        if len(set(self.possible_roles)) != len(self.possible_roles):
-            raise ValueError(
-                f"duplicate roles in conflict group {self.conflict_group!r}"
-            )
-        if not self.conflict_group:
-            raise ValueError("conflict_group must not be empty")
-
-        measurement_keys = [view.measurement_key for view in self.register_views]
-        if len(set(measurement_keys)) != len(measurement_keys):
-            raise ValueError(
-                f"duplicate measurement keys in conflict group {self.conflict_group!r}"
-            )
-
-        possible_roles = set(self.possible_roles)
-        for view in self.register_views:
-            unsupported = set(view.roles) - possible_roles
-            if unsupported:
-                raise ValueError(
-                    f"register view {view.measurement_key!r} uses unsupported roles: "
-                    f"{sorted(role.value for role in unsupported)}"
-                )
-
-    def view_for_key(self, measurement_key: str) -> RegisterViewDefinition | None:
-        """Return the logical register view for ``measurement_key``, if present."""
-        return next(
-            (
-                view
-                for view in self.register_views
-                if view.measurement_key == measurement_key
-            ),
-            None,
-        )
+    def contains(self, sensor_key: str) -> bool:
+        """Return whether this variant contains ``sensor_key``."""
+        return sensor_key in self.sensor_keys
 
 
 @dataclass(frozen=True, slots=True)
 class ModelDefinition:
-    """Static hardware definition for one TROVIS controller model."""
+    """Static logical sensor capabilities of one TROVIS controller model."""
 
     model: ControllerModel
     heating_circuits: int
-    inputs: tuple[PhysicalInputDefinition, ...]
+    sensor_keys: tuple[str, ...]
+    sensor_variants: tuple[SensorVariant, ...] = ()
 
     def __post_init__(self) -> None:
         if self.heating_circuits not in (2, 3):
             raise ValueError("heating_circuits must be 2 or 3")
-        if not self.inputs:
-            raise ValueError("a model definition must contain physical inputs")
+        if not self.sensor_keys:
+            raise ValueError("a model definition must contain sensor keys")
+        if any(not sensor_key for sensor_key in self.sensor_keys):
+            raise ValueError("sensor keys must not be empty")
+        if len(set(self.sensor_keys)) != len(self.sensor_keys):
+            raise ValueError(f"duplicate sensor keys in model {self.model.value}")
 
-        terminals = [input_definition.terminal for input_definition in self.inputs]
-        if len(set(terminals)) != len(terminals):
-            raise ValueError(f"duplicate terminals in model {self.model.value}")
+        supported_sensor_keys = set(self.sensor_keys)
+        variant_sensor_keys: set[str] = set()
+        variant_signatures: set[tuple[str, ...]] = set()
 
-        conflict_groups = [
-            input_definition.conflict_group for input_definition in self.inputs
-        ]
-        if len(set(conflict_groups)) != len(conflict_groups):
-            raise ValueError(f"duplicate conflict groups in model {self.model.value}")
+        for variant in self.sensor_variants:
+            unsupported = set(variant.sensor_keys) - supported_sensor_keys
+            if unsupported:
+                raise ValueError(
+                    f"sensor variant in model {self.model.value} contains "
+                    f"unsupported sensor keys: {sorted(unsupported)}"
+                )
 
-        measurement_keys = [
-            view.measurement_key
-            for input_definition in self.inputs
-            for view in input_definition.register_views
-        ]
-        if len(set(measurement_keys)) != len(measurement_keys):
-            raise ValueError(f"duplicate measurement keys in model {self.model.value}")
+            signature = variant.sensor_keys
+            if signature in variant_signatures:
+                raise ValueError(
+                    f"duplicate sensor variant in model {self.model.value}: "
+                    f"{signature!r}"
+                )
+            variant_signatures.add(signature)
+
+            duplicate_membership = variant_sensor_keys & set(variant.sensor_keys)
+            if duplicate_membership:
+                raise ValueError(
+                    f"sensor keys occur in several variants in model "
+                    f"{self.model.value}: {sorted(duplicate_membership)}"
+                )
+            variant_sensor_keys.update(variant.sensor_keys)
 
     @property
     def measurement_keys(self) -> tuple[str, ...]:
-        """Return every logical sensor name supported by the model."""
-        return tuple(
-            view.measurement_key
-            for input_definition in self.inputs
-            for view in input_definition.register_views
+        """Return the supported logical sensor keys.
+
+        ``measurement_keys`` remains as a neutral read-only alias while callers
+        move to the more precise :attr:`sensor_keys` name.
+        """
+        return self.sensor_keys
+
+    @property
+    def variant_sensor_keys(self) -> frozenset[str]:
+        """Return sensor keys whose meaning or availability is configurable."""
+        return frozenset(
+            sensor_key
+            for variant in self.sensor_variants
+            for sensor_key in variant.sensor_keys
         )
 
-    def input_for_terminal(self, terminal: int) -> PhysicalInputDefinition | None:
-        """Return the physical input starting at ``terminal``, if present."""
+    @property
+    def fixed_sensor_keys(self) -> frozenset[str]:
+        """Return sensor keys that are not part of a configurable variant."""
+        return frozenset(self.sensor_keys) - self.variant_sensor_keys
+
+    def supports_sensor(self, sensor_key: str) -> bool:
+        """Return whether the controller model exposes ``sensor_key``."""
+        return sensor_key in self.sensor_keys
+
+    def sensor_variant_for(self, sensor_key: str) -> SensorVariant | None:
+        """Return the configurable variant containing ``sensor_key``."""
         return next(
             (
-                input_definition
-                for input_definition in self.inputs
-                if input_definition.terminal == terminal
+                variant
+                for variant in self.sensor_variants
+                if variant.contains(sensor_key)
             ),
             None,
         )
 
-    def input_for_measurement(
-        self, measurement_key: str
-    ) -> PhysicalInputDefinition | None:
-        """Return the physical input that exposes ``measurement_key``."""
-        return next(
-            (
-                input_definition
-                for input_definition in self.inputs
-                if input_definition.view_for_key(measurement_key) is not None
-            ),
-            None,
-        )
 
-
-def register_view(
-    measurement_key: str,
-    register: int,
-    *roles: InputRole,
-) -> RegisterViewDefinition:
-    """Create a concise immutable logical register-view definition."""
-    return RegisterViewDefinition(measurement_key, register, roles)
-
-
-def physical_input(
-    terminal: int,
-    *manufacturer_labels: str,
-    possible_roles: tuple[InputRole, ...],
-    register_views: tuple[RegisterViewDefinition, ...],
-    paired_common: int | None = None,
-) -> PhysicalInputDefinition:
-    """Create a physical input with a stable terminal-based conflict group."""
-    paired_suffix = f"_{paired_common}" if paired_common is not None else ""
-    return PhysicalInputDefinition(
-        terminal=terminal,
-        paired_common=paired_common,
-        manufacturer_labels=manufacturer_labels,
-        possible_roles=possible_roles,
-        conflict_group=f"terminal_{terminal}{paired_suffix}",
-        register_views=register_views,
-    )
+def sensor_variant(*sensor_keys: str) -> SensorVariant:
+    """Create one concise immutable sensor variant."""
+    return SensorVariant(sensor_keys=sensor_keys)
