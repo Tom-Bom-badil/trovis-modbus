@@ -1,4 +1,4 @@
-"""The heating circuits (Rk1...Rk3 in different configurations)."""
+"""The heating circuits (Hk (Heizkreis) 1-3, also called Rk (Regelkreis) 1-3)."""
 
 from __future__ import annotations
 

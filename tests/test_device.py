@@ -8,6 +8,7 @@ import pytest
 from modbus_connection.mock import MockModbusConnection, MockModbusUnit
 
 from trovis_modbus import (
+    ControlCircuitRole,
     MonthDay,
     OperatingMode,
     SystemActivity,
@@ -303,3 +304,40 @@ async def test_5576_anlage_2_1_exposes_only_hk1(
     )
     await device.async_update()
     assert device.heating_circuit_indices == (1,)
+
+
+async def test_5576_anlage_2_1_exposes_compatibility_rk_roles(
+    mock_modbus_unit: MockModbusUnit,
+) -> None:
+    mock_modbus_unit.holding.update(HOLDING)
+    mock_modbus_unit.coils.update(COILS)
+    device = Trovis557x(
+        mock_modbus_unit,
+        model=5576,
+    )
+
+    await device.async_update()
+
+    assert device.control_circuit_indices == (1, 4)
+    assert device.control_circuit_role(1) is ControlCircuitRole.HEATING
+    assert device.control_circuit_role(2) is ControlCircuitRole.UNUSED
+    assert device.control_circuit_role(3) is ControlCircuitRole.UNUSED
+    assert device.control_circuit_role(4) is ControlCircuitRole.DOMESTIC_HOT_WATER
+    assert device.has_rk4 is True
+
+
+async def test_control_circuit_roles_are_clipped_to_model_capacity(
+    mock_modbus_unit: MockModbusUnit,
+) -> None:
+    mock_modbus_unit.holding.update(HOLDING)
+    mock_modbus_unit.holding[1] = 61  # Anlage 6.1 uses Rk1 through Rk3.
+    mock_modbus_unit.coils.update(COILS)
+    device = Trovis557x(
+        mock_modbus_unit,
+        model=5576,
+    )
+
+    await device.async_update()
+
+    assert device.control_circuit_indices == (1, 2, 4)
+    assert device.control_circuit_role(3) is ControlCircuitRole.UNUSED

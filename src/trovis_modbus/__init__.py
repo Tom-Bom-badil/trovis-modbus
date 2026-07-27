@@ -24,6 +24,7 @@ from .configurations.settings import Functions, Parameters
 from .data_model import DEFAULT_WRITE_ACCESS_CODE
 from .device_info import DeviceInformation
 from .enums import (
+    ControlCircuitRole,
     EnergyUnit,
     FlowRateUnit,
     HeatMeterReadMode,
@@ -69,6 +70,7 @@ __all__ = [
     "OUTDOOR_TEMPERATURES",
     "Clock",
     "Controller",
+    "ControlCircuitRole",
     "DeviceInformation",
     "EnergyUnit",
     "FlowRateUnit",

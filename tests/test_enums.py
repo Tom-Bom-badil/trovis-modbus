@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from trovis_modbus import (
+    ControlCircuitRole,
     EnergyUnit,
     FlowRateUnit,
     HeatMeterReadMode,
@@ -59,3 +60,15 @@ def test_heat_meter_unit_options_match_controller_values() -> None:
     assert _option_values(VOLUME_UNIT_OPTIONS) == tuple(map(int, VolumeUnit))
     assert _option_values(ENERGY_UNIT_OPTIONS) == tuple(map(int, EnergyUnit))
     assert _option_values(POWER_UNIT_OPTIONS) == tuple(map(int, PowerUnit))
+
+
+def test_control_circuit_roles_have_stable_api_values() -> None:
+    assert tuple(ControlCircuitRole) == (
+        ControlCircuitRole.UNUSED,
+        ControlCircuitRole.HEATING,
+        ControlCircuitRole.PRECONTROL,
+        ControlCircuitRole.BUFFER_TANK,
+        ControlCircuitRole.DOMESTIC_HOT_WATER,
+    )
+    assert ControlCircuitRole.PRECONTROL.value == "precontrol"
+    assert ControlCircuitRole.BUFFER_TANK.value == "buffer_tank"

@@ -13,7 +13,10 @@ from .configurations.address_ranges import (
     heating_circuit_count,
     ranges_for_model,
 )
-from .configurations.hydronic_systems import get_configuration_definition
+from .configurations.hydronic_systems import (
+    ConfigurationTopology,
+    get_configuration_definition,
+)
 from .configurations.sensor_variants import (
     SensorVariantResolution,
     SensorVariantStatus,
@@ -28,7 +31,7 @@ from .data_model import (
     async_read_writing_enabled,
 )
 from .device_info import DeviceInformation
-from .enums import SystemActivity
+from .enums import ControlCircuitRole, SystemActivity
 from .subsystems import (
     Clock,
     Controller,
@@ -160,22 +163,57 @@ class Trovis557x:
         return self._heating_circuits
 
     @property
-    def heating_circuit_indices(self) -> tuple[int, ...]:
-        """Return heating circuits enabled by model and hydronic topology."""
-        model_indices = tuple(range(1, len(self._heating_circuits) + 1))
+    def configuration_topology(self) -> ConfigurationTopology | None:
+        """Return the known hydronic topology reported by the controller."""
         system_code = self.info.system_code
-
         if system_code is None:
-            return model_indices
+            return None
 
         try:
-            topology = get_configuration_definition(round(system_code * 10)).topology
+            return get_configuration_definition(round(system_code * 10)).topology
         except KeyError:
-            return model_indices
+            return None
 
+    def control_circuit_role(self, index: int) -> ControlCircuitRole:
+        """Return the role of technical slot Rk1 through Rk4."""
+        if not 1 <= index <= 4:
+            raise ValueError("control circuit index must be in range 1..4")
+
+        if index <= 3 and index > len(self._heating_circuits):
+            return ControlCircuitRole.UNUSED
+
+        topology = self.configuration_topology
+        if topology is not None:
+            return topology.control_circuit_role(index)
+
+        if index <= len(self._heating_circuits):
+            return ControlCircuitRole.HEATING
+        if index == 4:
+            return ControlCircuitRole.DOMESTIC_HOT_WATER
+        return ControlCircuitRole.UNUSED
+
+    @property
+    def control_circuit_indices(self) -> tuple[int, ...]:
+        """Return technical Rk slots enabled by model and hydronic topology."""
         return tuple(
-            index for index in model_indices if getattr(topology, f"hk{index}")
+            index
+            for index in range(1, 5)
+            if self.control_circuit_role(index) is not ControlCircuitRole.UNUSED
         )
+
+    @property
+    def heating_circuit_indices(self) -> tuple[int, ...]:
+        """Return Rk1 through Rk3 currently classified as heating circuits."""
+        return tuple(
+            index
+            for index in range(1, len(self._heating_circuits) + 1)
+            if self.control_circuit_role(index) is ControlCircuitRole.HEATING
+        )
+
+    @property
+    def has_rk4(self) -> bool:
+        """Return whether Rk4/WW is present or retained as safe fallback."""
+        return self.control_circuit_role(4) is ControlCircuitRole.DOMESTIC_HOT_WATER
 
     @property
     def components(self) -> tuple[Component, ...]:

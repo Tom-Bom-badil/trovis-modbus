@@ -10,6 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from types import MappingProxyType
 
+from ..enums import ControlCircuitRole
+
 FUNCTIONAL_SENSOR_ROLE_KEYS = (
     "af1",
     "af2",
@@ -60,6 +62,72 @@ class ConfigurationTopology:
             raise ValueError(
                 "a configuration topology must contain at least one feature"
             )
+
+    @property
+    def rk1_role(self) -> ControlCircuitRole:
+        """Return the compatibility role derived for technical slot Rk1."""
+        return ControlCircuitRole.HEATING if self.hk1 else ControlCircuitRole.UNUSED
+
+    @property
+    def rk2_role(self) -> ControlCircuitRole:
+        """Return the compatibility role derived for technical slot Rk2."""
+        return ControlCircuitRole.HEATING if self.hk2 else ControlCircuitRole.UNUSED
+
+    @property
+    def rk3_role(self) -> ControlCircuitRole:
+        """Return the compatibility role derived for technical slot Rk3."""
+        return ControlCircuitRole.HEATING if self.hk3 else ControlCircuitRole.UNUSED
+
+    @property
+    def rk4_role(self) -> ControlCircuitRole:
+        """Return the compatibility role derived for technical slot Rk4."""
+        return (
+            ControlCircuitRole.DOMESTIC_HOT_WATER
+            if self.ww
+            else ControlCircuitRole.UNUSED
+        )
+
+    @property
+    def control_circuit_roles(self) -> tuple[ControlCircuitRole, ...]:
+        """Return the roles of the stable technical slots Rk1 through Rk4."""
+        return (
+            self.rk1_role,
+            self.rk2_role,
+            self.rk3_role,
+            self.rk4_role,
+        )
+
+    def control_circuit_role(self, index: int) -> ControlCircuitRole:
+        """Return the role assigned to technical slot ``index``."""
+        if not 1 <= index <= 4:
+            raise ValueError("control circuit index must be in range 1..4")
+        return self.control_circuit_roles[index - 1]
+
+    @property
+    def control_circuit_indices(self) -> tuple[int, ...]:
+        """Return every technical Rk slot used by this hydronic system."""
+        return tuple(
+            index
+            for index, role in enumerate(self.control_circuit_roles, start=1)
+            if role is not ControlCircuitRole.UNUSED
+        )
+
+    @property
+    def heating_circuit_indices(self) -> tuple[int, ...]:
+        """Return slots currently classified as room-heating circuits."""
+        return tuple(
+            index
+            for index, role in enumerate(
+                self.control_circuit_roles[:3],
+                start=1,
+            )
+            if role is ControlCircuitRole.HEATING
+        )
+
+    @property
+    def has_rk4(self) -> bool:
+        """Return whether the hydronic system contains Rk4/WW."""
+        return self.rk4_role is ControlCircuitRole.DOMESTIC_HOT_WATER
 
 
 @dataclass(frozen=True, slots=True)

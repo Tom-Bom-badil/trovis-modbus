@@ -19,6 +19,16 @@ class ControllerModel(StrEnum):
     TROVIS_5579 = "5579"
 
 
+class ControlCircuitRole(StrEnum):
+    """Hydronic role assigned to one technical control-circuit slot."""
+
+    UNUSED = "unused"
+    HEATING = "heating"
+    PRECONTROL = "precontrol"
+    BUFFER_TANK = "buffer_tank"
+    DOMESTIC_HOT_WATER = "domestic_hot_water"
+
+
 class OperatingMode(IntEnum):
     """Operating mode of a heating circuit, domestic hot water, or rotary switch.
 

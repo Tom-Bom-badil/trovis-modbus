@@ -4,6 +4,7 @@ from types import MappingProxyType
 
 import pytest
 
+from trovis_modbus import ControlCircuitRole
 from trovis_modbus.configurations import (
     FUNCTIONAL_SENSOR_ROLE_KEYS,
     HYDRONIC_CONFIGURATIONS,
@@ -236,3 +237,37 @@ def test_definition_rejects_unknown_sensor_role() -> None:
             topology=ConfigurationTopology(hk1=True),
             functional_sensor_roles=("hk11",),
         )
+
+
+def test_topology_exposes_compatibility_control_circuit_roles() -> None:
+    topology = ConfigurationTopology(
+        hk1=True,
+        hk3=True,
+        ww=True,
+    )
+
+    assert topology.control_circuit_roles == (
+        ControlCircuitRole.HEATING,
+        ControlCircuitRole.UNUSED,
+        ControlCircuitRole.HEATING,
+        ControlCircuitRole.DOMESTIC_HOT_WATER,
+    )
+    assert topology.control_circuit_indices == (1, 3, 4)
+    assert topology.heating_circuit_indices == (1, 3)
+    assert topology.has_rk4 is True
+
+
+def test_topology_rejects_invalid_control_circuit_index() -> None:
+    topology = ConfigurationTopology(hk1=True)
+
+    with pytest.raises(
+        ValueError,
+        match="control circuit index must be in range 1..4",
+    ):
+        topology.control_circuit_role(0)
+
+    with pytest.raises(
+        ValueError,
+        match="control circuit index must be in range 1..4",
+    ):
+        topology.control_circuit_role(5)
