@@ -7,10 +7,10 @@ anchors for this large configuration table.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from types import MappingProxyType
 
-from ..enums import ControlCircuitRole
+from ..enums import ControlCircuitRole, ControllerModel
 
 FUNCTIONAL_SENSOR_ROLE_KEYS = (
     "af1",
@@ -28,9 +28,242 @@ FUNCTIONAL_SENSOR_ROLE_KEYS = (
     "sf1",
     "sf2",
     "sf3",
+    "sf4",
 )
 
 _FUNCTIONAL_SENSOR_ROLE_KEY_SET = frozenset(FUNCTIONAL_SENSOR_ROLE_KEYS)
+
+
+# Model support is taken from the Anlage headings in Appendix A of the
+# current model-specific manuals. Anlage 19.0 exists in layout_expert.xml,
+# but is not documented for any current model and therefore has no model
+# assignment here.
+_TROVIS_5573_SYSTEM_CODES = frozenset(
+    {
+        10,
+        11,
+        12,
+        13,
+        15,
+        16,
+        19,
+        20,
+        21,
+        22,
+        23,
+        30,
+        35,
+        40,
+        41,
+        45,
+        100,
+        110,
+        111,
+        112,
+        115,
+        116,
+        119,
+        160,
+        161,
+        162,
+        163,
+        164,
+        166,
+    }
+)
+
+_TROVIS_5575_SYSTEM_CODES = _TROVIS_5573_SYSTEM_CODES | frozenset({31, 32, 101, 105})
+
+_TROVIS_5576_SYSTEM_CODES = frozenset(
+    {
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        40,
+        41,
+        42,
+        43,
+        45,
+        71,
+        72,
+        81,
+        82,
+        100,
+        101,
+        102,
+        103,
+        105,
+        110,
+        111,
+        112,
+        113,
+        114,
+        115,
+        116,
+        119,
+        141,
+        142,
+        143,
+        160,
+        161,
+        162,
+        163,
+        164,
+        166,
+    }
+)
+
+_TROVIS_5578_SYSTEM_CODES = frozenset(
+    {
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        39,
+        40,
+        41,
+        42,
+        43,
+        45,
+        50,
+        51,
+        52,
+        59,
+        60,
+        61,
+        71,
+        72,
+        81,
+        82,
+        91,
+        92,
+        95,
+        96,
+        100,
+        101,
+        102,
+        103,
+        105,
+        110,
+        111,
+        112,
+        113,
+        114,
+        115,
+        116,
+        119,
+        120,
+        121,
+        122,
+        129,
+        130,
+        131,
+        132,
+        136,
+        139,
+        141,
+        142,
+        143,
+        150,
+        151,
+        152,
+        153,
+        154,
+        155,
+        160,
+        161,
+        162,
+        163,
+        164,
+        165,
+        166,
+        167,
+        168,
+        171,
+        178,
+        181,
+        210,
+        211,
+        212,
+        219,
+        250,
+        255,
+    }
+)
+
+_TROVIS_5578_E_SYSTEM_CODES = _TROVIS_5578_SYSTEM_CODES | frozenset(
+    {37, 38, 200, 271, 278}
+)
+
+_TROVIS_5579_SYSTEM_CODES = _TROVIS_5578_SYSTEM_CODES - frozenset(
+    {39, 59, 171, 178, 181}
+)
+
+SUPPORTED_SYSTEM_CODES_BY_MODEL = MappingProxyType(
+    {
+        ControllerModel.TROVIS_5573: _TROVIS_5573_SYSTEM_CODES,
+        ControllerModel.TROVIS_5573_1: _TROVIS_5573_SYSTEM_CODES,
+        ControllerModel.TROVIS_5575: _TROVIS_5575_SYSTEM_CODES,
+        ControllerModel.TROVIS_5576: _TROVIS_5576_SYSTEM_CODES,
+        ControllerModel.TROVIS_5578: _TROVIS_5578_SYSTEM_CODES,
+        ControllerModel.TROVIS_5578_E: _TROVIS_5578_E_SYSTEM_CODES,
+        ControllerModel.TROVIS_5579: _TROVIS_5579_SYSTEM_CODES,
+    }
+)
+
+_SUPPORTED_MODELS_BY_SYSTEM_CODE_MUTABLE: dict[int, set[ControllerModel]] = {}
+for _model, _system_codes in SUPPORTED_SYSTEM_CODES_BY_MODEL.items():
+    for _system_code in _system_codes:
+        _SUPPORTED_MODELS_BY_SYSTEM_CODE_MUTABLE.setdefault(_system_code, set()).add(
+            _model
+        )
+
+SUPPORTED_MODELS_BY_SYSTEM_CODE = MappingProxyType(
+    {
+        system_code: frozenset(models)
+        for system_code, models in _SUPPORTED_MODELS_BY_SYSTEM_CODE_MUTABLE.items()
+    }
+)
+
+del _SUPPORTED_MODELS_BY_SYSTEM_CODE_MUTABLE
+del _model
+del _system_code
+del _system_codes
 
 
 @dataclass(frozen=True, slots=True)
@@ -144,8 +377,14 @@ class ConfigurationDefinition:
     display_code: str
     topology: ConfigurationTopology
     functional_sensor_roles: tuple[str, ...] = ()
+    supported_models: frozenset[ControllerModel] = field(init=False)
 
     def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "supported_models",
+            SUPPORTED_MODELS_BY_SYSTEM_CODE.get(self.code, frozenset()),
+        )
         if self.code <= 0:
             raise ValueError("code must be positive")
 
@@ -169,6 +408,10 @@ class ConfigurationDefinition:
                 f"unsupported functional sensor roles for Anlage "
                 f"{self.display_code}: {sorted(unsupported_roles)}"
             )
+
+    def supports_model(self, model: ControllerModel) -> bool:
+        """Return whether this system code is documented for ``model``."""
+        return model in self.supported_models
 
 
 # ---------------------------------------------------------------------------
@@ -1565,7 +1808,6 @@ ANLAGE_11_6 = ConfigurationDefinition(
     topology=ConfigurationTopology(
         rk1_role=ControlCircuitRole.HEATING,
         rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
-        circulation=True,
         heat_exchanger=True,
     ),
     functional_sensor_roles=(
@@ -1823,7 +2065,6 @@ ANLAGE_13_6 = ConfigurationDefinition(
         rk1_role=ControlCircuitRole.HEATING,
         rk3_role=ControlCircuitRole.HEATING,
         rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
-        circulation=True,
         heat_exchanger=True,
     ),
     functional_sensor_roles=(
@@ -1940,12 +2181,13 @@ ANLAGE_14_3 = ConfigurationDefinition(
     functional_sensor_roles=(
         "af1",
         "vf1",
-        "vf3",
         "vf4",
         "ruef1",
+        "ruef2",
         "sf1",
         "sf2",
         "sf3",
+        "sf4",
     ),
 )
 
@@ -2058,11 +2300,13 @@ ANLAGE_15_3 = ConfigurationDefinition(
         "vf3",
         "vf4",
         "ruef1",
+        "ruef2",
         "ruef3",
         "rf3",
         "sf1",
         "sf2",
         "sf3",
+        "sf4",
     ),
 )
 
@@ -2764,6 +3008,20 @@ HYDRONIC_CONFIGURATIONS = MappingProxyType(
 if len(HYDRONIC_CONFIGURATIONS) != len(_ALL_CONFIGURATIONS):
     raise RuntimeError("duplicate TROVIS system code numbers in hydronic registry")
 
+_DOCUMENTED_SYSTEM_CODES = frozenset(SUPPORTED_MODELS_BY_SYSTEM_CODE)
+_UNKNOWN_DOCUMENTED_SYSTEM_CODES = (
+    _DOCUMENTED_SYSTEM_CODES - HYDRONIC_CONFIGURATIONS.keys()
+)
+if _UNKNOWN_DOCUMENTED_SYSTEM_CODES:
+    raise RuntimeError(
+        "documented TROVIS system code numbers are missing from the hydronic "
+        f"registry: {sorted(_UNKNOWN_DOCUMENTED_SYSTEM_CODES)}"
+    )
+
+UNDOCUMENTED_SYSTEM_CODES = frozenset(
+    HYDRONIC_CONFIGURATIONS.keys() - _DOCUMENTED_SYSTEM_CODES
+)
+
 
 def get_configuration_definition(system_code: int) -> ConfigurationDefinition:
     """Return the static hydronic definition for a raw system code number."""
@@ -2778,6 +3036,9 @@ def get_configuration_definition(system_code: int) -> ConfigurationDefinition:
 __all__ = [
     "FUNCTIONAL_SENSOR_ROLE_KEYS",
     "HYDRONIC_CONFIGURATIONS",
+    "SUPPORTED_MODELS_BY_SYSTEM_CODE",
+    "SUPPORTED_SYSTEM_CODES_BY_MODEL",
+    "UNDOCUMENTED_SYSTEM_CODES",
     "ConfigurationDefinition",
     "ConfigurationTopology",
     "get_configuration_definition",

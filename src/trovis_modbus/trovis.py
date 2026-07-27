@@ -14,6 +14,7 @@ from .configurations.address_ranges import (
     ranges_for_model,
 )
 from .configurations.hydronic_systems import (
+    ConfigurationDefinition,
     ConfigurationTopology,
     get_configuration_definition,
 )
@@ -163,16 +164,30 @@ class Trovis557x:
         return self._control_circuits
 
     @property
-    def configuration_topology(self) -> ConfigurationTopology | None:
-        """Return the known hydronic topology reported by the controller."""
+    def configuration_definition(self) -> ConfigurationDefinition | None:
+        """Return the known hydronic definition reported by the controller."""
         system_code = self.info.system_code
         if system_code is None:
             return None
 
         try:
-            return get_configuration_definition(round(system_code * 10)).topology
+            return get_configuration_definition(round(system_code * 10))
         except KeyError:
             return None
+
+    @property
+    def configuration_topology(self) -> ConfigurationTopology | None:
+        """Return the known hydronic topology reported by the controller."""
+        definition = self.configuration_definition
+        return definition.topology if definition is not None else None
+
+    @property
+    def configuration_supported_by_model(self) -> bool | None:
+        """Return whether the reported system code is documented for this model."""
+        definition = self.configuration_definition
+        if definition is None:
+            return None
+        return definition.supports_model(self.model_definition.model)
 
     def control_circuit_role(self, index: int) -> ControlCircuitRole:
         """Return the role of technical slot Rk1 through Rk4."""

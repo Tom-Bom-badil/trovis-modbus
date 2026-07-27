@@ -318,6 +318,9 @@ async def test_5576_anlage_2_1_exposes_rk_roles(
 
     await device.async_update()
 
+    assert device.configuration_definition is not None
+    assert device.configuration_definition.display_code == "2.1"
+    assert device.configuration_supported_by_model is True
     assert device.control_circuit_indices == (1, 4)
     assert device.control_circuit_role(1) is ControlCircuitRole.HEATING
     assert device.control_circuit_role(2) is ControlCircuitRole.UNUSED
@@ -350,6 +353,9 @@ async def test_control_circuit_roles_are_clipped_to_model_capacity(
 
     await device.async_update()
 
+    assert device.configuration_definition is not None
+    assert device.configuration_definition.display_code == "6.1"
+    assert device.configuration_supported_by_model is False
     assert device.control_circuit_indices == (1, 2, 4)
     assert device.control_circuit_role(3) is ControlCircuitRole.UNUSED
 
