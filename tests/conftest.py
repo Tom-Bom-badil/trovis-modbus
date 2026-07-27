@@ -72,9 +72,12 @@ HOLDING: dict[int, int] = {
     1831: 1900,  # disinfection start -> 19:00
     1832: 2100,  # disinfection stop -> 21:00
     1838: 30,  # disinfection hold -> 30 min
+    2001: 5,  # HR42002 / AE selection -> AE1 + AE3
+    2002: 15,  # HR42003 / SLP sensor input -> input 15
 }
 
 COILS: dict[int, bool] = {
+    138: False,  # CL139 / FB10 / pulse input inactive
     3: True,  # CL4 / Sammel_Ebenenbit -> AUTARK by default
     56: True,  # hk1 pump
     158: False,  # CL159 / GLT timeout inactive
@@ -82,6 +85,23 @@ COILS: dict[int, bool] = {
     1000: True,  # hk1 day active
     1799: True,  # ww automatic
     59: True,  # WW storage tank charging pump
+    401: False,  # CL402 / FB02 / SF2 inactive -> RF2
+    404: False,  # CL405 / FB05 / VF4 inactive
+    800: False,  # CL801 / input 1 configured as sensor input
+    801: True,  # CL802 / input 2 configured as binary input
+    802: False,  # CL803 / input 3 configured as sensor input
+    803: False,  # CL804 / input 4 configured as sensor input
+    805: False,  # CL806 / input 6 configured as sensor input
+    808: False,  # CL809 / input 9 configured as sensor input
+    809: False,  # CL810 / input 10 configured as sensor input
+    810: False,  # CL811 / input 11 configured as sensor input
+    814: False,  # CL815 / input 15 configured as sensor input
+    815: True,  # CL816 / input 16 configured as binary input
+    816: False,  # CL817 / input 17 configured as sensor input
+    904: True,  # CL905 / 0-10 V setpoint correction enabled
+    906: False,  # CL907 / FB07 / VF2 inactive
+    1828: False,  # CL1829 / FB05 / VF4 inactive
+    2124: False,  # CL2125 / CO1 F25 / SF3 buffer bottom sensor inactive
 }
 
 

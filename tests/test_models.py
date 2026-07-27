@@ -2,8 +2,7 @@
 
 import pytest
 
-from trovis_modbus.enums import ControllerModel
-from trovis_modbus.models import (
+from trovis_modbus.configurations import (
     COMMON_SENSOR_KEYS,
     MODEL_DEFINITIONS,
     TROVIS_5573,
@@ -17,12 +16,14 @@ from trovis_modbus.models import (
     ModelDefinition,
     SensorVariant,
     get_model_definition,
+    get_model_definition_for_reported_model,
     model_candidates_for_reported_model,
     sensor_variant,
 )
-from trovis_modbus.models.definitions import (
+from trovis_modbus.configurations.trovis_models import (
     ControllerModel as DefinitionsControllerModel,
 )
+from trovis_modbus.enums import ControllerModel
 
 
 def _variant_keys(definition: ModelDefinition) -> set[tuple[str, ...]]:
@@ -84,6 +85,14 @@ def test_unknown_reported_model_has_no_candidates() -> None:
     assert model_candidates_for_reported_model(9999) == ()
 
 
+def test_unique_reported_model_definition_lookup() -> None:
+    assert get_model_definition_for_reported_model(55731) is TROVIS_5573_1
+    assert get_model_definition_for_reported_model(55781) is TROVIS_5578_E
+
+    with pytest.raises(KeyError, match="unsupported reported TROVIS model"):
+        get_model_definition_for_reported_model(9999)
+
+
 @pytest.mark.parametrize("definition", MODEL_DEFINITIONS.values())
 def test_every_model_uses_the_common_557x_sensor_base(
     definition: ModelDefinition,
@@ -133,7 +142,7 @@ def test_5573_family_uses_the_reduced_sensor_variants() -> None:
 
 def test_5575_keeps_the_multi_purpose_sensor_variant() -> None:
     assert _variant_keys(TROVIS_5575) == {
-        ("sf2", "rf2", "analog_input_voltage"),
+        ("sf2", "rf2", "analog_input_voltage", "pulse_rate"),
         ("vf2", "vf3", "vf4"),
         ("fg1",),
         ("fg2",),
@@ -145,13 +154,13 @@ def test_5576_adds_af2_and_sf3_without_a_third_heating_circuit() -> None:
     assert TROVIS_5576.supports_sensor("af2")
     assert TROVIS_5576.supports_sensor("sf3")
     assert not TROVIS_5576.supports_sensor("rf3")
-    assert ("sf3", "analog_input_voltage") in _variant_keys(TROVIS_5576)
+    assert ("sf3", "analog_input_voltage", "pulse_rate") in _variant_keys(TROVIS_5576)
 
 
 def test_5578_has_no_ruef4_sensor_key() -> None:
     assert TROVIS_5578.supports_sensor("af2")
     assert not TROVIS_5578.supports_sensor("ruef4")
-    assert ("sf3", "fg3") in _variant_keys(TROVIS_5578)
+    assert ("sf3", "fg3", "pulse_rate") in _variant_keys(TROVIS_5578)
 
 
 def test_5578_e_keeps_separate_ae_and_fg_sensor_keys() -> None:
@@ -160,12 +169,34 @@ def test_5578_e_keeps_separate_ae_and_fg_sensor_keys() -> None:
 
     assert ("ae1", "fg1") in _variant_keys(TROVIS_5578_E)
     assert ("ae2", "fg2") in _variant_keys(TROVIS_5578_E)
-    assert ("ae3", "fg3", "sf3") in _variant_keys(TROVIS_5578_E)
+    assert ("ae3", "fg3", "sf3", "pulse_rate") in _variant_keys(TROVIS_5578_E)
     assert not TROVIS_5578_E.supports_sensor("ruef4")
 
 
-def test_5579_keeps_the_sf3_fg3_analog_sensor_variant() -> None:
-    assert ("sf3", "fg3", "analog_input_voltage") in _variant_keys(TROVIS_5579)
+def test_5579_keeps_the_multifunctional_input_17_variant() -> None:
+    assert TROVIS_5579.supports_sensor("analog_input_voltage")
+    assert TROVIS_5579.supports_sensor("analog_input_current")
+    assert (
+        "sf3",
+        "fg3",
+        "analog_input_voltage",
+        "analog_input_current",
+        "pulse_rate",
+    ) in _variant_keys(TROVIS_5579)
+
+
+def test_pulse_rate_is_supported_only_by_documented_models() -> None:
+    for definition in (
+        TROVIS_5575,
+        TROVIS_5576,
+        TROVIS_5578,
+        TROVIS_5578_E,
+        TROVIS_5579,
+    ):
+        assert definition.supports_sensor("pulse_rate")
+
+    assert not TROVIS_5573.supports_sensor("pulse_rate")
+    assert not TROVIS_5573_1.supports_sensor("pulse_rate")
 
 
 @pytest.mark.parametrize("definition", MODEL_DEFINITIONS.values())

@@ -9,6 +9,18 @@ from typing import TYPE_CHECKING
 from modbus_connection.model import Component, ComponentGroup
 
 from .addresses import register_address
+from .configurations.address_ranges import (
+    heating_circuit_count,
+    ranges_for_model,
+)
+from .configurations.hydronic_systems import get_configuration_definition
+from .configurations.sensor_variants import (
+    SensorVariantResolution,
+    SensorVariantStatus,
+    resolve_sensor_variants,
+)
+from .configurations.settings import Functions, Parameters
+from .configurations.trovis_models import get_model_definition_for_reported_model
 from .data_model import (
     DEFAULT_WRITE_ACCESS_CODE,
     async_disable_writing,
@@ -17,7 +29,6 @@ from .data_model import (
 )
 from .device_info import DeviceInformation
 from .enums import SystemActivity
-from .ranges import heating_circuit_count, ranges_for_model
 from .subsystems import (
     Clock,
     Controller,
@@ -55,11 +66,25 @@ class Trovis557x:
     ) -> None:
         self._unit = unit
         self.model = model
-        self.detected_sensors = frozenset(detected_sensors)
+        self.model_definition = get_model_definition_for_reported_model(model)
+
+        # Probe results may contain several descriptor views of the same raw
+        # register. Keep only logical sensor keys supported by this model. This
+        # also sanitizes existing config entries created before ModelDefinition
+        # became the authoritative model filter.
+        self.probed_sensors = frozenset(detected_sensors)
+        self.detected_sensors = frozenset(
+            sensor_key
+            for sensor_key in self.probed_sensors
+            if self.model_definition.supports_sensor(sensor_key)
+        )
+        self.unsupported_detected_sensors = self.probed_sensors - self.detected_sensors
 
         self.info = DeviceInformation(unit)
         self.controller = Controller(unit)
         self.clock = Clock(unit)
+        self.functions = Functions(unit)
+        self.parameters = Parameters(unit)
         self.sensors = Sensors(unit)
 
         self.hk1 = HeatingCircuit(unit, index=1)
@@ -73,6 +98,8 @@ class Trovis557x:
             self.info,
             self.controller,
             self.clock,
+            self.functions,
+            self.parameters,
             self.sensors,
             self.hk1,
             self.hk2,
@@ -82,8 +109,11 @@ class Trovis557x:
 
         register_ranges, coil_ranges = ranges_for_model(model)
         for component in all_components:
-            component.register_ranges = register_ranges
-            component.coil_ranges = coil_ranges
+            component.configure_readable_ranges(register_ranges, coil_ranges)
+
+        # Ranges describe address availability. ModelDefinition additionally
+        # limits logical sensor views that may share one readable register.
+        self.sensors.configure_readable_fields(self.model_definition.sensor_keys)
 
         self._heating_circuits = (
             self.hk1,
@@ -106,15 +136,22 @@ class Trovis557x:
         )
 
         register_ranges, coil_ranges = ranges_for_model(model)
+        model_definition = get_model_definition_for_reported_model(model)
 
         sensors = Sensors(unit)
-        sensors.register_ranges = register_ranges
-        sensors.coil_ranges = coil_ranges
+        sensors.configure_readable_ranges(register_ranges, coil_ranges)
+        sensors.configure_readable_fields(model_definition.sensor_keys)
         await sensors.async_update()
+
+        detected_sensors = tuple(
+            sensor_key
+            for sensor_key in sensors.detected_sensor_names
+            if model_definition.supports_sensor(sensor_key)
+        )
 
         return TrovisProbe(
             model=model,
-            detected_sensors=sensors.detected_sensor_names,
+            detected_sensors=detected_sensors,
         )
 
     @property
@@ -124,8 +161,21 @@ class Trovis557x:
 
     @property
     def heating_circuit_indices(self) -> tuple[int, ...]:
-        """Return the available heating-circuit indices."""
-        return tuple(range(1, len(self._heating_circuits) + 1))
+        """Return heating circuits enabled by model and hydronic topology."""
+        model_indices = tuple(range(1, len(self._heating_circuits) + 1))
+        system_code = self.info.system_code
+
+        if system_code is None:
+            return model_indices
+
+        try:
+            topology = get_configuration_definition(round(system_code * 10)).topology
+        except KeyError:
+            return model_indices
+
+        return tuple(
+            index for index in model_indices if getattr(topology, f"hk{index}")
+        )
 
     @property
     def components(self) -> tuple[Component, ...]:
@@ -134,9 +184,60 @@ class Trovis557x:
             self.info,
             self.controller,
             self.clock,
+            self.functions,
+            self.parameters,
             self.sensors,
             *self.heating_circuits,
             self.ww,
+        )
+
+    @property
+    def sensor_variant_resolution(self) -> SensorVariantResolution:
+        """Return the current configuration-only sensor-variant diagnosis."""
+        return resolve_sensor_variants(
+            self.model_definition,
+            self.functions,
+            self.parameters,
+        )
+
+    @property
+    def canonical_sensor_keys(self) -> frozenset[str]:
+        """Return model-supported sensor keys with an unambiguous role.
+
+        Fixed sensors and conclusively resolved variants are included.
+        Inactive and unresolved variants are excluded without guessing from
+        their values.
+        """
+        return frozenset(self.sensor_variant_resolution.canonical_sensor_keys)
+
+    @property
+    def available_sensor_keys(self) -> frozenset[str]:
+        """Return detected sensors that are safe to expose as normal entities."""
+        resolution = self.sensor_variant_resolution
+
+        unresolved_single_role_keys = frozenset(
+            result.variant_sensor_keys[0]
+            for result in resolution.variants
+            if result.status is SensorVariantStatus.UNRESOLVED
+            and len(result.variant_sensor_keys) == 1
+        )
+
+        return self.detected_sensors & (
+            frozenset(resolution.canonical_sensor_keys) | unresolved_single_role_keys
+        )
+
+    @property
+    def unresolved_detected_sensor_keys(self) -> frozenset[str]:
+        """Return detected role-specific views kept only for diagnostics."""
+        return self.detected_sensors & frozenset(
+            self.sensor_variant_resolution.unresolved_sensor_keys
+        )
+
+    @property
+    def inactive_detected_sensor_keys(self) -> frozenset[str]:
+        """Return detected views whose input is configured for non-sensor use."""
+        return self.detected_sensors & frozenset(
+            self.sensor_variant_resolution.inactive_sensor_keys
         )
 
     @property

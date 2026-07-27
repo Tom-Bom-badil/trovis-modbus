@@ -1,4 +1,4 @@
-"""Tests for central TROVIS enums and reusable option metadata."""
+"""Tests for central TROVIS enums and their reusable option metadata."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from trovis_modbus import (
     PowerUnit,
     VolumeUnit,
 )
-from trovis_modbus.enum_options import (
+from trovis_modbus.enums import (
     ENERGY_UNIT_OPTIONS,
     FLOW_RATE_UNIT_OPTIONS,
     HEAT_METER_READ_MODE_OPTIONS,

@@ -15,7 +15,7 @@ from trovis_modbus import (
     Trovis557x,
     Weekday,
 )
-from trovis_modbus.ranges import REGISTER_RANGES
+from trovis_modbus.configurations.address_ranges import REGISTER_RANGES
 
 from .conftest import COILS, HOLDING
 
@@ -65,15 +65,18 @@ async def test_sensors(trovis: Trovis557x) -> None:
     assert trovis.sensors.sf1 == pytest.approx(45.0)
     assert trovis.sensors.sf2 is None  # NaN sentinel
     assert trovis.sensors.sf3 == pytest.approx(65.0)
-    assert trovis.sensors.ae1 == pytest.approx(95.2)
+    assert trovis.sensors.ae1 is None
     assert trovis.sensors.fg1 == pytest.approx(95.2)
-    assert trovis.sensors.ae2 == pytest.approx(325.0)
+    assert trovis.sensors.ae2 is None
     assert trovis.sensors.fg2 == pytest.approx(325.0)
-    assert trovis.sensors.ae3 == pytest.approx(12.5)
+    assert trovis.sensors.ae3 is None
     assert trovis.sensors.fg3 == pytest.approx(12.5)
+    # The raw IMP register is read for supported models so it remains available
+    # for diagnostics. CL139 decides whether IMP is exposed as a canonical sensor.
     assert trovis.sensors.pulse_rate == 240
+    assert "pulse_rate" not in trovis.available_sensor_keys
     assert trovis.sensors.analog_input_voltage == pytest.approx(7.35)
-    assert trovis.sensors.analog_input_current == pytest.approx(147.0)
+    assert trovis.sensors.analog_input_current is None
 
 
 async def test_clock(trovis: Trovis557x) -> None:
@@ -287,3 +290,16 @@ async def test_write_refreshes_access_code(trovis: Trovis557x) -> None:
 
     assert (await unit.read_holding_registers(144, 1))[0] == 1732
     assert (await unit.read_holding_registers(1002, 1))[0] == 215
+
+
+async def test_5576_anlage_2_1_exposes_only_hk1(
+    mock_modbus_unit: MockModbusUnit,
+) -> None:
+    mock_modbus_unit.holding.update(HOLDING)
+    mock_modbus_unit.coils.update(COILS)
+    device = Trovis557x(
+        mock_modbus_unit,
+        model=5576,
+    )
+    await device.async_update()
+    assert device.heating_circuit_indices == (1,)

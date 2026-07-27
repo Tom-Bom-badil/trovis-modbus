@@ -8,13 +8,19 @@ objects::
     device.hk1.room_setpoint_active
     device.ww.storage_tank_charging_pump_running
 
-Shared infrastructure remains at package level. Controller domains live in
-``subsystems``; model descriptions and hydronic configurations have dedicated
-packages for the upcoming model and capability work. The public imports and
-``Trovis557x`` object API remain unchanged.
+Controller domains live in ``subsystems``. Static models, hydronic tables,
+range maps, settings, and sensor-variant logic live in ``configurations``.
+The public imports and ``Trovis557x`` object API remain unchanged.
 """
 
 from .addresses import coil_address, register_address
+from .configurations.sensor_variants import (
+    ResolvedSensorVariant,
+    SensorVariantResolution,
+    SensorVariantStatus,
+    resolve_sensor_variants,
+)
+from .configurations.settings import Functions, Parameters
 from .data_model import DEFAULT_WRITE_ACCESS_CODE
 from .device_info import DeviceInformation
 from .enums import (
@@ -66,15 +72,21 @@ __all__ = [
     "DeviceInformation",
     "EnergyUnit",
     "FlowRateUnit",
+    "Functions",
     "HeatingCircuit",
     "HeatMeterReadMode",
     "DomesticHotWater",
     "MonthDay",
     "TemperatureRange",
     "OperatingMode",
+    "Parameters",
     "SystemActivity",
     "PowerUnit",
     "Sensors",
+    "resolve_sensor_variants",
+    "SensorVariantStatus",
+    "SensorVariantResolution",
+    "ResolvedSensorVariant",
     "StorageStatus",
     "Trovis557x",
     "VolumeUnit",

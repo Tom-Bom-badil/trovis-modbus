@@ -39,14 +39,21 @@ KNOWN_NON_CANONICAL_REGISTERS = {
     register_address(40042),  # 5578 analog input 0-10 V
     register_address(40043),  # Summer-operation daily outdoor-temperature average
     register_address(41827),  # Current domestic hot-water storage status
+    register_address(42002),  # Analog-input selection (AE_Auswahl)
+    register_address(42003),  # Charging-pump sensor selection (SLP_Sensor)
 }
 
-# Manufacturer-documented 5578 points absent from the older canonical list.
+# Manufacturer-documented points absent from the older canonical list.
 # Values state the expected writable flag.
 KNOWN_NON_CANONICAL_COILS = {
     coil_address(cl_number): writable
     for cl_number, writable in (
+        (139, False),  # FB10 pulse input for flow/power limitation
         (159, True),  # GLT timeout monitoring
+        (402, False),  # FB02 storage tank sensor SF2
+        (405, False),  # FB05 flow sensor VF4
+        (907, False),  # FB07 flow sensor VF2
+        (1829, False),  # Mirrored FB05 flow sensor VF4
         (122, False),
         (123, False),
         (124, False),  # Active room-setpoint control level Rk1-Rk3
@@ -63,6 +70,22 @@ KNOWN_NON_CANONICAL_COILS = {
         (2108, True),
         (2208, True),
         (2308, True),  # Adaptation Rk1-Rk3
+        (801, False),
+        (802, False),
+        (803, False),
+        (804, False),
+        (805, False),
+        (806, False),  # CO8 inputs 1-6: sensor or binary input
+        (809, False),
+        (810, False),
+        (811, False),
+        (812, False),
+        (813, False),  # CO8 inputs 9-13: sensor or binary input
+        (815, False),
+        (816, False),
+        (817, False),  # CO8 inputs 15-17: sensor or binary input
+        (905, False),  # Setpoint correction through 0 to 10 V input
+        (2125, False),  # CO1 F25 buffer-storage bottom sensor SF3
     )
 }
 

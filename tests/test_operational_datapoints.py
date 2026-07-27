@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from trovis_modbus import StorageStatus, Trovis557x
+from trovis_modbus import Sensors, StorageStatus, Trovis557x
 
 
 def test_storage_status_enum_matches_firmware_values() -> None:
@@ -82,8 +82,7 @@ def test_legacy_gap_registers_and_intermediate_heating_points() -> None:
 
 
 def test_additional_5578_sensor_addresses() -> None:
-    device = Trovis557x(unit=None)  # type: ignore[arg-type]
-    sensors = device.sensors
+    sensors = Sensors(unit=None)  # type: ignore[arg-type]
 
     assert sensors._address(sensors._register_fields["af2"]) == 10
     assert sensors._address(sensors._register_fields["sf3"]) == 24

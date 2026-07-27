@@ -10,10 +10,10 @@ Known gaps and manufacturer block boundaries are preserved intentionally.
 
 from __future__ import annotations
 
-from .addresses import cl_range, hr_range
+from ..addresses import cl_range, hr_range
 
-TWO_HEATING_CIRCUIT_MODELS = frozenset({5573, 5575, 5576})
-THREE_HEATING_CIRCUIT_MODELS = frozenset({5578, 5579})
+TWO_HEATING_CIRCUIT_MODELS = frozenset({5573, 55731, 5575, 5576})
+THREE_HEATING_CIRCUIT_MODELS = frozenset({5578, 55781, 5579})
 SUPPORTED_MODELS = TWO_HEATING_CIRCUIT_MODELS | THREE_HEATING_CIRCUIT_MODELS
 
 
@@ -252,6 +252,24 @@ COIL_RANGES_3_HC = _cl_ranges(
     (6000, 6001),
     (9910, 9914),
 )
+
+
+def is_span_readable(
+    address: int,
+    count: int,
+    ranges: tuple[tuple[int, int], ...],
+) -> bool:
+    """Return whether one complete field span lies in a readable range.
+
+    ``modbus-connection`` uses readable ranges as block-planning boundaries.
+    TROVIS additionally uses them as the static availability map: fields outside
+    the selected model profile must not be queried as isolated reads.
+    """
+    if count <= 0:
+        raise ValueError(f"field count must be positive, got {count}")
+
+    end = address + count - 1
+    return any(low <= address and end <= high for low, high in ranges)
 
 
 def heating_circuit_count(model: int) -> int:

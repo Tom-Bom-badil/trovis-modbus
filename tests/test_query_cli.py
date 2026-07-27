@@ -53,6 +53,26 @@ def test_values_lists_every_subsystem_field(mock_modbus_unit: MockModbusUnit) ->
     assert "return_temperature" not in circuit_names
     assert "room_temperature" not in circuit_names
 
+    function_rows = field_rows(device.functions)
+    function_names = {name for name, _value in function_rows}
+    assert {
+        "input_01_is_binary",
+        "input_02_is_binary",
+        "input_17_is_binary",
+        "pulse_input_enabled",
+        "analog_setpoint_correction_enabled",
+    } <= function_names
+
+    parameter_rows = field_rows(device.parameters)
+    parameter_names = {name for name, _value in parameter_rows}
+    assert {
+        "analog_input_selection",
+        "validated_analog_input_selection",
+        "selected_analog_inputs",
+        "storage_tank_charging_pump_sensor_input",
+        "validated_storage_tank_charging_pump_sensor_input",
+    } <= parameter_names
+
     sensor_rows = field_rows(device.sensors)
     sensor_names = {name for name, _value in sensor_rows}
 
@@ -72,16 +92,44 @@ def test_values_lists_every_subsystem_field(mock_modbus_unit: MockModbusUnit) ->
         "sf1",
         "sf2",
         "sf3",
-        "ae1",
-        "ae2",
-        "ae3",
         "fg1",
         "fg2",
         "fg3",
-        "pulse_rate",
         "analog_input_voltage",
-        "analog_input_current",
     } <= sensor_names
+    # field_rows() enumerates the component's public descriptor API. Logical
+    # views therefore remain visible here even when the current model excludes
+    # them from its instance-specific Modbus read layout.
+    unsupported_sensor_views = {
+        "ae1",
+        "ae2",
+        "ae3",
+        "analog_input_current",
+    }
+    assert unsupported_sensor_views <= sensor_names
+    assert unsupported_sensor_views.isdisjoint(device.sensors.readable_field_names)
+    assert {
+        "af1",
+        "af2",
+        "vf1",
+        "vf2",
+        "vf3",
+        "vf4",
+        "ruef1",
+        "ruef2",
+        "ruef3",
+        "rf1",
+        "rf2",
+        "rf3",
+        "sf1",
+        "sf2",
+        "sf3",
+        "fg1",
+        "fg2",
+        "fg3",
+        "analog_input_voltage",
+        "pulse_rate",
+    } <= device.sensors.readable_field_names
 
     # Methods / private helpers are not data rows.
     assert "heating_curve" not in circuit_names
@@ -97,5 +145,9 @@ def test_print_runs(
     query._print(device)
     out = capsys.readouterr().out
     assert "Device" in out
+    assert "Functions" in out
+    assert "Parameters" in out
+    assert "Sensor variants" in out
+    assert "sf3 / fg3 / pulse_rate: unresolved" in out
     assert "Hk1 - Heating circuit 1" in out
     assert "WW - Domestic hot water" in out

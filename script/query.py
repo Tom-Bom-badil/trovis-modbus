@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 """Query a Samson TROVIS 557x over Modbus and print every value.
 
 Connects over Modbus TCP (a network gateway) or a serial/USB port, reads the
@@ -26,6 +27,8 @@ SECTIONS: list[tuple[str, str]] = [
     ("Device", "info"),
     ("Controller", "controller"),
     ("Clock", "clock"),
+    ("Functions", "functions"),
+    ("Parameters", "parameters"),
     ("Measurements", "sensors"),
     ("Hk1 - Heating circuit 1", "hk1"),
     ("Hk2 - Heating circuit 2", "hk2"),
@@ -92,10 +95,50 @@ async def _open(args: argparse.Namespace) -> ModbusConnection:
     return await connect_tcp(args.host, port=args.port, framer=args.framer)
 
 
+def _format_evidence(
+    evidence: tuple[tuple[str, bool | int | None], ...],
+) -> str:
+    """Format resolver evidence for a compact diagnostic line."""
+    return ", ".join(f"{name}={value!r}" for name, value in evidence)
+
+
+def _format_sensor_keys(sensor_keys: frozenset[str]) -> str:
+    """Format sensor-key sets deterministically for diagnostics."""
+    return ", ".join(sorted(sensor_keys)) or "-"
+
+
+def _print_sensor_variants(device: Trovis557x) -> None:
+    """Print configuration-only sensor-variant diagnostics."""
+    resolution = device.sensor_variant_resolution
+    print()
+    print("Sensor selection")
+    print(f"  entities: {_format_sensor_keys(device.available_sensor_keys)}")
+    print(
+        "  unresolved diagnostics: "
+        f"{_format_sensor_keys(device.unresolved_detected_sensor_keys)}"
+    )
+    print(
+        "  inactive inputs: "
+        f"{_format_sensor_keys(device.inactive_detected_sensor_keys)}"
+    )
+    print()
+    print("Sensor variants")
+    for result in resolution.variants:
+        variant = " / ".join(result.variant_sensor_keys)
+        selected = result.selected_sensor_key or "-"
+        candidates = ", ".join(result.candidate_sensor_keys) or "-"
+        evidence = _format_evidence(result.evidence) or "none"
+        print(
+            f"  {variant}: {result.status.value}; selected={selected}; "
+            f"candidates={candidates}; {result.reason}; evidence: {evidence}"
+        )
+
+
 def _print(device: Trovis557x) -> None:
     for label, attr in SECTIONS:
         print()
         print_component(getattr(device, attr), title=label)
+    _print_sensor_variants(device)
 
 
 async def _run(args: argparse.Namespace) -> int:
@@ -107,7 +150,12 @@ async def _run(args: argparse.Namespace) -> int:
 
     counting = CountingUnit(connection.for_unit(args.unit))
     try:
-        device = Trovis557x(counting)
+        probe = await Trovis557x.async_probe(counting)
+        device = Trovis557x(
+            counting,
+            model=probe.model,
+            detected_sensors=probe.detected_sensors,
+        )
         start = time.monotonic()
         await device.async_update()
         elapsed = time.monotonic() - start

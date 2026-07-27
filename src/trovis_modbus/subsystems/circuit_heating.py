@@ -1,11 +1,10 @@
-"""The heating circuits (Hk (Heizkreis) 1-3, also called Rk (Regelkreis) 1-3)."""
+"""The heating circuits (Rk1...Rk3 in different configurations)."""
 
 from __future__ import annotations
 
 from .. import utils
 from ..data_model import TrovisComponent, coil, enum, gauge, integer, temperature
-from ..enum_options import OPERATING_MODE_OPTIONS
-from ..enums import OperatingMode
+from ..enums import OPERATING_MODE_OPTIONS, OperatingMode
 
 
 class HeatingCircuit(TrovisComponent):

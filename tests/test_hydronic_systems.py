@@ -1,10 +1,10 @@
-"""Tests for static TROVIS hydronic-configuration definitions."""
+"""Tests for static TROVIS hydronic-system definitions."""
 
 from types import MappingProxyType
 
 import pytest
 
-from trovis_modbus.hydronic_configs import (
+from trovis_modbus.configurations import (
     FUNCTIONAL_SENSOR_ROLE_KEYS,
     HYDRONIC_CONFIGURATIONS,
     ConfigurationDefinition,

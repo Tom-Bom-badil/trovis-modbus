@@ -1,4 +1,4 @@
-"""The domestic hot-water circuit (WW)."""
+"""The domestic hot-water circuit (WW; always Rk4)."""
 
 from __future__ import annotations
 
@@ -13,8 +13,13 @@ from ..data_model import (
     temperature,
     time_value,
 )
-from ..enum_options import OPERATING_MODE_OPTIONS, WEEKDAY_OPTIONS
-from ..enums import OperatingMode, StorageStatus, Weekday
+from ..enums import (
+    OPERATING_MODE_OPTIONS,
+    WEEKDAY_OPTIONS,
+    OperatingMode,
+    StorageStatus,
+    Weekday,
+)
 from ..utils import TemperatureRange
 
 

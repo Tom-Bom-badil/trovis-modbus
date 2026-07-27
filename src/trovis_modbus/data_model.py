@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import datetime
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from enum import IntEnum
 from typing import Any
 
@@ -19,6 +19,11 @@ from modbus_connection.model import (
 )
 
 from .addresses import coil_address, register_address
+from .configurations.address_ranges import (
+    COIL_RANGES,
+    REGISTER_RANGES,
+    is_span_readable,
+)
 from .enums import OperatingMode
 from .exceptions import TrovisValueValidationError, TrovisWriteAccessError
 from .metadata import (
@@ -31,7 +36,6 @@ from .metadata import (
     attach_metadata,
     step_from_digits,
 )
-from .ranges import COIL_RANGES, REGISTER_RANGES
 from .utils import (
     MonthDay,
     date_from_ddmm_year,
@@ -740,11 +744,111 @@ class TrovisComponent(Component):
     # coil instead of being written to the corresponding holding register.
     ebene_autark_values: dict[str, Any] = {"mode": OperatingMode.AUTOMATIC}
 
+    def _ensure_read_layout_is_configurable(self) -> None:
+        """Reject availability changes after the read layout was built."""
+        cached_layout = {
+            "_read_items",
+            "register_items",
+            "bit_items",
+            "_register_blocks",
+            "_bit_blocks",
+        } & self.__dict__.keys()
+        if self.__dict__.get("_plan") is not None:
+            cached_layout.add("_plan")
+        if cached_layout:
+            names = ", ".join(sorted(cached_layout))
+            raise RuntimeError(
+                "read availability must be configured before the first read "
+                f"layout is built (already cached: {names})"
+            )
+
+    def configure_readable_ranges(
+        self,
+        register_ranges: tuple[tuple[int, int], ...],
+        coil_ranges: tuple[tuple[int, int], ...],
+    ) -> None:
+        """Keep only fields whose complete spans are readable for the model."""
+        self._ensure_read_layout_is_configurable()
+        self.register_ranges = register_ranges
+        self.coil_ranges = coil_ranges
+
+        declared_registers = type(self)._register_fields
+        self._register_fields = {
+            name: descriptor
+            for name, descriptor in declared_registers.items()
+            if self._register_field_is_readable(descriptor, register_ranges)
+        }
+
+        declared_bits = type(self)._bit_fields
+        self._bit_fields = {
+            name: descriptor
+            for name, descriptor in declared_bits.items()
+            if is_span_readable(
+                self._address(descriptor),
+                getattr(descriptor, "count", 1),
+                coil_ranges,
+            )
+        }
+
+    def configure_readable_fields(self, field_names: Iterable[str]) -> None:
+        """Limit one component instance to a declared set of field names.
+
+        Ranges remain the coarse address-availability map. This optional second
+        filter removes unsupported logical views that share an otherwise valid
+        address, for example model-specific sensor aliases.
+        """
+        self._ensure_read_layout_is_configurable()
+        allowed = frozenset(field_names)
+        self._register_fields = {
+            name: descriptor
+            for name, descriptor in self._register_fields.items()
+            if name in allowed
+        }
+        self._bit_fields = {
+            name: descriptor
+            for name, descriptor in self._bit_fields.items()
+            if name in allowed
+        }
+
+    def _register_field_is_readable(
+        self,
+        descriptor: RegisterField[Any],
+        register_ranges: tuple[tuple[int, int], ...],
+    ) -> bool:
+        """Return whether a register field and its scale register are readable."""
+        if not is_span_readable(
+            self._address(descriptor),
+            descriptor.count,
+            register_ranges,
+        ):
+            return False
+
+        if descriptor.scale_register is None:
+            return True
+
+        scale_address = (
+            descriptor.scale_register
+            + descriptor.scale_register_stride * (self._index - 1)
+            + self._base_offset
+        )
+        if getattr(self, "scale_in_block", False):
+            scale_address += self._instance_offset
+        return is_span_readable(scale_address, 1, register_ranges)
+
+    @property
+    def readable_field_names(self) -> frozenset[str]:
+        """Return fields selected by the current model's range profile."""
+        return frozenset((*self._register_fields, *self._bit_fields))
+
+    def is_field_readable(self, field: str) -> bool:
+        """Return whether ``field`` is part of this instance's read layout."""
+        return field in self._register_fields or field in self._bit_fields
+
     def metadata_for(self, field: str) -> DatapointMetadata | None:
-        """Return neutral TROVIS metadata for a field."""
-        descriptor = self._register_fields.get(field)
+        """Return neutral TROVIS metadata for a declared field."""
+        descriptor = type(self)._register_fields.get(field)
         if descriptor is None:
-            descriptor = self._bit_fields.get(field)
+            descriptor = type(self)._bit_fields.get(field)
         if descriptor is None:
             return None
         return getattr(descriptor, "trovis_metadata", None)
