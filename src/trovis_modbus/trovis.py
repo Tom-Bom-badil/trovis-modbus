@@ -203,7 +203,16 @@ class Trovis557x:
 
     @property
     def heating_circuit_indices(self) -> tuple[int, ...]:
-        """Return Rk1 through Rk3 currently classified as heating circuits."""
+        """Return occupied Rk1-Rk3 slots for legacy Hk-based consumers."""
+        return tuple(
+            index
+            for index in range(1, len(self._heating_circuits) + 1)
+            if self.control_circuit_role(index) is not ControlCircuitRole.UNUSED
+        )
+
+    @property
+    def room_heating_circuit_indices(self) -> tuple[int, ...]:
+        """Return Rk1-Rk3 slots whose hydronic role is room heating."""
         return tuple(
             index
             for index in range(1, len(self._heating_circuits) + 1)

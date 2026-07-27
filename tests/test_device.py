@@ -341,3 +341,48 @@ async def test_control_circuit_roles_are_clipped_to_model_capacity(
 
     assert device.control_circuit_indices == (1, 2, 4)
     assert device.control_circuit_role(3) is ControlCircuitRole.UNUSED
+
+
+async def test_5579_anlage_5_1_exposes_precontrol_and_heating_roles(
+    mock_modbus_unit: MockModbusUnit,
+) -> None:
+    mock_modbus_unit.holding.update(HOLDING)
+    mock_modbus_unit.holding[1] = 51
+    mock_modbus_unit.coils.update(COILS)
+    device = Trovis557x(
+        mock_modbus_unit,
+        model=5579,
+    )
+
+    await device.async_update()
+
+    assert device.control_circuit_indices == (1, 2, 3, 4)
+    assert device.control_circuit_role(1) is ControlCircuitRole.PRECONTROL
+    assert device.control_circuit_role(2) is ControlCircuitRole.HEATING
+    assert device.control_circuit_role(3) is ControlCircuitRole.HEATING
+    assert device.control_circuit_role(4) is ControlCircuitRole.DOMESTIC_HOT_WATER
+    # Preserve the existing Hk-based integration until the dedicated Rk step.
+    assert device.heating_circuit_indices == (1, 2, 3)
+    assert device.room_heating_circuit_indices == (2, 3)
+    assert device.has_rk4 is True
+
+
+async def test_5578_anlage_16_1_exposes_buffer_tank_role(
+    mock_modbus_unit: MockModbusUnit,
+) -> None:
+    mock_modbus_unit.holding.update(HOLDING)
+    mock_modbus_unit.holding[1] = 161
+    mock_modbus_unit.coils.update(COILS)
+    device = Trovis557x(
+        mock_modbus_unit,
+        model=5578,
+    )
+
+    await device.async_update()
+
+    assert device.control_circuit_indices == (1, 2)
+    assert device.control_circuit_role(1) is ControlCircuitRole.BUFFER_TANK
+    assert device.control_circuit_role(2) is ControlCircuitRole.HEATING
+    assert device.heating_circuit_indices == (1, 2)
+    assert device.room_heating_circuit_indices == (2,)
+    assert device.has_rk4 is False

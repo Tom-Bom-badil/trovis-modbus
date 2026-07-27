@@ -37,22 +37,47 @@ _FUNCTIONAL_SENSOR_ROLE_KEY_SET = frozenset(FUNCTIONAL_SENSOR_ROLE_KEYS)
 class ConfigurationTopology:
     """Static hydronic topology selected by one system code number."""
 
-    hk1: bool = False
-    hk2: bool = False
-    hk3: bool = False
-    ww: bool = False
+    rk1_role: ControlCircuitRole = ControlCircuitRole.UNUSED
+    rk2_role: ControlCircuitRole = ControlCircuitRole.UNUSED
+    rk3_role: ControlCircuitRole = ControlCircuitRole.UNUSED
+    rk4_role: ControlCircuitRole = ControlCircuitRole.UNUSED
     circulation: bool = False
     solar: bool = False
     buffer_storage: bool = False
     heat_exchanger: bool = False
 
     def __post_init__(self) -> None:
+        allowed_rk1_roles = {
+            ControlCircuitRole.UNUSED,
+            ControlCircuitRole.HEATING,
+            ControlCircuitRole.PRECONTROL,
+            ControlCircuitRole.BUFFER_TANK,
+        }
+        allowed_rk2_rk3_roles = {
+            ControlCircuitRole.UNUSED,
+            ControlCircuitRole.HEATING,
+            ControlCircuitRole.PRECONTROL,
+        }
+        allowed_rk4_roles = {
+            ControlCircuitRole.UNUSED,
+            ControlCircuitRole.DOMESTIC_HOT_WATER,
+        }
+
+        if self.rk1_role not in allowed_rk1_roles:
+            raise ValueError(f"unsupported role for Rk1: {self.rk1_role}")
+        if self.rk2_role not in allowed_rk2_rk3_roles:
+            raise ValueError(f"unsupported role for Rk2: {self.rk2_role}")
+        if self.rk3_role not in allowed_rk2_rk3_roles:
+            raise ValueError(f"unsupported role for Rk3: {self.rk3_role}")
+        if self.rk4_role not in allowed_rk4_roles:
+            raise ValueError(f"unsupported role for Rk4: {self.rk4_role}")
+
+        has_control_circuit = any(
+            role is not ControlCircuitRole.UNUSED for role in self.control_circuit_roles
+        )
         if not any(
             (
-                self.hk1,
-                self.hk2,
-                self.hk3,
-                self.ww,
+                has_control_circuit,
                 self.circulation,
                 self.solar,
                 self.buffer_storage,
@@ -64,28 +89,24 @@ class ConfigurationTopology:
             )
 
     @property
-    def rk1_role(self) -> ControlCircuitRole:
-        """Return the compatibility role derived for technical slot Rk1."""
-        return ControlCircuitRole.HEATING if self.hk1 else ControlCircuitRole.UNUSED
+    def hk1(self) -> bool:
+        """Return whether legacy Hk slot 1 is occupied by any Rk1 role."""
+        return self.rk1_role is not ControlCircuitRole.UNUSED
 
     @property
-    def rk2_role(self) -> ControlCircuitRole:
-        """Return the compatibility role derived for technical slot Rk2."""
-        return ControlCircuitRole.HEATING if self.hk2 else ControlCircuitRole.UNUSED
+    def hk2(self) -> bool:
+        """Return whether legacy Hk slot 2 is occupied by any Rk2 role."""
+        return self.rk2_role is not ControlCircuitRole.UNUSED
 
     @property
-    def rk3_role(self) -> ControlCircuitRole:
-        """Return the compatibility role derived for technical slot Rk3."""
-        return ControlCircuitRole.HEATING if self.hk3 else ControlCircuitRole.UNUSED
+    def hk3(self) -> bool:
+        """Return whether legacy Hk slot 3 is occupied by any Rk3 role."""
+        return self.rk3_role is not ControlCircuitRole.UNUSED
 
     @property
-    def rk4_role(self) -> ControlCircuitRole:
-        """Return the compatibility role derived for technical slot Rk4."""
-        return (
-            ControlCircuitRole.DOMESTIC_HOT_WATER
-            if self.ww
-            else ControlCircuitRole.UNUSED
-        )
+    def ww(self) -> bool:
+        """Return whether the legacy WW view maps to Rk4."""
+        return self.rk4_role is ControlCircuitRole.DOMESTIC_HOT_WATER
 
     @property
     def control_circuit_roles(self) -> tuple[ControlCircuitRole, ...]:
@@ -114,7 +135,19 @@ class ConfigurationTopology:
 
     @property
     def heating_circuit_indices(self) -> tuple[int, ...]:
-        """Return slots currently classified as room-heating circuits."""
+        """Return occupied Rk1-Rk3 slots for legacy Hk-based consumers."""
+        return tuple(
+            index
+            for index, role in enumerate(
+                self.control_circuit_roles[:3],
+                start=1,
+            )
+            if role is not ControlCircuitRole.UNUSED
+        )
+
+    @property
+    def room_heating_circuit_indices(self) -> tuple[int, ...]:
+        """Return Rk1-Rk3 slots whose hydronic role is room heating."""
         return tuple(
             index
             for index, role in enumerate(
@@ -179,7 +212,7 @@ ANLAGE_1_0 = ConfigurationDefinition(
     code=10,
     display_code="1.0",
     topology=ConfigurationTopology(
-        hk1=True,
+        rk1_role=ControlCircuitRole.HEATING,
     ),
     functional_sensor_roles=(
         "af1",
@@ -195,8 +228,8 @@ ANLAGE_1_1 = ConfigurationDefinition(
     code=11,
     display_code="1.1",
     topology=ConfigurationTopology(
-        hk1=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
     ),
     functional_sensor_roles=(
@@ -216,8 +249,8 @@ ANLAGE_1_2 = ConfigurationDefinition(
     code=12,
     display_code="1.2",
     topology=ConfigurationTopology(
-        hk1=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         heat_exchanger=True,
     ),
@@ -238,8 +271,8 @@ ANLAGE_1_3 = ConfigurationDefinition(
     code=13,
     display_code="1.3",
     topology=ConfigurationTopology(
-        hk1=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         solar=True,
     ),
@@ -262,8 +295,8 @@ ANLAGE_1_4 = ConfigurationDefinition(
     code=14,
     display_code="1.4",
     topology=ConfigurationTopology(
-        hk1=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         solar=True,
         heat_exchanger=True,
@@ -287,8 +320,8 @@ ANLAGE_1_5 = ConfigurationDefinition(
     code=15,
     display_code="1.5",
     topology=ConfigurationTopology(
-        hk1=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.PRECONTROL,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
     ),
     functional_sensor_roles=(
@@ -307,8 +340,8 @@ ANLAGE_1_6 = ConfigurationDefinition(
     code=16,
     display_code="1.6",
     topology=ConfigurationTopology(
-        hk1=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.PRECONTROL,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         heat_exchanger=True,
     ),
@@ -328,8 +361,8 @@ ANLAGE_1_7 = ConfigurationDefinition(
     code=17,
     display_code="1.7",
     topology=ConfigurationTopology(
-        hk1=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.PRECONTROL,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         solar=True,
     ),
@@ -351,8 +384,8 @@ ANLAGE_1_8 = ConfigurationDefinition(
     code=18,
     display_code="1.8",
     topology=ConfigurationTopology(
-        hk1=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.PRECONTROL,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         solar=True,
         heat_exchanger=True,
@@ -375,7 +408,7 @@ ANLAGE_1_9 = ConfigurationDefinition(
     code=19,
     display_code="1.9",
     topology=ConfigurationTopology(
-        ww=True,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         heat_exchanger=True,
     ),
@@ -408,8 +441,8 @@ ANLAGE_2_0 = ConfigurationDefinition(
     code=20,
     display_code="2.0",
     topology=ConfigurationTopology(
-        hk1=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
     ),
     functional_sensor_roles=(
@@ -429,8 +462,8 @@ ANLAGE_2_1 = ConfigurationDefinition(
     code=21,
     display_code="2.1",
     topology=ConfigurationTopology(
-        hk1=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
     ),
     functional_sensor_roles=(
@@ -450,8 +483,8 @@ ANLAGE_2_2 = ConfigurationDefinition(
     code=22,
     display_code="2.2",
     topology=ConfigurationTopology(
-        hk1=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         heat_exchanger=True,
     ),
@@ -472,8 +505,8 @@ ANLAGE_2_3 = ConfigurationDefinition(
     code=23,
     display_code="2.3",
     topology=ConfigurationTopology(
-        hk1=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         solar=True,
     ),
@@ -496,8 +529,8 @@ ANLAGE_2_4 = ConfigurationDefinition(
     code=24,
     display_code="2.4",
     topology=ConfigurationTopology(
-        hk1=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         solar=True,
         heat_exchanger=True,
@@ -529,8 +562,8 @@ ANLAGE_3_0 = ConfigurationDefinition(
     code=30,
     display_code="3.0",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
+        rk1_role=ControlCircuitRole.PRECONTROL,
+        rk2_role=ControlCircuitRole.HEATING,
     ),
     functional_sensor_roles=(
         "af1",
@@ -549,9 +582,9 @@ ANLAGE_3_1 = ConfigurationDefinition(
     code=31,
     display_code="3.1",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.PRECONTROL,
+        rk2_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
     ),
     functional_sensor_roles=(
@@ -574,9 +607,9 @@ ANLAGE_3_2 = ConfigurationDefinition(
     code=32,
     display_code="3.2",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.PRECONTROL,
+        rk2_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         heat_exchanger=True,
     ),
@@ -600,9 +633,9 @@ ANLAGE_3_3 = ConfigurationDefinition(
     code=33,
     display_code="3.3",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.PRECONTROL,
+        rk2_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         solar=True,
     ),
@@ -628,9 +661,9 @@ ANLAGE_3_4 = ConfigurationDefinition(
     code=34,
     display_code="3.4",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.PRECONTROL,
+        rk2_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         solar=True,
         heat_exchanger=True,
@@ -657,7 +690,7 @@ ANLAGE_3_5 = ConfigurationDefinition(
     code=35,
     display_code="3.5",
     topology=ConfigurationTopology(
-        hk1=True,
+        rk1_role=ControlCircuitRole.PRECONTROL,
     ),
     functional_sensor_roles=(
         "af1",
@@ -672,7 +705,7 @@ ANLAGE_3_7 = ConfigurationDefinition(
     code=37,
     display_code="3.7",
     topology=ConfigurationTopology(
-        ww=True,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
     ),
     functional_sensor_roles=(
@@ -689,9 +722,9 @@ ANLAGE_3_8 = ConfigurationDefinition(
     code=38,
     display_code="3.8",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.BUFFER_TANK,
+        rk2_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         buffer_storage=True,
     ),
@@ -715,9 +748,9 @@ ANLAGE_3_9 = ConfigurationDefinition(
     code=39,
     display_code="3.9",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.BUFFER_TANK,
+        rk2_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         buffer_storage=True,
     ),
@@ -753,8 +786,8 @@ ANLAGE_4_0 = ConfigurationDefinition(
     code=40,
     display_code="4.0",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk2_role=ControlCircuitRole.HEATING,
     ),
     functional_sensor_roles=(
         "af1",
@@ -774,9 +807,9 @@ ANLAGE_4_1 = ConfigurationDefinition(
     code=41,
     display_code="4.1",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk2_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
     ),
     functional_sensor_roles=(
@@ -800,9 +833,9 @@ ANLAGE_4_2 = ConfigurationDefinition(
     code=42,
     display_code="4.2",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk2_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         heat_exchanger=True,
     ),
@@ -827,9 +860,9 @@ ANLAGE_4_3 = ConfigurationDefinition(
     code=43,
     display_code="4.3",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk2_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         solar=True,
     ),
@@ -856,9 +889,9 @@ ANLAGE_4_5 = ConfigurationDefinition(
     code=45,
     display_code="4.5",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk2_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
     ),
     functional_sensor_roles=(
@@ -890,9 +923,9 @@ ANLAGE_5_0 = ConfigurationDefinition(
     code=50,
     display_code="5.0",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
-        hk3=True,
+        rk1_role=ControlCircuitRole.PRECONTROL,
+        rk2_role=ControlCircuitRole.HEATING,
+        rk3_role=ControlCircuitRole.HEATING,
     ),
     functional_sensor_roles=(
         "af1",
@@ -914,10 +947,10 @@ ANLAGE_5_1 = ConfigurationDefinition(
     code=51,
     display_code="5.1",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
-        hk3=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.PRECONTROL,
+        rk2_role=ControlCircuitRole.HEATING,
+        rk3_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
     ),
     functional_sensor_roles=(
@@ -943,10 +976,10 @@ ANLAGE_5_2 = ConfigurationDefinition(
     code=52,
     display_code="5.2",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
-        hk3=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.PRECONTROL,
+        rk2_role=ControlCircuitRole.HEATING,
+        rk3_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         heat_exchanger=True,
     ),
@@ -973,10 +1006,10 @@ ANLAGE_5_9 = ConfigurationDefinition(
     code=59,
     display_code="5.9",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
-        hk3=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.BUFFER_TANK,
+        rk2_role=ControlCircuitRole.HEATING,
+        rk3_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         buffer_storage=True,
     ),
@@ -1010,9 +1043,9 @@ ANLAGE_6_0 = ConfigurationDefinition(
     code=60,
     display_code="6.0",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
-        hk3=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk2_role=ControlCircuitRole.HEATING,
+        rk3_role=ControlCircuitRole.HEATING,
     ),
     functional_sensor_roles=(
         "af1",
@@ -1035,10 +1068,10 @@ ANLAGE_6_1 = ConfigurationDefinition(
     code=61,
     display_code="6.1",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
-        hk3=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk2_role=ControlCircuitRole.HEATING,
+        rk3_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
     ),
     functional_sensor_roles=(
@@ -1070,8 +1103,8 @@ ANLAGE_7_1 = ConfigurationDefinition(
     code=71,
     display_code="7.1",
     topology=ConfigurationTopology(
-        hk1=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.PRECONTROL,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
     ),
     functional_sensor_roles=(
@@ -1092,8 +1125,8 @@ ANLAGE_7_2 = ConfigurationDefinition(
     code=72,
     display_code="7.2",
     topology=ConfigurationTopology(
-        hk1=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.PRECONTROL,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         heat_exchanger=True,
     ),
@@ -1120,8 +1153,8 @@ ANLAGE_8_1 = ConfigurationDefinition(
     code=81,
     display_code="8.1",
     topology=ConfigurationTopology(
-        hk1=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
     ),
     functional_sensor_roles=(
@@ -1143,8 +1176,8 @@ ANLAGE_8_2 = ConfigurationDefinition(
     code=82,
     display_code="8.2",
     topology=ConfigurationTopology(
-        hk1=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         heat_exchanger=True,
     ),
@@ -1172,9 +1205,9 @@ ANLAGE_9_1 = ConfigurationDefinition(
     code=91,
     display_code="9.1",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk3=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.PRECONTROL,
+        rk3_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
     ),
     functional_sensor_roles=(
@@ -1199,9 +1232,9 @@ ANLAGE_9_2 = ConfigurationDefinition(
     code=92,
     display_code="9.2",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk3=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.PRECONTROL,
+        rk3_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         heat_exchanger=True,
     ),
@@ -1227,9 +1260,9 @@ ANLAGE_9_5 = ConfigurationDefinition(
     code=95,
     display_code="9.5",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk3=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk3_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
     ),
     functional_sensor_roles=(
@@ -1255,9 +1288,9 @@ ANLAGE_9_6 = ConfigurationDefinition(
     code=96,
     display_code="9.6",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk3=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk3_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         heat_exchanger=True,
     ),
@@ -1291,8 +1324,8 @@ ANLAGE_10_0 = ConfigurationDefinition(
     code=100,
     display_code="10.0",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk2_role=ControlCircuitRole.HEATING,
     ),
     functional_sensor_roles=(
         "af1",
@@ -1312,9 +1345,9 @@ ANLAGE_10_1 = ConfigurationDefinition(
     code=101,
     display_code="10.1",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk2_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
     ),
     functional_sensor_roles=(
@@ -1338,9 +1371,9 @@ ANLAGE_10_2 = ConfigurationDefinition(
     code=102,
     display_code="10.2",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk2_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         heat_exchanger=True,
     ),
@@ -1365,9 +1398,9 @@ ANLAGE_10_3 = ConfigurationDefinition(
     code=103,
     display_code="10.3",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk2_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         solar=True,
     ),
@@ -1394,8 +1427,8 @@ ANLAGE_10_5 = ConfigurationDefinition(
     code=105,
     display_code="10.5",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
+        rk1_role=ControlCircuitRole.PRECONTROL,
+        rk2_role=ControlCircuitRole.PRECONTROL,
     ),
     functional_sensor_roles=(
         "af1",
@@ -1421,8 +1454,8 @@ ANLAGE_11_0 = ConfigurationDefinition(
     code=110,
     display_code="11.0",
     topology=ConfigurationTopology(
-        hk1=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
     ),
     functional_sensor_roles=(
@@ -1442,8 +1475,8 @@ ANLAGE_11_1 = ConfigurationDefinition(
     code=111,
     display_code="11.1",
     topology=ConfigurationTopology(
-        hk1=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
     ),
     functional_sensor_roles=(
@@ -1465,8 +1498,8 @@ ANLAGE_11_2 = ConfigurationDefinition(
     code=112,
     display_code="11.2",
     topology=ConfigurationTopology(
-        hk1=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         heat_exchanger=True,
     ),
@@ -1489,8 +1522,8 @@ ANLAGE_11_3 = ConfigurationDefinition(
     code=113,
     display_code="11.3",
     topology=ConfigurationTopology(
-        hk1=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         solar=True,
     ),
@@ -1513,8 +1546,8 @@ ANLAGE_11_4 = ConfigurationDefinition(
     code=114,
     display_code="11.4",
     topology=ConfigurationTopology(
-        hk1=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         solar=True,
     ),
@@ -1539,8 +1572,8 @@ ANLAGE_11_5 = ConfigurationDefinition(
     code=115,
     display_code="11.5",
     topology=ConfigurationTopology(
-        hk1=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
     ),
     functional_sensor_roles=(
@@ -1562,8 +1595,8 @@ ANLAGE_11_6 = ConfigurationDefinition(
     code=116,
     display_code="11.6",
     topology=ConfigurationTopology(
-        hk1=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         heat_exchanger=True,
     ),
@@ -1586,8 +1619,8 @@ ANLAGE_11_9 = ConfigurationDefinition(
     code=119,
     display_code="11.9",
     topology=ConfigurationTopology(
-        hk1=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         heat_exchanger=True,
     ),
@@ -1621,9 +1654,9 @@ ANLAGE_12_0 = ConfigurationDefinition(
     code=120,
     display_code="12.0",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk3=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.PRECONTROL,
+        rk3_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
     ),
     functional_sensor_roles=(
@@ -1646,9 +1679,9 @@ ANLAGE_12_1 = ConfigurationDefinition(
     code=121,
     display_code="12.1",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk3=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.PRECONTROL,
+        rk3_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
     ),
     functional_sensor_roles=(
@@ -1673,9 +1706,9 @@ ANLAGE_12_2 = ConfigurationDefinition(
     code=122,
     display_code="12.2",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk3=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.PRECONTROL,
+        rk3_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         heat_exchanger=True,
     ),
@@ -1701,9 +1734,9 @@ ANLAGE_12_9 = ConfigurationDefinition(
     code=129,
     display_code="12.9",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk3=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.PRECONTROL,
+        rk3_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         heat_exchanger=True,
     ),
@@ -1736,9 +1769,9 @@ ANLAGE_13_0 = ConfigurationDefinition(
     code=130,
     display_code="13.0",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk3=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk3_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
     ),
     functional_sensor_roles=(
@@ -1762,9 +1795,9 @@ ANLAGE_13_1 = ConfigurationDefinition(
     code=131,
     display_code="13.1",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk3=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk3_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
     ),
     functional_sensor_roles=(
@@ -1790,9 +1823,9 @@ ANLAGE_13_2 = ConfigurationDefinition(
     code=132,
     display_code="13.2",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk3=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk3_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         heat_exchanger=True,
     ),
@@ -1819,9 +1852,9 @@ ANLAGE_13_6 = ConfigurationDefinition(
     code=136,
     display_code="13.6",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk3=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk3_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         heat_exchanger=True,
     ),
@@ -1848,9 +1881,9 @@ ANLAGE_13_9 = ConfigurationDefinition(
     code=139,
     display_code="13.9",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk3=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk3_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         heat_exchanger=True,
     ),
@@ -1885,8 +1918,8 @@ ANLAGE_14_1 = ConfigurationDefinition(
     code=141,
     display_code="14.1",
     topology=ConfigurationTopology(
-        hk1=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.BUFFER_TANK,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         buffer_storage=True,
     ),
@@ -1907,8 +1940,8 @@ ANLAGE_14_2 = ConfigurationDefinition(
     code=142,
     display_code="14.2",
     topology=ConfigurationTopology(
-        hk1=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.BUFFER_TANK,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         buffer_storage=True,
         heat_exchanger=True,
@@ -1930,8 +1963,8 @@ ANLAGE_14_3 = ConfigurationDefinition(
     code=143,
     display_code="14.3",
     topology=ConfigurationTopology(
-        hk1=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.BUFFER_TANK,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         solar=True,
         buffer_storage=True,
@@ -1960,9 +1993,9 @@ ANLAGE_15_0 = ConfigurationDefinition(
     code=150,
     display_code="15.0",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk3=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.BUFFER_TANK,
+        rk3_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         buffer_storage=True,
         heat_exchanger=True,
@@ -1988,9 +2021,9 @@ ANLAGE_15_1 = ConfigurationDefinition(
     code=151,
     display_code="15.1",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk3=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.BUFFER_TANK,
+        rk3_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         buffer_storage=True,
     ),
@@ -2015,9 +2048,9 @@ ANLAGE_15_2 = ConfigurationDefinition(
     code=152,
     display_code="15.2",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk3=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.BUFFER_TANK,
+        rk3_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         buffer_storage=True,
         heat_exchanger=True,
@@ -2043,9 +2076,9 @@ ANLAGE_15_3 = ConfigurationDefinition(
     code=153,
     display_code="15.3",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk3=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.BUFFER_TANK,
+        rk3_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         solar=True,
         buffer_storage=True,
@@ -2071,9 +2104,9 @@ ANLAGE_15_4 = ConfigurationDefinition(
     code=154,
     display_code="15.4",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk3=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.BUFFER_TANK,
+        rk3_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         buffer_storage=True,
     ),
@@ -2098,9 +2131,9 @@ ANLAGE_15_5 = ConfigurationDefinition(
     code=155,
     display_code="15.5",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk3=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.BUFFER_TANK,
+        rk3_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         buffer_storage=True,
         heat_exchanger=True,
@@ -2135,7 +2168,7 @@ ANLAGE_16_0 = ConfigurationDefinition(
     code=160,
     display_code="16.0",
     topology=ConfigurationTopology(
-        hk1=True,
+        rk1_role=ControlCircuitRole.BUFFER_TANK,
         buffer_storage=True,
     ),
     functional_sensor_roles=(
@@ -2153,8 +2186,8 @@ ANLAGE_16_1 = ConfigurationDefinition(
     code=161,
     display_code="16.1",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
+        rk1_role=ControlCircuitRole.BUFFER_TANK,
+        rk2_role=ControlCircuitRole.HEATING,
         buffer_storage=True,
     ),
     functional_sensor_roles=(
@@ -2176,7 +2209,7 @@ ANLAGE_16_2 = ConfigurationDefinition(
     code=162,
     display_code="16.2",
     topology=ConfigurationTopology(
-        hk1=True,
+        rk1_role=ControlCircuitRole.BUFFER_TANK,
         buffer_storage=True,
     ),
     functional_sensor_roles=(
@@ -2194,7 +2227,7 @@ ANLAGE_16_3 = ConfigurationDefinition(
     code=163,
     display_code="16.3",
     topology=ConfigurationTopology(
-        hk1=True,
+        rk1_role=ControlCircuitRole.BUFFER_TANK,
         solar=True,
         buffer_storage=True,
     ),
@@ -2215,7 +2248,7 @@ ANLAGE_16_4 = ConfigurationDefinition(
     code=164,
     display_code="16.4",
     topology=ConfigurationTopology(
-        hk1=True,
+        rk1_role=ControlCircuitRole.BUFFER_TANK,
         solar=True,
         buffer_storage=True,
     ),
@@ -2236,8 +2269,8 @@ ANLAGE_16_5 = ConfigurationDefinition(
     code=165,
     display_code="16.5",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk3=True,
+        rk1_role=ControlCircuitRole.BUFFER_TANK,
+        rk3_role=ControlCircuitRole.HEATING,
         buffer_storage=True,
     ),
     functional_sensor_roles=(
@@ -2259,8 +2292,8 @@ ANLAGE_16_6 = ConfigurationDefinition(
     code=166,
     display_code="16.6",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
+        rk1_role=ControlCircuitRole.BUFFER_TANK,
+        rk2_role=ControlCircuitRole.HEATING,
         solar=True,
         buffer_storage=True,
     ),
@@ -2285,8 +2318,8 @@ ANLAGE_16_7 = ConfigurationDefinition(
     code=167,
     display_code="16.7",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk3=True,
+        rk1_role=ControlCircuitRole.BUFFER_TANK,
+        rk3_role=ControlCircuitRole.HEATING,
         solar=True,
         buffer_storage=True,
     ),
@@ -2310,9 +2343,9 @@ ANLAGE_16_8 = ConfigurationDefinition(
     code=168,
     display_code="16.8",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
-        hk3=True,
+        rk1_role=ControlCircuitRole.BUFFER_TANK,
+        rk2_role=ControlCircuitRole.HEATING,
+        rk3_role=ControlCircuitRole.HEATING,
         buffer_storage=True,
     ),
     functional_sensor_roles=(
@@ -2349,9 +2382,9 @@ ANLAGE_17_1 = ConfigurationDefinition(
     code=171,
     display_code="17.1",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.BUFFER_TANK,
+        rk2_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         buffer_storage=True,
     ),
@@ -2375,10 +2408,10 @@ ANLAGE_17_8 = ConfigurationDefinition(
     code=178,
     display_code="17.8",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
-        hk3=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.BUFFER_TANK,
+        rk2_role=ControlCircuitRole.HEATING,
+        rk3_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         buffer_storage=True,
     ),
@@ -2410,9 +2443,9 @@ ANLAGE_18_1 = ConfigurationDefinition(
     code=181,
     display_code="18.1",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.BUFFER_TANK,
+        rk2_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         buffer_storage=True,
     ),
@@ -2443,8 +2476,10 @@ ANLAGE_19_0 = ConfigurationDefinition(
     code=190,
     display_code="19.0",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
+        # Anlage 19.0 role semantics remain unresolved; preserve
+        # the legacy occupied Rk1/Rk2 behavior until reviewed.
+        rk1_role=ControlCircuitRole.HEATING,
+        rk2_role=ControlCircuitRole.HEATING,
         buffer_storage=True,
     ),
     functional_sensor_roles=(
@@ -2468,9 +2503,9 @@ ANLAGE_20_0 = ConfigurationDefinition(
     code=200,
     display_code="20.0",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk3=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.BUFFER_TANK,
+        rk3_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         buffer_storage=True,
     ),
@@ -2497,9 +2532,9 @@ ANLAGE_21_0 = ConfigurationDefinition(
     code=210,
     display_code="21.0",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk3=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk3_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
     ),
     functional_sensor_roles=(
@@ -2523,9 +2558,9 @@ ANLAGE_21_1 = ConfigurationDefinition(
     code=211,
     display_code="21.1",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk3=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk3_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
     ),
     functional_sensor_roles=(
@@ -2551,9 +2586,9 @@ ANLAGE_21_2 = ConfigurationDefinition(
     code=212,
     display_code="21.2",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk3=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk3_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         heat_exchanger=True,
     ),
@@ -2580,9 +2615,9 @@ ANLAGE_21_9 = ConfigurationDefinition(
     code=219,
     display_code="21.9",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk3=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk3_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         heat_exchanger=True,
     ),
@@ -2616,9 +2651,9 @@ ANLAGE_25_0 = ConfigurationDefinition(
     code=250,
     display_code="25.0",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
-        hk3=True,
+        rk1_role=ControlCircuitRole.HEATING,
+        rk2_role=ControlCircuitRole.HEATING,
+        rk3_role=ControlCircuitRole.HEATING,
     ),
     functional_sensor_roles=(
         "af1",
@@ -2641,9 +2676,9 @@ ANLAGE_25_5 = ConfigurationDefinition(
     code=255,
     display_code="25.5",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
-        hk3=True,
+        rk1_role=ControlCircuitRole.PRECONTROL,
+        rk2_role=ControlCircuitRole.PRECONTROL,
+        rk3_role=ControlCircuitRole.PRECONTROL,
     ),
     functional_sensor_roles=(
         "af1",
@@ -2668,9 +2703,9 @@ ANLAGE_27_1 = ConfigurationDefinition(
     code=271,
     display_code="27.1",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.BUFFER_TANK,
+        rk2_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         buffer_storage=True,
     ),
@@ -2694,10 +2729,10 @@ ANLAGE_27_8 = ConfigurationDefinition(
     code=278,
     display_code="27.8",
     topology=ConfigurationTopology(
-        hk1=True,
-        hk2=True,
-        hk3=True,
-        ww=True,
+        rk1_role=ControlCircuitRole.BUFFER_TANK,
+        rk2_role=ControlCircuitRole.HEATING,
+        rk3_role=ControlCircuitRole.HEATING,
+        rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
         circulation=True,
         buffer_storage=True,
     ),
