@@ -43,8 +43,8 @@ HOLDING: dict[int, int] = {
     100: 2106,  # date -> 21.06
     101: 2026,  # year
     102: 1,  # switch_top -> AUTOMATIC
-    105: 1,  # hk1 mode -> AUTOMATIC
-    106: 42,  # hk1 control signal -> 42 %
+    105: 1,  # rk1 mode -> AUTOMATIC
+    106: 42,  # rk1 control signal -> 42 %
     112: 1505,  # summer start -> 15.05
     113: 3009,  # summer end -> 30.09
     114: 2,  # summer_days_on
@@ -54,20 +54,20 @@ HOLDING: dict[int, int] = {
     123: 0x10000 - 200,  # 0 V outdoor-temperature range -> -20.0 °C
     124: 500,  # 10 V outdoor-temperature range -> 50.0 °C
     149: 0,  # error status
-    999: 550,  # hk1 flow_setpoint -> 55.0
-    1000: 800,  # hk1 maximum_flow_temperature -> 80.0
-    1001: 200,  # hk1 minimum_flow_temperature -> 20.0
-    1002: 210,  # hk1 room_setpoint_day -> 21.0
-    1003: 180,  # hk1 room_setpoint_night -> 18.0
-    1004: 210,  # hk1 room_setpoint_active -> 21.0
-    1005: 12,  # hk1 gradient -> 1.2
-    1006: 0,  # hk1 level -> 0.0
-    1199: 480,  # hk2 flow_setpoint -> 48.0
-    1799: 500,  # ww setpoint_day -> 50.0
-    1802: 50,  # ww hysteresis -> 5.0 K
-    1806: 450,  # ww setpoint_night -> 45.0 °C
-    1807: 500,  # ww setpoint_active -> 50.0
-    1837: 670,  # ww active_charging_setpoint -> 67.0
+    999: 550,  # rk1 flow_setpoint -> 55.0
+    1000: 800,  # rk1 maximum_flow_temperature -> 80.0
+    1001: 200,  # rk1 minimum_flow_temperature -> 20.0
+    1002: 210,  # rk1 room_setpoint_day -> 21.0
+    1003: 180,  # rk1 room_setpoint_night -> 18.0
+    1004: 210,  # rk1 room_setpoint_active -> 21.0
+    1005: 12,  # rk1 gradient -> 1.2
+    1006: 0,  # rk1 level -> 0.0
+    1199: 480,  # rk2 flow_setpoint -> 48.0
+    1799: 500,  # rk4 setpoint_day -> 50.0
+    1802: 50,  # rk4 hysteresis -> 5.0 K
+    1806: 450,  # rk4 setpoint_night -> 45.0 °C
+    1807: 500,  # rk4 setpoint_active -> 50.0
+    1837: 670,  # rk4 active_charging_setpoint -> 67.0
     1830: 3,  # disinfection weekday -> WEDNESDAY
     1831: 1900,  # disinfection start -> 19:00
     1832: 2100,  # disinfection stop -> 21:00
@@ -79,11 +79,11 @@ HOLDING: dict[int, int] = {
 COILS: dict[int, bool] = {
     138: False,  # CL139 / FB10 / pulse input inactive
     3: True,  # CL4 / Sammel_Ebenenbit -> AUTARK by default
-    56: True,  # hk1 pump
+    56: True,  # rk1 pump
     158: False,  # CL159 / GLT timeout inactive
-    999: True,  # hk1 automatic
-    1000: True,  # hk1 day active
-    1799: True,  # ww automatic
+    999: True,  # rk1 automatic
+    1000: True,  # rk1 day active
+    1799: True,  # rk4 automatic
     59: True,  # WW storage tank charging pump
     401: False,  # CL402 / FB02 / SF2 inactive -> RF2
     404: False,  # CL405 / FB05 / VF4 inactive

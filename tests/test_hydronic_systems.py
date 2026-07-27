@@ -614,7 +614,7 @@ def test_definition_rejects_unknown_sensor_role() -> None:
         )
 
 
-def test_topology_exposes_role_native_and_compatibility_views() -> None:
+def test_topology_exposes_role_native_views() -> None:
     topology = ConfigurationTopology(
         rk1_role=ControlCircuitRole.PRECONTROL,
         rk3_role=ControlCircuitRole.HEATING,
@@ -628,22 +628,21 @@ def test_topology_exposes_role_native_and_compatibility_views() -> None:
         ControlCircuitRole.DOMESTIC_HOT_WATER,
     )
     assert topology.control_circuit_indices == (1, 3, 4)
-    assert topology.heating_circuit_indices == (1, 3)
     assert topology.room_heating_circuit_indices == (3,)
     assert topology.has_rk4 is True
-    assert topology.hk1 is True
-    assert topology.hk2 is False
-    assert topology.hk3 is True
-    assert topology.ww is True
+    assert topology.control_circuit_role(1) is ControlCircuitRole.PRECONTROL
+    assert topology.control_circuit_role(2) is ControlCircuitRole.UNUSED
+    assert topology.control_circuit_role(3) is ControlCircuitRole.HEATING
+    assert topology.control_circuit_role(4) is ControlCircuitRole.DOMESTIC_HOT_WATER
 
 
-def test_buffer_tank_role_keeps_legacy_hk1_presence() -> None:
+def test_buffer_tank_role_uses_rk1() -> None:
     topology = ConfigurationTopology(
         rk1_role=ControlCircuitRole.BUFFER_TANK,
     )
 
-    assert topology.hk1 is True
-    assert topology.heating_circuit_indices == (1,)
+    assert topology.control_circuit_indices == (1,)
+    assert topology.control_circuit_role(1) is ControlCircuitRole.BUFFER_TANK
     assert topology.room_heating_circuit_indices == ()
 
 

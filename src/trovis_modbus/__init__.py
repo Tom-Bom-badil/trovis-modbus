@@ -5,12 +5,13 @@ Construct ``Trovis557x(unit)`` with a ``modbus_connection.ModbusUnit``, call
 objects::
 
     device.sensors.af1
-    device.hk1.room_setpoint_active
-    device.ww.storage_tank_charging_pump_running
+    device.rk1.room_setpoint_active
+    device.rk4.storage_tank_charging_pump_running
 
 Controller domains live in ``subsystems``. Static models, hydronic tables,
 range maps, settings, and sensor-variant logic live in ``configurations``.
-The public imports and ``Trovis557x`` object API remain unchanged.
+The public subsystem classes remain available while ``Trovis557x`` exposes
+stable ``rk1`` through ``rk4`` slots.
 """
 
 from .addresses import coil_address, register_address

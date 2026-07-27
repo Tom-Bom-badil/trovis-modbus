@@ -105,45 +105,45 @@ async def test_controller(trovis: Trovis557x) -> None:
 
 async def test_heating_circuit_reads(trovis: Trovis557x) -> None:
     await trovis.async_update()
-    hk1 = trovis.hk1
-    assert hk1.mode is OperatingMode.AUTOMATIC
-    assert hk1.valve_setpoint == 42
-    assert hk1.flow_setpoint == pytest.approx(55.0)
-    assert hk1.room_setpoint_active == pytest.approx(21.0)
-    assert hk1.pump_running is True
-    assert hk1.day_active is True
-    assert hk1.automatic is True
+    rk1 = trovis.rk1
+    assert rk1.mode is OperatingMode.AUTOMATIC
+    assert rk1.valve_setpoint == 42
+    assert rk1.flow_setpoint == pytest.approx(55.0)
+    assert rk1.room_setpoint_active == pytest.approx(21.0)
+    assert rk1.pump_running is True
+    assert rk1.day_active is True
+    assert rk1.automatic is True
 
 
 async def test_circuit_offset_pattern(trovis: Trovis557x) -> None:
     """Circuit 2 reads its own (+200) registers."""
     await trovis.async_update()
-    assert trovis.hk2.flow_setpoint == pytest.approx(48.0)
-    assert trovis.hk1.flow_setpoint == pytest.approx(55.0)
+    assert trovis.rk2.flow_setpoint == pytest.approx(48.0)
+    assert trovis.rk1.flow_setpoint == pytest.approx(55.0)
 
 
 async def test_heating_curve(trovis: Trovis557x) -> None:
     await trovis.async_update()
-    curve = trovis.hk1.heating_curve()
+    curve = trovis.rk1.heating_curve()
     assert curve is not None and len(curve) == 41
     # day active, room 21, slope 1.2, offset 0, clamp [20, 80]
     assert curve[-1] == pytest.approx(26.4)  # outdoor temperature +20 °C
-    assert trovis.hk1.heating_curve("night") is not None
+    assert trovis.rk1.heating_curve("night") is not None
 
 
 async def test_domestic_hot_water(trovis: Trovis557x) -> None:
     await trovis.async_update()
-    ww = trovis.ww
-    assert ww.setpoint_day == pytest.approx(50.0)
-    assert ww.setpoint_active == pytest.approx(50.0)
-    assert ww.active_charging_setpoint == pytest.approx(67.0)
-    assert ww.disinfection_weekday is Weekday.WEDNESDAY
-    assert ww.disinfection_start == time(19, 0)
-    assert ww.disinfection_stop == time(21, 0)
-    assert ww.day_temperature_range == TemperatureRange(50.0, 55.0)
-    assert ww.night_temperature_range == TemperatureRange(45.0, 50.0)
-    assert ww.automatic is True
-    assert ww.storage_tank_charging_pump_running is True
+    rk4 = trovis.rk4
+    assert rk4.setpoint_day == pytest.approx(50.0)
+    assert rk4.setpoint_active == pytest.approx(50.0)
+    assert rk4.active_charging_setpoint == pytest.approx(67.0)
+    assert rk4.disinfection_weekday is Weekday.WEDNESDAY
+    assert rk4.disinfection_start == time(19, 0)
+    assert rk4.disinfection_stop == time(21, 0)
+    assert rk4.day_temperature_range == TemperatureRange(50.0, 55.0)
+    assert rk4.night_temperature_range == TemperatureRange(45.0, 50.0)
+    assert rk4.automatic is True
+    assert rk4.storage_tank_charging_pump_running is True
 
 
 async def test_combined_activity(trovis: Trovis557x) -> None:
@@ -153,9 +153,9 @@ async def test_combined_activity(trovis: Trovis557x) -> None:
 
 async def test_independent_component_update(trovis: Trovis557x) -> None:
     """A sub-system refreshes on its own, without the rest."""
-    await trovis.ww.async_update()
-    assert trovis.ww.setpoint_day == pytest.approx(50.0)
-    assert trovis.hk1.flow_setpoint is None  # not updated yet
+    await trovis.rk4.async_update()
+    assert trovis.rk4.setpoint_day == pytest.approx(50.0)
+    assert trovis.rk1.flow_setpoint is None  # not updated yet
 
 
 async def test_full_update_consolidates_reads() -> None:
@@ -220,38 +220,38 @@ async def test_consolidated_reads_decode_correctly() -> None:
 
 async def test_update_listener(trovis: Trovis557x) -> None:
     calls: list[int] = []
-    unsubscribe = trovis.ww.add_update_listener(lambda: calls.append(1))
-    await trovis.ww.async_update()
-    await trovis.ww.async_update()
+    unsubscribe = trovis.rk4.add_update_listener(lambda: calls.append(1))
+    await trovis.rk4.async_update()
+    await trovis.rk4.async_update()
     assert len(calls) == 2
     unsubscribe()
-    await trovis.ww.async_update()
+    await trovis.rk4.async_update()
     assert len(calls) == 2  # no longer notified
 
 
 async def test_write_roundtrip(trovis: Trovis557x) -> None:
     await trovis.async_update()
     await trovis.async_enable_writing()
-    await trovis.hk1.set_room_setpoint_day(21.5)
-    await trovis.ww.set_setpoint(52.0)
-    await trovis.hk1.async_update()
-    await trovis.ww.async_update()
-    assert trovis.hk1.room_setpoint_day == pytest.approx(21.5)
-    assert trovis.ww.setpoint_day == pytest.approx(52.0)
+    await trovis.rk1.set_room_setpoint_day(21.5)
+    await trovis.rk4.set_setpoint(52.0)
+    await trovis.rk1.async_update()
+    await trovis.rk4.async_update()
+    assert trovis.rk1.room_setpoint_day == pytest.approx(21.5)
+    assert trovis.rk4.setpoint_day == pytest.approx(52.0)
 
 
 async def test_write_rejects_readonly(trovis: Trovis557x) -> None:
     with pytest.raises(AttributeError):
-        await trovis.hk1.write("flow_setpoint", 50.0)
+        await trovis.rk1.write("flow_setpoint", 50.0)
 
 
 async def test_mode_write_releases_override_coil(trovis: Trovis557x) -> None:
     """Setting the mode first releases the Ebene coil (0 = remote control)."""
-    unit = trovis.hk1._unit
+    unit = trovis.rk1._unit
 
     await trovis.async_enable_writing()
     await unit.write_coil(88, True)  # start "autonomous" (controller-controlled)
-    await trovis.hk1.set_mode(OperatingMode.DAY)
+    await trovis.rk1.set_mode(OperatingMode.DAY)
 
     # Override coil 88 (EBNBetrArtRk1) released to 0, then mode register written.
     assert (await unit.read_coils(88, 1))[0] is False
@@ -260,9 +260,9 @@ async def test_mode_write_releases_override_coil(trovis: Trovis557x) -> None:
 
 async def test_circuit2_mode_uses_strided_override(trovis: Trovis557x) -> None:
     """Circuit 2's override coil follows the +2 stride (90, not 88)."""
-    unit = trovis.hk2._unit
+    unit = trovis.rk2._unit
     await unit.write_coil(90, True)
-    await trovis.hk2.set_mode(OperatingMode.NIGHT)
+    await trovis.rk2.set_mode(OperatingMode.NIGHT)
     assert (await unit.read_coils(90, 1))[0] is False
     assert (await unit.read_holding_registers(107, 1))[0] == int(OperatingMode.NIGHT)
 
@@ -287,13 +287,13 @@ async def test_write_refreshes_access_code(trovis: Trovis557x) -> None:
 
     assert await trovis.async_read_writing_enabled() is False
 
-    await trovis.hk1.set_room_setpoint_day(21.5)
+    await trovis.rk1.set_room_setpoint_day(21.5)
 
     assert (await unit.read_holding_registers(144, 1))[0] == 1732
     assert (await unit.read_holding_registers(1002, 1))[0] == 215
 
 
-async def test_5576_anlage_2_1_exposes_only_hk1(
+async def test_5576_anlage_2_1_exposes_rk1_and_rk4(
     mock_modbus_unit: MockModbusUnit,
 ) -> None:
     mock_modbus_unit.holding.update(HOLDING)
@@ -303,10 +303,10 @@ async def test_5576_anlage_2_1_exposes_only_hk1(
         model=5576,
     )
     await device.async_update()
-    assert device.heating_circuit_indices == (1,)
+    assert device.control_circuit_indices == (1, 4)
 
 
-async def test_5576_anlage_2_1_exposes_compatibility_rk_roles(
+async def test_5576_anlage_2_1_exposes_rk_roles(
     mock_modbus_unit: MockModbusUnit,
 ) -> None:
     mock_modbus_unit.holding.update(HOLDING)
@@ -324,6 +324,17 @@ async def test_5576_anlage_2_1_exposes_compatibility_rk_roles(
     assert device.control_circuit_role(3) is ControlCircuitRole.UNUSED
     assert device.control_circuit_role(4) is ControlCircuitRole.DOMESTIC_HOT_WATER
     assert device.has_rk4 is True
+
+
+def test_device_exposes_only_rk_slot_names(mock_modbus_unit: MockModbusUnit) -> None:
+    device = Trovis557x(mock_modbus_unit, model=5579)
+
+    assert device.rk1 is device.control_circuits[0]
+    assert device.rk2 is device.control_circuits[1]
+    assert device.rk3 is device.control_circuits[2]
+    assert device.rk4 is not None
+    for legacy_name in ("hk1", "hk2", "hk3", "ww", "heating_circuits"):
+        assert not hasattr(device, legacy_name)
 
 
 async def test_control_circuit_roles_are_clipped_to_model_capacity(
@@ -361,8 +372,6 @@ async def test_5579_anlage_5_1_exposes_precontrol_and_heating_roles(
     assert device.control_circuit_role(2) is ControlCircuitRole.HEATING
     assert device.control_circuit_role(3) is ControlCircuitRole.HEATING
     assert device.control_circuit_role(4) is ControlCircuitRole.DOMESTIC_HOT_WATER
-    # Preserve the existing Hk-based integration until the dedicated Rk step.
-    assert device.heating_circuit_indices == (1, 2, 3)
     assert device.room_heating_circuit_indices == (2, 3)
     assert device.has_rk4 is True
 
@@ -383,6 +392,5 @@ async def test_5578_anlage_16_1_exposes_buffer_tank_role(
     assert device.control_circuit_indices == (1, 2)
     assert device.control_circuit_role(1) is ControlCircuitRole.BUFFER_TANK
     assert device.control_circuit_role(2) is ControlCircuitRole.HEATING
-    assert device.heating_circuit_indices == (1, 2)
     assert device.room_heating_circuit_indices == (2,)
     assert device.has_rk4 is False

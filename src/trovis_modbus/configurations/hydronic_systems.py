@@ -89,26 +89,6 @@ class ConfigurationTopology:
             )
 
     @property
-    def hk1(self) -> bool:
-        """Return whether legacy Hk slot 1 is occupied by any Rk1 role."""
-        return self.rk1_role is not ControlCircuitRole.UNUSED
-
-    @property
-    def hk2(self) -> bool:
-        """Return whether legacy Hk slot 2 is occupied by any Rk2 role."""
-        return self.rk2_role is not ControlCircuitRole.UNUSED
-
-    @property
-    def hk3(self) -> bool:
-        """Return whether legacy Hk slot 3 is occupied by any Rk3 role."""
-        return self.rk3_role is not ControlCircuitRole.UNUSED
-
-    @property
-    def ww(self) -> bool:
-        """Return whether the legacy WW view maps to Rk4."""
-        return self.rk4_role is ControlCircuitRole.DOMESTIC_HOT_WATER
-
-    @property
     def control_circuit_roles(self) -> tuple[ControlCircuitRole, ...]:
         """Return the roles of the stable technical slots Rk1 through Rk4."""
         return (
@@ -130,18 +110,6 @@ class ConfigurationTopology:
         return tuple(
             index
             for index, role in enumerate(self.control_circuit_roles, start=1)
-            if role is not ControlCircuitRole.UNUSED
-        )
-
-    @property
-    def heating_circuit_indices(self) -> tuple[int, ...]:
-        """Return occupied Rk1-Rk3 slots for legacy Hk-based consumers."""
-        return tuple(
-            index
-            for index, role in enumerate(
-                self.control_circuit_roles[:3],
-                start=1,
-            )
             if role is not ControlCircuitRole.UNUSED
         )
 

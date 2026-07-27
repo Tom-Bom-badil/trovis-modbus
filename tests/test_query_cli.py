@@ -45,7 +45,7 @@ def test_values_lists_every_subsystem_field(mock_modbus_unit: MockModbusUnit) ->
     """Each sub-system's public fields are enumerated, methods excluded."""
     device = Trovis557x(mock_modbus_unit)
 
-    circuit_rows = field_rows(device.hk1)
+    circuit_rows = field_rows(device.rk1)
     circuit_names = {name for name, _value in circuit_rows}
 
     assert {"mode", "pump_running", "room_setpoint_active"} <= circuit_names
@@ -149,5 +149,5 @@ def test_print_runs(
     assert "Parameters" in out
     assert "Sensor variants" in out
     assert "sf3 / fg3 / pulse_rate: unresolved" in out
-    assert "Hk1 - Heating circuit 1" in out
-    assert "WW - Domestic hot water" in out
+    assert "Rk1 - Control circuit 1" in out
+    assert "Rk4 - Domestic hot water" in out

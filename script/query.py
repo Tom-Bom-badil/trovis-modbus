@@ -30,10 +30,10 @@ SECTIONS: list[tuple[str, str]] = [
     ("Functions", "functions"),
     ("Parameters", "parameters"),
     ("Measurements", "sensors"),
-    ("Hk1 - Heating circuit 1", "hk1"),
-    ("Hk2 - Heating circuit 2", "hk2"),
-    ("Hk3 - Heating circuit 3", "hk3"),
-    ("WW - Domestic hot water", "ww"),
+    ("Rk1 - Control circuit 1", "rk1"),
+    ("Rk2 - Control circuit 2", "rk2"),
+    ("Rk3 - Control circuit 3", "rk3"),
+    ("Rk4 - Domestic hot water", "rk4"),
 ]
 
 

@@ -12,9 +12,9 @@ from __future__ import annotations
 
 from ..addresses import cl_range, hr_range
 
-TWO_HEATING_CIRCUIT_MODELS = frozenset({5573, 55731, 5575, 5576})
-THREE_HEATING_CIRCUIT_MODELS = frozenset({5578, 55781, 5579})
-SUPPORTED_MODELS = TWO_HEATING_CIRCUIT_MODELS | THREE_HEATING_CIRCUIT_MODELS
+TWO_CONTROL_CIRCUIT_MODELS = frozenset({5573, 55731, 5575, 5576})
+THREE_CONTROL_CIRCUIT_MODELS = frozenset({5578, 55781, 5579})
+SUPPORTED_MODELS = TWO_CONTROL_CIRCUIT_MODELS | THREE_CONTROL_CIRCUIT_MODELS
 
 
 def _hr_ranges(
@@ -32,8 +32,8 @@ def _cl_ranges(
 
 
 # TROVIS 5573 Rev. 2.54.
-# Also used as the initial safe profile for the 2-HC models 5575 and 5576.
-REGISTER_RANGES_2_HC = _hr_ranges(
+# Also used as the initial safe profile for the two-Rk models 5575 and 5576.
+REGISTER_RANGES_2_RK = _hr_ranges(
     (40001, 40006),
     (40010, 40031),
     (40034, 40043),
@@ -117,7 +117,7 @@ REGISTER_RANGES_2_HC = _hr_ranges(
     (49375, 49408),
 )
 
-COIL_RANGES_2_HC = _cl_ranges(
+COIL_RANGES_2_RK = _cl_ranges(
     (1, 9),
     (10, 18),
     (22, 23),
@@ -148,7 +148,7 @@ COIL_RANGES_2_HC = _cl_ranges(
 
 # TROVIS 5578 Rev. 2.62 final.
 # Also used as the initial safe profile for 5578-E and 5579.
-REGISTER_RANGES_3_HC = _hr_ranges(
+REGISTER_RANGES_3_RK = _hr_ranges(
     (40001, 40006),
     (40010, 40032),
     (40034, 40054),
@@ -211,7 +211,7 @@ REGISTER_RANGES_3_HC = _hr_ranges(
     (47875, 47908),
 )
 
-COIL_RANGES_3_HC = _cl_ranges(
+COIL_RANGES_3_RK = _cl_ranges(
     (1, 9),
     (10, 18),
     (22, 23),
@@ -272,11 +272,11 @@ def is_span_readable(
     return any(low <= address and end <= high for low, high in ranges)
 
 
-def heating_circuit_count(model: int) -> int:
-    """Return the number of built-in heating circuits."""
-    if model in TWO_HEATING_CIRCUIT_MODELS:
+def control_circuit_count(model: int) -> int:
+    """Return the number of built-in Rk1-Rk3 control circuits."""
+    if model in TWO_CONTROL_CIRCUIT_MODELS:
         return 2
-    if model in THREE_HEATING_CIRCUIT_MODELS:
+    if model in THREE_CONTROL_CIRCUIT_MODELS:
         return 3
     raise ValueError(f"Unsupported TROVIS model: {model}")
 
@@ -288,13 +288,13 @@ def ranges_for_model(
     tuple[tuple[int, int], ...],
 ]:
     """Return register and coil ranges for a TROVIS model."""
-    if model in TWO_HEATING_CIRCUIT_MODELS:
-        return REGISTER_RANGES_2_HC, COIL_RANGES_2_HC
-    if model in THREE_HEATING_CIRCUIT_MODELS:
-        return REGISTER_RANGES_3_HC, COIL_RANGES_3_HC
+    if model in TWO_CONTROL_CIRCUIT_MODELS:
+        return REGISTER_RANGES_2_RK, COIL_RANGES_2_RK
+    if model in THREE_CONTROL_CIRCUIT_MODELS:
+        return REGISTER_RANGES_3_RK, COIL_RANGES_3_RK
     raise ValueError(f"Unsupported TROVIS model: {model}")
 
 
 # Backwards-compatible default for components instantiated without a device.
-REGISTER_RANGES = REGISTER_RANGES_3_HC
-COIL_RANGES = COIL_RANGES_3_HC
+REGISTER_RANGES = REGISTER_RANGES_3_RK
+COIL_RANGES = COIL_RANGES_3_RK

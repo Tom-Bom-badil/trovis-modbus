@@ -22,7 +22,7 @@ The Home Assistant integration is maintained separately in
 
 ## Features
 
-- Object-oriented access to controller, sensor, heating-circuit, hot-water, and clock data
+- Object-oriented access to controller, sensor, Rk1-Rk4 control-circuit, and clock data
 - Automatic controller-model probe and physical-sensor detection
 - Conservative model-specific register and coil profiles
 - Grouped, range-aware reads with a maximum span of 50 registers or coils
@@ -31,13 +31,13 @@ The Home Assistant integration is maintained separately in
 - Neutral metadata for units, limits, steps, enums, value types, and writable state
 - Complete operating-mode and control-level modelling
 - Native Python `date` and `time` values plus year-independent `MonthDay` values
-- Operational status values for heating circuits and domestic hot water
+- Operational status values for Rk1 through Rk4
 - Derived plant activity and hot-water temperature ranges
 - Central handling of scaling, signed values, and TROVIS invalid-value sentinels
 
 ## Supported model profiles
 
-| Models | Heating circuits | Register and coil profile |
+| Models | Rk1-Rk3 control circuits | Register and coil profile |
 | --- | ---: | --- |
 | TROVIS 5573, 5573-1, 5575, 5576 | 2 | TROVIS 5573 Rev. 2.54 |
 | TROVIS 5578, 5578-E, 5579 | 3 | TROVIS 5578 Rev. 2.62 final |
@@ -55,14 +55,15 @@ A `Trovis557x` object exposes the following subsystems:
 | `controller` | Controller-wide status and settings |
 | `clock` | Native controller date and time |
 | `sensors` | Physical temperature, analog, pulse, and remote-control inputs |
-| `heating_circuit_1` | Heating circuit Rk1 |
-| `heating_circuit_2` | Heating circuit Rk2 |
-| `heating_circuit_3` | Heating circuit Rk3 on supported models |
-| `hot_water` | Domestic-hot-water circuit Rk4 |
+| `rk1` | Technical control circuit Rk1 |
+| `rk2` | Technical control circuit Rk2 |
+| `rk3` | Technical control circuit Rk3 on supported models |
+| `rk4` | Domestic-hot-water control circuit Rk4 |
 | `activity` | Combined heating and hot-water activity |
 
-`device.heating_circuits` contains only the heating circuits supported by the
-detected model.
+`device.control_circuits` contains the Rk1-Rk3 slots supported by the
+detected model. Their hydronic roles are available through
+`device.control_circuit_role(index)`.
 
 ## Basic usage
 
@@ -101,7 +102,7 @@ async def main() -> None:
 
         await device.async_enable_writing()
         try:
-            await device.heating_circuit_1.set_room_setpoint_day(21.5)
+            await device.rk1.set_room_setpoint_day(21.5)
         finally:
             await device.async_disable_writing()
     finally:

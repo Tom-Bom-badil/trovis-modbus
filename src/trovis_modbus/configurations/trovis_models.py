@@ -41,13 +41,13 @@ class ModelDefinition:
     """Static logical sensor capabilities of one TROVIS controller model."""
 
     model: ControllerModel
-    heating_circuits: int
+    control_circuits: int
     sensor_keys: tuple[str, ...]
     sensor_variants: tuple[SensorVariant, ...] = ()
 
     def __post_init__(self) -> None:
-        if self.heating_circuits not in (2, 3):
-            raise ValueError("heating_circuits must be 2 or 3")
+        if self.control_circuits not in (2, 3):
+            raise ValueError("control_circuits must be 2 or 3")
         if not self.sensor_keys:
             raise ValueError("a model definition must contain sensor keys")
         if any(not sensor_key for sensor_key in self.sensor_keys):
@@ -146,7 +146,7 @@ COMMON_SENSOR_KEYS = (
     "analog_input_voltage",
 )
 
-# Additional logical sensors used by the three-heating-circuit models.
+# Additional logical sensors used by the three-control-circuit models.
 THREE_CIRCUIT_SENSOR_KEYS = COMMON_SENSOR_KEYS + (
     "af2",
     "ruef3",
@@ -181,21 +181,21 @@ TROVIS_5573_FAMILY_SENSOR_VARIANTS = (
 
 TROVIS_5573 = ModelDefinition(
     model=ControllerModel.TROVIS_5573,
-    heating_circuits=2,
+    control_circuits=2,
     sensor_keys=COMMON_SENSOR_KEYS,
     sensor_variants=TROVIS_5573_FAMILY_SENSOR_VARIANTS,
 )
 
 TROVIS_5573_1 = ModelDefinition(
     model=ControllerModel.TROVIS_5573_1,
-    heating_circuits=2,
+    control_circuits=2,
     sensor_keys=COMMON_SENSOR_KEYS,
     sensor_variants=TROVIS_5573_FAMILY_SENSOR_VARIANTS,
 )
 
 TROVIS_5575 = ModelDefinition(
     model=ControllerModel.TROVIS_5575,
-    heating_circuits=2,
+    control_circuits=2,
     sensor_keys=COMMON_SENSOR_KEYS + ("pulse_rate",),
     sensor_variants=(
         sensor_variant("sf2", "rf2", "analog_input_voltage", "pulse_rate"),
@@ -207,7 +207,7 @@ TROVIS_5575 = ModelDefinition(
 
 TROVIS_5576 = ModelDefinition(
     model=ControllerModel.TROVIS_5576,
-    heating_circuits=2,
+    control_circuits=2,
     sensor_keys=COMMON_SENSOR_KEYS + ("af2", "sf3", "pulse_rate"),
     sensor_variants=COMMON_INDIVIDUAL_SENSOR_VARIANTS
     + (sensor_variant("sf3", "analog_input_voltage", "pulse_rate"),),
@@ -215,7 +215,7 @@ TROVIS_5576 = ModelDefinition(
 
 TROVIS_5578 = ModelDefinition(
     model=ControllerModel.TROVIS_5578,
-    heating_circuits=3,
+    control_circuits=3,
     sensor_keys=THREE_CIRCUIT_SENSOR_KEYS + ("pulse_rate",),
     sensor_variants=COMMON_INDIVIDUAL_SENSOR_VARIANTS
     + (sensor_variant("sf3", "fg3", "pulse_rate"),),
@@ -223,7 +223,7 @@ TROVIS_5578 = ModelDefinition(
 
 TROVIS_5578_E = ModelDefinition(
     model=ControllerModel.TROVIS_5578_E,
-    heating_circuits=3,
+    control_circuits=3,
     sensor_keys=THREE_CIRCUIT_SENSOR_KEYS
     + (
         "ae1",
@@ -245,7 +245,7 @@ TROVIS_5578_E = ModelDefinition(
 
 TROVIS_5579 = ModelDefinition(
     model=ControllerModel.TROVIS_5579,
-    heating_circuits=3,
+    control_circuits=3,
     sensor_keys=THREE_CIRCUIT_SENSOR_KEYS + ("analog_input_current", "pulse_rate"),
     sensor_variants=COMMON_INDIVIDUAL_SENSOR_VARIANTS
     + (

@@ -15,14 +15,14 @@ from trovis_modbus import MonthDay, Trovis557x
         ("controller", "summer_outdoor_temperature_limit", 0, 30, 0, 300),
         ("controller", "outdoor_temperature_delay", 1, 6, 10, 60),
         ("controller", "frost_protection_limit", -15, 3, -150, 30),
-        ("hk1", "minimum_flow_temperature", -5, 150, -50, 1500),
-        ("hk1", "maximum_flow_temperature", 5, 150, 50, 1500),
-        ("hk1", "maximum_return_flow_temperature", 5, 90, 50, 900),
-        ("ww", "hysteresis", 0, 30, 0, 300),
-        ("ww", "charging_temperature_boost", 0, 50, 0, 500),
-        ("ww", "maximum_charging_temperature", 0, 90, 0, 900),
-        ("ww", "maximum_return_flow_temperature", 5, 90, 50, 900),
-        ("ww", "disinfection_temperature", 60, 90, 600, 900),
+        ("rk1", "minimum_flow_temperature", -5, 150, -50, 1500),
+        ("rk1", "maximum_flow_temperature", 5, 150, 50, 1500),
+        ("rk1", "maximum_return_flow_temperature", 5, 90, 50, 900),
+        ("rk4", "hysteresis", 0, 30, 0, 300),
+        ("rk4", "charging_temperature_boost", 0, 50, 0, 500),
+        ("rk4", "maximum_charging_temperature", 0, 90, 0, 900),
+        ("rk4", "maximum_return_flow_temperature", 5, 90, 50, 900),
+        ("rk4", "disinfection_temperature", 60, 90, 600, 900),
     ],
 )
 def test_number_ranges_from_reference_data(
@@ -46,7 +46,7 @@ def test_number_ranges_from_reference_data(
 
 def test_corrected_domestic_hot_water_setpoint_limits(trovis: Trovis557x) -> None:
     for field in ("setpoint_min", "setpoint_max"):
-        metadata = trovis.ww.require_metadata_for(field)
+        metadata = trovis.rk4.require_metadata_for(field)
         assert metadata.number is not None
         assert metadata.number.min_value == 5
         assert metadata.number.max_value == 90

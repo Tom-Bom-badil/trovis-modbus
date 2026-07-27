@@ -1,4 +1,4 @@
-"""The domestic hot-water circuit (WW)."""
+"""The domestic hot-water control circuit Rk4."""
 
 from __future__ import annotations
 

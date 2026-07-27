@@ -14,43 +14,43 @@ def test_storage_status_enum_matches_firmware_values() -> None:
 def test_heating_circuit_stride_patterns() -> None:
     device = Trovis557x(unit=None)  # type: ignore[arg-type]
 
-    hk1 = device.hk1
-    hk2 = device.hk2
-    hk3 = device.hk3
+    rk1 = device.rk1
+    rk2 = device.rk2
+    rk3 = device.rk3
 
-    assert hk1._address(hk1._bit_fields["valve_closing"]) == 61
-    assert hk2._address(hk2._bit_fields["valve_closing"]) == 63
-    assert hk3._address(hk3._bit_fields["valve_closing"]) == 65
+    assert rk1._address(rk1._bit_fields["valve_closing"]) == 61
+    assert rk2._address(rk2._bit_fields["valve_closing"]) == 63
+    assert rk3._address(rk3._bit_fields["valve_closing"]) == 65
 
-    assert hk1._address(hk1._register_fields["fixed_setpoint_day"]) == 1041
-    assert hk2._address(hk2._register_fields["fixed_setpoint_day"]) == 1241
-    assert hk3._address(hk3._register_fields["fixed_setpoint_day"]) == 1441
+    assert rk1._address(rk1._register_fields["fixed_setpoint_day"]) == 1041
+    assert rk2._address(rk2._register_fields["fixed_setpoint_day"]) == 1241
+    assert rk3._address(rk3._register_fields["fixed_setpoint_day"]) == 1441
 
-    assert hk1._address(hk1._bit_fields["room_setpoint_control_autonomous"]) == 121
-    assert hk2._address(hk2._bit_fields["room_setpoint_control_autonomous"]) == 122
-    assert hk3._address(hk3._bit_fields["room_setpoint_control_autonomous"]) == 123
+    assert rk1._address(rk1._bit_fields["room_setpoint_control_autonomous"]) == 121
+    assert rk2._address(rk2._bit_fields["room_setpoint_control_autonomous"]) == 122
+    assert rk3._address(rk3._bit_fields["room_setpoint_control_autonomous"]) == 123
 
 
 def test_domestic_hot_water_special_setpoint_is_distinct_from_active_setpoint() -> None:
     device = Trovis557x(unit=None)  # type: ignore[arg-type]
-    ww = device.ww
+    rk4 = device.rk4
 
-    assert ww._address(ww._register_fields["setpoint_active"]) == 1807
-    assert ww._address(ww._register_fields["special_setpoint"]) == 1808
-    assert ww.ebene_coils["special_setpoint"] == (112, 0)
+    assert rk4._address(rk4._register_fields["setpoint_active"]) == 1807
+    assert rk4._address(rk4._register_fields["special_setpoint"]) == 1808
+    assert rk4.ebene_coils["special_setpoint"] == (112, 0)
 
 
 def test_new_writable_fields_have_expected_limits() -> None:
     device = Trovis557x(unit=None)  # type: ignore[arg-type]
 
-    fixed = device.hk1.require_metadata_for("fixed_setpoint_day")
+    fixed = device.rk1.require_metadata_for("fixed_setpoint_day")
     assert fixed.writable is True
     assert fixed.number is not None
     assert fixed.number.min_value == -5
     assert fixed.number.max_value == 130
     assert fixed.number.step == pytest.approx(0.1)
 
-    special = device.ww.require_metadata_for("special_setpoint")
+    special = device.rk4.require_metadata_for("special_setpoint")
     assert special.writable is True
     assert special.number is not None
     assert special.number.min_value == 5
@@ -62,13 +62,13 @@ def test_legacy_gap_registers_and_intermediate_heating_points() -> None:
     device = Trovis557x(unit=None)  # type: ignore[arg-type]
 
     controller = device.controller
-    ww = device.ww
+    rk4 = device.rk4
 
     assert controller._address(controller._register_fields["special_functions"]) == 4
 
-    overrun = ww.require_metadata_for("storage_tank_charging_pump_lag_factor")
+    overrun = rk4.require_metadata_for("storage_tank_charging_pump_lag_factor")
     assert (
-        ww._address(ww._register_fields["storage_tank_charging_pump_lag_factor"])
+        rk4._address(rk4._register_fields["storage_tank_charging_pump_lag_factor"])
         == 1804
     )
     assert overrun.writable is True
@@ -77,8 +77,8 @@ def test_legacy_gap_registers_and_intermediate_heating_points() -> None:
     assert overrun.number.max_value == pytest.approx(10.0)
     assert overrun.number.step == pytest.approx(0.1)
 
-    assert ww._address(ww._bit_fields["intermediate_heating_function_enabled"]) == 406
-    assert ww._address(ww._bit_fields["intermediate_heating_operation"]) == 1830
+    assert rk4._address(rk4._bit_fields["intermediate_heating_function_enabled"]) == 406
+    assert rk4._address(rk4._bit_fields["intermediate_heating_operation"]) == 1830
 
 
 def test_additional_5578_sensor_addresses() -> None:

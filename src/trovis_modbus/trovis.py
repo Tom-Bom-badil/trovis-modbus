@@ -10,7 +10,7 @@ from modbus_connection.model import Component, ComponentGroup
 
 from .addresses import register_address
 from .configurations.address_ranges import (
-    heating_circuit_count,
+    control_circuit_count,
     ranges_for_model,
 )
 from .configurations.hydronic_systems import (
@@ -90,11 +90,11 @@ class Trovis557x:
         self.parameters = Parameters(unit)
         self.sensors = Sensors(unit)
 
-        self.hk1 = HeatingCircuit(unit, index=1)
-        self.hk2 = HeatingCircuit(unit, index=2)
-        self.hk3 = HeatingCircuit(unit, index=3)
+        self.rk1 = HeatingCircuit(unit, index=1)
+        self.rk2 = HeatingCircuit(unit, index=2)
+        self.rk3 = HeatingCircuit(unit, index=3)
 
-        self.ww = DomesticHotWater(unit)
+        self.rk4 = DomesticHotWater(unit)
         self._writing_enabled = False
 
         all_components = (
@@ -104,10 +104,10 @@ class Trovis557x:
             self.functions,
             self.parameters,
             self.sensors,
-            self.hk1,
-            self.hk2,
-            self.hk3,
-            self.ww,
+            self.rk1,
+            self.rk2,
+            self.rk3,
+            self.rk4,
         )
 
         register_ranges, coil_ranges = ranges_for_model(model)
@@ -118,11 +118,11 @@ class Trovis557x:
         # limits logical sensor views that may share one readable register.
         self.sensors.configure_readable_fields(self.model_definition.sensor_keys)
 
-        self._heating_circuits = (
-            self.hk1,
-            self.hk2,
-            self.hk3,
-        )[: heating_circuit_count(model)]
+        self._control_circuits = (
+            self.rk1,
+            self.rk2,
+            self.rk3,
+        )[: control_circuit_count(model)]
 
         self._group = ComponentGroup(unit, self.components)
 
@@ -158,9 +158,9 @@ class Trovis557x:
         )
 
     @property
-    def heating_circuits(self) -> tuple[HeatingCircuit, ...]:
-        """Return the built-in heating circuits for this model."""
-        return self._heating_circuits
+    def control_circuits(self) -> tuple[HeatingCircuit, ...]:
+        """Return the built-in Rk1-Rk3 control circuits for this model."""
+        return self._control_circuits
 
     @property
     def configuration_topology(self) -> ConfigurationTopology | None:
@@ -179,14 +179,14 @@ class Trovis557x:
         if not 1 <= index <= 4:
             raise ValueError("control circuit index must be in range 1..4")
 
-        if index <= 3 and index > len(self._heating_circuits):
+        if index <= 3 and index > len(self._control_circuits):
             return ControlCircuitRole.UNUSED
 
         topology = self.configuration_topology
         if topology is not None:
             return topology.control_circuit_role(index)
 
-        if index <= len(self._heating_circuits):
+        if index <= len(self._control_circuits):
             return ControlCircuitRole.HEATING
         if index == 4:
             return ControlCircuitRole.DOMESTIC_HOT_WATER
@@ -202,20 +202,11 @@ class Trovis557x:
         )
 
     @property
-    def heating_circuit_indices(self) -> tuple[int, ...]:
-        """Return occupied Rk1-Rk3 slots for legacy Hk-based consumers."""
-        return tuple(
-            index
-            for index in range(1, len(self._heating_circuits) + 1)
-            if self.control_circuit_role(index) is not ControlCircuitRole.UNUSED
-        )
-
-    @property
     def room_heating_circuit_indices(self) -> tuple[int, ...]:
         """Return Rk1-Rk3 slots whose hydronic role is room heating."""
         return tuple(
             index
-            for index in range(1, len(self._heating_circuits) + 1)
+            for index in range(1, len(self._control_circuits) + 1)
             if self.control_circuit_role(index) is ControlCircuitRole.HEATING
         )
 
@@ -234,8 +225,8 @@ class Trovis557x:
             self.functions,
             self.parameters,
             self.sensors,
-            *self.heating_circuits,
-            self.ww,
+            *self.control_circuits,
+            self.rk4,
         )
 
     @property
@@ -291,9 +282,9 @@ class Trovis557x:
     def system_activity(self) -> SystemActivity | None:
         """Return combined heating and WW system activity from pump states."""
         heating_states = tuple(
-            circuit.pump_running for circuit in self.heating_circuits
+            circuit.pump_running for circuit in self.control_circuits
         )
-        ww_state = self.ww.storage_tank_charging_pump_running
+        ww_state = self.rk4.storage_tank_charging_pump_running
 
         if all(state is None for state in (*heating_states, ww_state)):
             return None

@@ -1,4 +1,4 @@
-"""The heating circuits (Hk (Heizkreis) 1-3, also called Rk (Regelkreis) 1-3)."""
+"""The technical control circuits Rk1 through Rk3."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from ..enums import OPERATING_MODE_OPTIONS, OperatingMode
 
 
 class HeatingCircuit(TrovisComponent):
-    """One heating circuit. Construct with ``index`` 1, 2 or 3.
+    """One technical Rk1-Rk3 control circuit. Construct with ``index`` 1, 2 or 3.
 
     Addresses follow the controller's offset pattern: the 1000-block steps by
     200 per circuit, mode/control-signal by 2, pumps/manual status by 1. Because

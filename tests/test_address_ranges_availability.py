@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from trovis_modbus.configurations.address_ranges import (
-    COIL_RANGES_3_HC,
-    REGISTER_RANGES_3_HC,
-    heating_circuit_count,
+    COIL_RANGES_3_RK,
+    REGISTER_RANGES_3_RK,
+    control_circuit_count,
     is_span_readable,
     ranges_for_model,
 )
@@ -22,9 +22,9 @@ def test_span_must_fit_completely_inside_one_range() -> None:
 
 
 def test_extended_model_raw_values_use_family_ranges() -> None:
-    assert ranges_for_model(55781) == (REGISTER_RANGES_3_HC, COIL_RANGES_3_HC)
-    assert heating_circuit_count(55781) == 3
-    assert heating_circuit_count(55731) == 2
+    assert ranges_for_model(55781) == (REGISTER_RANGES_3_RK, COIL_RANGES_3_RK)
+    assert control_circuit_count(55781) == 3
+    assert control_circuit_count(55731) == 2
 
 
 def test_ranges_must_be_configured_before_read_layout(

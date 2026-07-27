@@ -117,7 +117,7 @@ class SystemActivity(IntEnum):
 
 
 # Reusable option metadata for the enums above.
-# All heating circuits and the domestic-hot-water circuit share one
+# Rk1 through Rk4 share one
 # writable operating-mode list.
 # PROGRAM remains readable through OperatingMode, but it is a timer-program
 # state rather than a normal mode selected through a writable field.

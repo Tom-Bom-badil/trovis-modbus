@@ -36,7 +36,7 @@ def test_controller_model_import_paths_share_the_canonical_enum() -> None:
 
 
 @pytest.mark.parametrize(
-    ("definition", "expected_heating_circuits"),
+    ("definition", "expected_control_circuits"),
     (
         (TROVIS_5573, 2),
         (TROVIS_5573_1, 2),
@@ -49,9 +49,9 @@ def test_controller_model_import_paths_share_the_canonical_enum() -> None:
 )
 def test_model_definitions_have_unique_sensor_keys(
     definition: ModelDefinition,
-    expected_heating_circuits: int,
+    expected_control_circuits: int,
 ) -> None:
-    assert definition.heating_circuits == expected_heating_circuits
+    assert definition.control_circuits == expected_control_circuits
     assert len(definition.sensor_keys) == len(set(definition.sensor_keys))
     assert definition.measurement_keys == definition.sensor_keys
 
@@ -149,8 +149,8 @@ def test_5575_keeps_the_multi_purpose_sensor_variant() -> None:
     }
 
 
-def test_5576_adds_af2_and_sf3_without_a_third_heating_circuit() -> None:
-    assert TROVIS_5576.heating_circuits == 2
+def test_5576_adds_af2_and_sf3_without_a_third_control_circuit() -> None:
+    assert TROVIS_5576.control_circuits == 2
     assert TROVIS_5576.supports_sensor("af2")
     assert TROVIS_5576.supports_sensor("sf3")
     assert not TROVIS_5576.supports_sensor("rf3")
@@ -227,7 +227,7 @@ def test_model_rejects_an_unsupported_variant_sensor() -> None:
     with pytest.raises(ValueError, match="unsupported sensor keys"):
         ModelDefinition(
             model=ControllerModel.TROVIS_5573,
-            heating_circuits=2,
+            control_circuits=2,
             sensor_keys=("af1",),
             sensor_variants=(sensor_variant("fg1"),),
         )
