@@ -11,6 +11,8 @@ from modbus_connection.mock import MockModbusUnit
 
 from trovis_modbus import MonthDay, Trovis557x
 
+from .conftest import COILS, HOLDING
+
 _SPEC = importlib.util.spec_from_file_location(
     "trovis_query", Path(__file__).resolve().parents[1] / "script" / "query.py"
 )
@@ -151,3 +153,21 @@ def test_print_runs(
     assert "sf3 / fg3 / pulse_rate: unresolved" in out
     assert "Rk1 - Control circuit 1" in out
     assert "Rk4 - Domestic hot water" in out
+    assert "Solar circuit" not in out
+
+
+async def test_print_includes_solar_only_for_solar_systems(
+    capsys: pytest.CaptureFixture[str], mock_modbus_unit: MockModbusUnit
+) -> None:
+    mock_modbus_unit.holding.update(HOLDING)
+    mock_modbus_unit.holding[1] = 23  # Anlage 2.3 includes solar.
+    mock_modbus_unit.coils.update(COILS)
+    device = Trovis557x(mock_modbus_unit)
+    await device.async_update()
+
+    query._print(device)
+    out = capsys.readouterr().out
+
+    assert "Solar circuit" in out
+    assert "pump_on_temperature_difference" in out
+    assert "operating_hours" in out

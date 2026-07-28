@@ -56,6 +56,7 @@ from .subsystems import (
     DomesticHotWater,
     HeatingCircuit,
     Sensors,
+    SolarCircuit,
 )
 from .trovis import Trovis557x
 from .utils import (
@@ -86,6 +87,7 @@ __all__ = [
     "SystemActivity",
     "PowerUnit",
     "Sensors",
+    "SolarCircuit",
     "resolve_sensor_variants",
     "SensorVariantStatus",
     "SensorVariantResolution",

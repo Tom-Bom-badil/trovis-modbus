@@ -67,6 +67,10 @@ HOLDING: dict[int, int] = {
     1802: 50,  # rk4 hysteresis -> 5.0 K
     1806: 450,  # rk4 setpoint_night -> 45.0 °C
     1807: 500,  # rk4 setpoint_active -> 50.0
+    1809: 100,  # solar pump on temperature difference -> 10.0 K
+    1810: 30,  # solar pump off temperature difference -> 3.0 K
+    1811: 800,  # solar maximum storage temperature -> 80.0 °C
+    1812: 1234,  # solar operating hours
     1837: 670,  # rk4 active_charging_setpoint -> 67.0
     1830: 3,  # disinfection weekday -> WEDNESDAY
     1831: 1900,  # disinfection start -> 19:00
@@ -84,6 +88,7 @@ COILS: dict[int, bool] = {
     999: True,  # rk1 automatic
     1000: True,  # rk1 day active
     1799: True,  # rk4 automatic
+    1807: True,  # CL1808 / solar circuit pump active
     59: True,  # WW storage tank charging pump
     401: False,  # CL402 / FB02 / SF2 inactive -> RF2
     404: False,  # CL405 / FB05 / VF4 inactive

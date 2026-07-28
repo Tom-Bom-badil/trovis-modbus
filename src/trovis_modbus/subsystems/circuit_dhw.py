@@ -15,10 +15,10 @@ from ..data_model import (
 )
 from ..enums import (
     OPERATING_MODE_OPTIONS,
-    WEEKDAY_OPTIONS,
     OperatingMode,
     StorageStatus,
     Weekday,
+    WEEKDAY_OPTIONS,
 )
 from ..utils import TemperatureRange
 
@@ -173,20 +173,6 @@ class DomesticHotWater(TrovisComponent):
         maker_key="BetriebsArt_TW",
         maker_category="ALG-BTR",
         description="Betriebsart Trinkwasser",
-    )
-
-    solar_operating_hours = integer(
-        41813,
-        signed=False,
-        min_value=0,
-        max_value=65535,
-        raw_min=0,
-        raw_max=65535,
-        digits=0,
-        unit="h",
-        maker_key="Solarbetr_h",
-        maker_category="SOL-SON",
-        description="Solarkreisbetriebsstunden",
     )
 
     storage_status = enum(
@@ -374,8 +360,6 @@ class DomesticHotWater(TrovisComponent):
     frost_protection = coil(1806)
 
     forced_charging = coil(1807, writable=True)
-
-    solar_circuit_pump_running = coil(1808)
 
     forced_charging_uses_storage_tank_sensor_2 = coil(
         1809,

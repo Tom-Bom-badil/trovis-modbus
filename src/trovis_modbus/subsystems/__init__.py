@@ -2,6 +2,7 @@
 
 from .circuit_dhw import DomesticHotWater
 from .circuit_heating import HeatingCircuit
+from .circuit_solar import SolarCircuit
 from .controller import Controller
 from .date_time import Clock
 from .sensors import Sensors
@@ -12,4 +13,5 @@ __all__ = [
     "DomesticHotWater",
     "HeatingCircuit",
     "Sensors",
+    "SolarCircuit",
 ]

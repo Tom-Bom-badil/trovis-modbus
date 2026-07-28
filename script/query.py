@@ -34,6 +34,7 @@ SECTIONS: list[tuple[str, str]] = [
     ("Rk2 - Control circuit 2", "rk2"),
     ("Rk3 - Control circuit 3", "rk3"),
     ("Rk4 - Domestic hot water", "rk4"),
+    ("Solar circuit", "solar"),
 ]
 
 
@@ -136,6 +137,8 @@ def _print_sensor_variants(device: Trovis557x) -> None:
 
 def _print(device: Trovis557x) -> None:
     for label, attr in SECTIONS:
+        if attr == "solar" and not device.has_solar:
+            continue
         print()
         print_component(getattr(device, attr), title=label)
     _print_sensor_variants(device)

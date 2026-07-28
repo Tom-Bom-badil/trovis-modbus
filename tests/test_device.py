@@ -325,7 +325,10 @@ async def test_5576_anlage_2_1_exposes_rk_roles(
     assert device.control_circuit_role(1) is ControlCircuitRole.HEATING
     assert device.control_circuit_role(2) is ControlCircuitRole.UNUSED
     assert device.control_circuit_role(3) is ControlCircuitRole.UNUSED
-    assert device.control_circuit_role(4) is ControlCircuitRole.DOMESTIC_HOT_WATER
+    assert (
+        device.control_circuit_role(4)
+        is ControlCircuitRole.DOMESTIC_HOT_WATER
+    )
     assert device.has_rk4 is True
 
 
@@ -377,7 +380,10 @@ async def test_5579_anlage_5_1_exposes_precontrol_and_heating_roles(
     assert device.control_circuit_role(1) is ControlCircuitRole.PRECONTROL
     assert device.control_circuit_role(2) is ControlCircuitRole.HEATING
     assert device.control_circuit_role(3) is ControlCircuitRole.HEATING
-    assert device.control_circuit_role(4) is ControlCircuitRole.DOMESTIC_HOT_WATER
+    assert (
+        device.control_circuit_role(4)
+        is ControlCircuitRole.DOMESTIC_HOT_WATER
+    )
     assert device.room_heating_circuit_indices == (2, 3)
     assert device.has_rk4 is True
 
@@ -400,3 +406,27 @@ async def test_5578_anlage_16_1_exposes_buffer_tank_role(
     assert device.control_circuit_role(2) is ControlCircuitRole.HEATING
     assert device.room_heating_circuit_indices == (2,)
     assert device.has_rk4 is False
+
+
+async def test_solar_capability_follows_hydronic_system(
+    mock_modbus_unit: MockModbusUnit,
+) -> None:
+    mock_modbus_unit.holding.update(HOLDING)
+    mock_modbus_unit.coils.update(COILS)
+    device = Trovis557x(mock_modbus_unit, model=5579)
+
+    await device.async_update()
+    assert device.configuration_definition is not None
+    assert device.configuration_definition.display_code == "2.1"
+    assert device.has_solar is False
+
+    mock_modbus_unit.holding[1] = 23  # Anlage 2.3 includes solar.
+    await device.async_update()
+    assert device.configuration_definition is not None
+    assert device.configuration_definition.display_code == "2.3"
+    assert device.has_solar is True
+    assert device.solar.pump_on_temperature_difference == pytest.approx(10.0)
+    assert device.solar.pump_off_temperature_difference == pytest.approx(3.0)
+    assert device.solar.maximum_storage_temperature == pytest.approx(80.0)
+    assert device.solar.operating_hours == 1234
+    assert device.solar.pump_running is True

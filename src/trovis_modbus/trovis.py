@@ -39,6 +39,7 @@ from .subsystems import (
     DomesticHotWater,
     HeatingCircuit,
     Sensors,
+    SolarCircuit,
 )
 
 if TYPE_CHECKING:
@@ -96,6 +97,7 @@ class Trovis557x:
         self.rk3 = HeatingCircuit(unit, index=3)
 
         self.rk4 = DomesticHotWater(unit)
+        self.solar = SolarCircuit(unit)
         self._writing_enabled = False
 
         all_components = (
@@ -109,6 +111,7 @@ class Trovis557x:
             self.rk2,
             self.rk3,
             self.rk4,
+            self.solar,
         )
 
         register_ranges, coil_ranges = ranges_for_model(model)
@@ -228,7 +231,16 @@ class Trovis557x:
     @property
     def has_rk4(self) -> bool:
         """Return whether Rk4/WW is present or retained as safe fallback."""
-        return self.control_circuit_role(4) is ControlCircuitRole.DOMESTIC_HOT_WATER
+        return (
+            self.control_circuit_role(4)
+            is ControlCircuitRole.DOMESTIC_HOT_WATER
+        )
+
+    @property
+    def has_solar(self) -> bool:
+        """Return whether the selected hydronic system contains a solar circuit."""
+        topology = self.configuration_topology
+        return topology.solar if topology is not None else False
 
     @property
     def components(self) -> tuple[Component, ...]:
@@ -242,6 +254,7 @@ class Trovis557x:
             self.sensors,
             *self.control_circuits,
             self.rk4,
+            self.solar,
         )
 
     @property

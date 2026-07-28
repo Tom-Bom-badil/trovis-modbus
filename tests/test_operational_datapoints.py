@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from trovis_modbus import Sensors, StorageStatus, Trovis557x
+from trovis_modbus import Sensors, SolarCircuit, StorageStatus, Trovis557x
 
 
 def test_storage_status_enum_matches_firmware_values() -> None:
@@ -145,3 +145,48 @@ def test_controller_monitoring_metadata_and_timeout() -> None:
         )
         == 42
     )
+
+
+def test_solar_circuit_uses_dedicated_register_and_coil_block() -> None:
+    solar = SolarCircuit(unit=None)  # type: ignore[arg-type]
+
+    assert solar._address(
+        solar._register_fields["pump_on_temperature_difference"]
+    ) == 1809
+    assert solar._address(
+        solar._register_fields["pump_off_temperature_difference"]
+    ) == 1810
+    assert solar._address(
+        solar._register_fields["maximum_storage_temperature"]
+    ) == 1811
+    assert solar._address(solar._register_fields["operating_hours"]) == 1812
+    assert solar._address(solar._bit_fields["pump_running"]) == 1807
+
+    pump_on = solar.require_metadata_for("pump_on_temperature_difference")
+    assert pump_on.writable is True
+    assert pump_on.number is not None
+    assert pump_on.number.min_value == pytest.approx(1.0)
+    assert pump_on.number.max_value == pytest.approx(30.0)
+    assert pump_on.number.unit == "K"
+
+    pump_off = solar.require_metadata_for("pump_off_temperature_difference")
+    assert pump_off.writable is True
+    assert pump_off.number is not None
+    assert pump_off.number.min_value == pytest.approx(0.0)
+    assert pump_off.number.max_value == pytest.approx(30.0)
+    assert pump_off.number.unit == "K"
+
+    maximum_storage = solar.require_metadata_for("maximum_storage_temperature")
+    assert maximum_storage.writable is True
+    assert maximum_storage.number is not None
+    assert maximum_storage.number.min_value == pytest.approx(20.0)
+    assert maximum_storage.number.max_value == pytest.approx(90.0)
+
+
+def test_solar_datapoints_are_no_longer_owned_by_rk4() -> None:
+    device = Trovis557x(unit=None)  # type: ignore[arg-type]
+
+    assert "solar_operating_hours" not in device.rk4._register_fields
+    assert "solar_circuit_pump_running" not in device.rk4._bit_fields
+    assert "operating_hours" in device.solar._register_fields
+    assert "pump_running" in device.solar._bit_fields
