@@ -1,6 +1,7 @@
 """Static TROVIS controller and hydronic configuration definitions."""
 
 from .hydronic_systems import (
+    BUFFER_TANK_CHARGING_SYSTEM_CODES_BY_MODEL,
     FUNCTIONAL_SENSOR_ROLE_KEYS,
     HYDRONIC_CONFIGURATIONS,
     SUPPORTED_MODELS_BY_SYSTEM_CODE,
@@ -33,6 +34,7 @@ from .trovis_models import (
 )
 
 __all__ = [
+    "BUFFER_TANK_CHARGING_SYSTEM_CODES_BY_MODEL",
     "COMMON_INDIVIDUAL_SENSOR_VARIANTS",
     "COMMON_SENSOR_KEYS",
     "FUNCTIONAL_SENSOR_ROLE_KEYS",

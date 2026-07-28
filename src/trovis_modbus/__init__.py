@@ -25,6 +25,7 @@ from .configurations.settings import Functions, Parameters
 from .data_model import DEFAULT_WRITE_ACCESS_CODE
 from .device_info import DeviceInformation
 from .enums import (
+    BufferTankStatus,
     ControlCircuitRole,
     EnergyUnit,
     FlowRateUnit,
@@ -51,6 +52,7 @@ from .metadata import (
     TemporalMetadata,
 )
 from .subsystems import (
+    BufferTankCircuit,
     Clock,
     Controller,
     DomesticHotWater,
@@ -70,6 +72,8 @@ __all__ = [
     "coil_address",
     "register_address",
     "OUTDOOR_TEMPERATURES",
+    "BufferTankCircuit",
+    "BufferTankStatus",
     "Clock",
     "Controller",
     "ControlCircuitRole",

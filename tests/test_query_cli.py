@@ -153,6 +153,7 @@ def test_print_runs(
     assert "sf3 / fg3 / pulse_rate: unresolved" in out
     assert "Rk1 - Control circuit 1" in out
     assert "Rk4 - Domestic hot water" in out
+    assert "Rk1 - Buffer tank extension" not in out
     assert "Solar circuit" not in out
 
 
@@ -171,3 +172,26 @@ async def test_print_includes_solar_only_for_solar_systems(
     assert "Solar circuit" in out
     assert "pump_on_temperature_difference" in out
     assert "operating_hours" in out
+
+
+async def test_print_includes_buffer_tank_only_for_buffer_tank_systems(
+    capsys: pytest.CaptureFixture[str], mock_modbus_unit: MockModbusUnit
+) -> None:
+    mock_modbus_unit.holding.update(HOLDING)
+    mock_modbus_unit.holding[1] = 161  # Anlage 16.1
+    mock_modbus_unit.holding[1099] = 0  # AUTO
+    mock_modbus_unit.holding[1100] = 0  # AUTO
+    mock_modbus_unit.holding[1101] = 60  # 6.0 K
+    mock_modbus_unit.holding[1102] = 10  # factor 1.0
+    mock_modbus_unit.holding[1103] = 4  # charging
+    mock_modbus_unit.coils.update(COILS)
+    device = Trovis557x(mock_modbus_unit)
+    await device.async_update()
+
+    query._print(device)
+    out = capsys.readouterr().out
+
+    assert "Rk1 - Buffer tank extension" in out
+    assert "minimum_charging_setpoint" in out
+    assert "charging_pump_lag_factor" in out
+    assert "status" in out

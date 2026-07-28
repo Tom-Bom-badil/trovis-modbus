@@ -6,6 +6,7 @@ import pytest
 
 from trovis_modbus import ControlCircuitRole
 from trovis_modbus.configurations import (
+    BUFFER_TANK_CHARGING_SYSTEM_CODES_BY_MODEL,
     FUNCTIONAL_SENSOR_ROLE_KEYS,
     HYDRONIC_CONFIGURATIONS,
     MODEL_DEFINITIONS,
@@ -1022,7 +1023,7 @@ def test_unknown_system_code_is_rejected() -> None:
                 rk2_role=ControlCircuitRole.HEATING,
                 rk4_role=ControlCircuitRole.DOMESTIC_HOT_WATER,
                 circulation=True,
-                buffer_storage=True,
+                buffer_tank=True,
             ),
         ),
         (
@@ -1055,7 +1056,7 @@ def test_unknown_system_code_is_rejected() -> None:
             ConfigurationTopology(
                 rk1_role=ControlCircuitRole.BUFFER_TANK,
                 solar=True,
-                buffer_storage=True,
+                buffer_tank=True,
             ),
         ),
     ),
@@ -1218,3 +1219,72 @@ def test_topology_rejects_invalid_control_circuit_index() -> None:
         match="control circuit index must be in range 1..4",
     ):
         topology.control_circuit_role(5)
+
+
+def test_buffer_tank_charging_parameter_support_matches_manuals() -> None:
+    expected = {
+        ControllerModel.TROVIS_5573: {160, 161, 162, 163, 164, 166},
+        ControllerModel.TROVIS_5573_1: {160, 161, 162, 163, 164, 166},
+        ControllerModel.TROVIS_5575: {160, 161, 162, 163, 164, 166},
+        ControllerModel.TROVIS_5576: {160, 161, 162, 163, 164, 166},
+        ControllerModel.TROVIS_5578: {
+            39,
+            59,
+            160,
+            161,
+            162,
+            163,
+            164,
+            165,
+            166,
+            167,
+            168,
+            171,
+            178,
+            181,
+        },
+        ControllerModel.TROVIS_5578_E: {
+            38,
+            39,
+            59,
+            160,
+            161,
+            162,
+            163,
+            164,
+            165,
+            166,
+            167,
+            168,
+            171,
+            178,
+            181,
+            200,
+        },
+        ControllerModel.TROVIS_5579: {
+            160,
+            161,
+            162,
+            163,
+            164,
+            165,
+            166,
+            167,
+            168,
+        },
+    }
+
+    assert {
+        model: set(codes)
+        for model, codes in BUFFER_TANK_CHARGING_SYSTEM_CODES_BY_MODEL.items()
+    } == expected
+
+    assert HYDRONIC_CONFIGURATIONS[161].supports_buffer_tank_charging_parameters(
+        ControllerModel.TROVIS_5576
+    )
+    assert not HYDRONIC_CONFIGURATIONS[141].supports_buffer_tank_charging_parameters(
+        ControllerModel.TROVIS_5576
+    )
+    assert not HYDRONIC_CONFIGURATIONS[271].supports_buffer_tank_charging_parameters(
+        ControllerModel.TROVIS_5578_E
+    )

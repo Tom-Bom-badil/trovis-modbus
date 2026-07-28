@@ -107,6 +107,18 @@ class StorageStatus(IntEnum):
     DISCHARGE_PROTECTION = 6
 
 
+class BufferTankStatus(IntEnum):
+    """Current operating state of the Rk1 buffer-tank charging process."""
+
+    STANDBY = 0
+    MONITORING = 1
+    RESERVED = 2  # value is not described in the manufacturer register table
+    DEMAND = 3
+    CHARGING = 4
+    PUMP_OVERRUN = 5
+    DISCHARGE_PROTECTION = 6
+
+
 class SystemActivity(IntEnum):
     """Combined heating and domestic-hot-water system activity."""
 

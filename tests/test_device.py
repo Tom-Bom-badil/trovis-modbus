@@ -325,10 +325,7 @@ async def test_5576_anlage_2_1_exposes_rk_roles(
     assert device.control_circuit_role(1) is ControlCircuitRole.HEATING
     assert device.control_circuit_role(2) is ControlCircuitRole.UNUSED
     assert device.control_circuit_role(3) is ControlCircuitRole.UNUSED
-    assert (
-        device.control_circuit_role(4)
-        is ControlCircuitRole.DOMESTIC_HOT_WATER
-    )
+    assert device.control_circuit_role(4) is ControlCircuitRole.DOMESTIC_HOT_WATER
     assert device.has_rk4 is True
 
 
@@ -380,10 +377,7 @@ async def test_5579_anlage_5_1_exposes_precontrol_and_heating_roles(
     assert device.control_circuit_role(1) is ControlCircuitRole.PRECONTROL
     assert device.control_circuit_role(2) is ControlCircuitRole.HEATING
     assert device.control_circuit_role(3) is ControlCircuitRole.HEATING
-    assert (
-        device.control_circuit_role(4)
-        is ControlCircuitRole.DOMESTIC_HOT_WATER
-    )
+    assert device.control_circuit_role(4) is ControlCircuitRole.DOMESTIC_HOT_WATER
     assert device.room_heating_circuit_indices == (2, 3)
     assert device.has_rk4 is True
 
@@ -403,6 +397,9 @@ async def test_5578_anlage_16_1_exposes_buffer_tank_role(
 
     assert device.control_circuit_indices == (1, 2)
     assert device.control_circuit_role(1) is ControlCircuitRole.BUFFER_TANK
+    assert device.has_buffer_tank_circuit is True
+    assert device.has_buffer_tank_charging_parameters is True
+    assert device.buffer_tank in device.components
     assert device.control_circuit_role(2) is ControlCircuitRole.HEATING
     assert device.room_heating_circuit_indices == (2,)
     assert device.has_rk4 is False
@@ -430,3 +427,31 @@ async def test_solar_capability_follows_hydronic_system(
     assert device.solar.maximum_storage_temperature == pytest.approx(80.0)
     assert device.solar.operating_hours == 1234
     assert device.solar.pump_running is True
+
+
+async def test_non_buffer_system_does_not_enable_buffer_tank_circuit(
+    mock_modbus_unit: MockModbusUnit,
+) -> None:
+    mock_modbus_unit.holding.update(HOLDING)
+    mock_modbus_unit.holding[1] = 21  # Anlage 2.1
+    mock_modbus_unit.coils.update(COILS)
+
+    device = Trovis557x(mock_modbus_unit, model=5579)
+    await device.async_update()
+
+    assert device.has_buffer_tank_circuit is False
+    assert device.has_buffer_tank_charging_parameters is False
+
+
+async def test_fixed_loading_buffer_system_omits_pa1_p16_to_p19_capability(
+    mock_modbus_unit: MockModbusUnit,
+) -> None:
+    mock_modbus_unit.holding.update(HOLDING)
+    mock_modbus_unit.holding[1] = 141  # Anlage 14.1
+    mock_modbus_unit.coils.update(COILS)
+
+    device = Trovis557x(mock_modbus_unit, model=5576)
+    await device.async_update()
+
+    assert device.has_buffer_tank_circuit is True
+    assert device.has_buffer_tank_charging_parameters is False

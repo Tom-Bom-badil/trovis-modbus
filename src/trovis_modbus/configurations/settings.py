@@ -110,11 +110,11 @@ class Functions(TrovisComponent):
         description="Setpoint correction through the general 0 to 10 V input",
     )
 
-    buffer_storage_bottom_sensor_enabled = _function_selector(
+    buffer_tank_bottom_sensor_enabled = _function_selector(
         2125,
         maker_key="FB25_PS_Bodensen",
         maker_category="CON-SON",
-        description="Buffer storage bottom sensor SF3 enabled",
+        description="Buffer tank bottom sensor SF3 enabled",
     )
 
     def input_is_binary(self, input_number: int) -> bool | None:

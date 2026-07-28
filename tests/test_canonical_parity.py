@@ -38,6 +38,11 @@ KNOWN_NON_CANONICAL_REGISTERS = {
     register_address(40028),  # 5578-E AE3 / FG3 input
     register_address(40042),  # 5578 analog input 0-10 V
     register_address(40043),  # Summer-operation daily outdoor-temperature average
+    register_address(41100),  # PA1 P16 minimum buffer-tank charging setpoint
+    register_address(41101),  # PA1 P17 buffer-tank charging end temperature
+    register_address(41102),  # PA1 P18 buffer-tank charging temperature boost
+    register_address(41103),  # PA1 P19 buffer-tank charging-pump lag factor
+    register_address(41104),  # Current buffer-tank charging status
     register_address(41827),  # Current domestic hot-water storage status
     register_address(42002),  # Analog-input selection (AE_Auswahl)
     register_address(42003),  # Charging-pump sensor selection (SLP_Sensor)
@@ -85,7 +90,7 @@ KNOWN_NON_CANONICAL_COILS = {
         (816, False),
         (817, False),  # CO8 inputs 15-17: sensor or binary input
         (905, False),  # Setpoint correction through 0 to 10 V input
-        (2125, False),  # CO1 F25 buffer-storage bottom sensor SF3
+        (2125, False),  # CO1 F25 buffer-tank bottom sensor SF3
     )
 }
 

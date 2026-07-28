@@ -4,7 +4,14 @@ from __future__ import annotations
 
 import pytest
 
-from trovis_modbus import Sensors, SolarCircuit, StorageStatus, Trovis557x
+from trovis_modbus import (
+    BufferTankCircuit,
+    BufferTankStatus,
+    Sensors,
+    SolarCircuit,
+    StorageStatus,
+    Trovis557x,
+)
 
 
 def test_storage_status_enum_matches_firmware_values() -> None:
@@ -150,15 +157,14 @@ def test_controller_monitoring_metadata_and_timeout() -> None:
 def test_solar_circuit_uses_dedicated_register_and_coil_block() -> None:
     solar = SolarCircuit(unit=None)  # type: ignore[arg-type]
 
-    assert solar._address(
-        solar._register_fields["pump_on_temperature_difference"]
-    ) == 1809
-    assert solar._address(
-        solar._register_fields["pump_off_temperature_difference"]
-    ) == 1810
-    assert solar._address(
-        solar._register_fields["maximum_storage_temperature"]
-    ) == 1811
+    assert (
+        solar._address(solar._register_fields["pump_on_temperature_difference"]) == 1809
+    )
+    assert (
+        solar._address(solar._register_fields["pump_off_temperature_difference"])
+        == 1810
+    )
+    assert solar._address(solar._register_fields["maximum_storage_temperature"]) == 1811
     assert solar._address(solar._register_fields["operating_hours"]) == 1812
     assert solar._address(solar._bit_fields["pump_running"]) == 1807
 
@@ -190,3 +196,64 @@ def test_solar_datapoints_are_no_longer_owned_by_rk4() -> None:
     assert "solar_circuit_pump_running" not in device.rk4._bit_fields
     assert "operating_hours" in device.solar._register_fields
     assert "pump_running" in device.solar._bit_fields
+
+
+def test_buffer_tank_status_enum_matches_firmware_values() -> None:
+    assert tuple(map(int, BufferTankStatus)) == tuple(range(7))
+
+
+def test_buffer_tank_circuit_uses_rk1_extension_registers() -> None:
+    buffer_tank = BufferTankCircuit(unit=None)  # type: ignore[arg-type]
+
+    assert (
+        buffer_tank._address(buffer_tank._register_fields["minimum_charging_setpoint"])
+        == 1099
+    )
+    assert (
+        buffer_tank._address(buffer_tank._register_fields["charging_end_temperature"])
+        == 1100
+    )
+    assert (
+        buffer_tank._address(buffer_tank._register_fields["charging_temperature_boost"])
+        == 1101
+    )
+    assert (
+        buffer_tank._address(buffer_tank._register_fields["charging_pump_lag_factor"])
+        == 1102
+    )
+    assert buffer_tank._address(buffer_tank._register_fields["status"]) == 1103
+
+    minimum = buffer_tank.require_metadata_for("minimum_charging_setpoint")
+    assert minimum.writable is True
+    assert minimum.number is not None
+    assert minimum.number.min_value == pytest.approx(0.0)
+    assert minimum.number.max_value == pytest.approx(90.0)
+    assert minimum.number.step == pytest.approx(0.1)
+
+    end = buffer_tank.require_metadata_for("charging_end_temperature")
+    assert end.writable is True
+    assert end.number is not None
+    assert end.number.min_value == pytest.approx(0.0)
+    assert end.number.max_value == pytest.approx(90.0)
+
+    boost = buffer_tank.require_metadata_for("charging_temperature_boost")
+    assert boost.writable is True
+    assert boost.number is not None
+    assert boost.number.min_value == pytest.approx(0.0)
+    assert boost.number.max_value == pytest.approx(50.0)
+    assert boost.number.unit == "K"
+
+    lag = buffer_tank.require_metadata_for("charging_pump_lag_factor")
+    assert lag.writable is True
+    assert lag.number is not None
+    assert lag.number.min_value == pytest.approx(0.0)
+    assert lag.number.max_value == pytest.approx(10.0)
+    assert lag.number.step == pytest.approx(0.1)
+
+
+def test_buffer_tank_extension_does_not_duplicate_rk1_fields() -> None:
+    device = Trovis557x(unit=None)  # type: ignore[arg-type]
+
+    assert set(device.buffer_tank._register_fields).isdisjoint(
+        device.rk1._register_fields
+    )

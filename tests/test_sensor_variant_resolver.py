@@ -76,7 +76,7 @@ async def test_5579_resolves_fg3_from_f25_and_analog_selector(
     assert input_17.status is SensorVariantStatus.RESOLVED
     assert input_17.selected_sensor_key == "fg3"
     assert input_17.candidate_sensor_keys == ("fg3",)
-    assert ("buffer_storage_bottom_sensor_enabled", False) in input_17.evidence
+    assert ("buffer_tank_bottom_sensor_enabled", False) in input_17.evidence
     assert ("analog_setpoint_correction_enabled", False) in input_17.evidence
 
 

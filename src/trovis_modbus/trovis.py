@@ -34,6 +34,7 @@ from .data_model import (
 from .device_info import DeviceInformation
 from .enums import ControlCircuitRole, SystemActivity
 from .subsystems import (
+    BufferTankCircuit,
     Clock,
     Controller,
     DomesticHotWater,
@@ -97,6 +98,7 @@ class Trovis557x:
         self.rk3 = HeatingCircuit(unit, index=3)
 
         self.rk4 = DomesticHotWater(unit)
+        self.buffer_tank = BufferTankCircuit(unit)
         self.solar = SolarCircuit(unit)
         self._writing_enabled = False
 
@@ -111,6 +113,7 @@ class Trovis557x:
             self.rk2,
             self.rk3,
             self.rk4,
+            self.buffer_tank,
             self.solar,
         )
 
@@ -231,9 +234,21 @@ class Trovis557x:
     @property
     def has_rk4(self) -> bool:
         """Return whether Rk4/WW is present or retained as safe fallback."""
-        return (
-            self.control_circuit_role(4)
-            is ControlCircuitRole.DOMESTIC_HOT_WATER
+        return self.control_circuit_role(4) is ControlCircuitRole.DOMESTIC_HOT_WATER
+
+    @property
+    def has_buffer_tank_circuit(self) -> bool:
+        """Return whether Rk1 is assigned the buffer-tank circuit role."""
+        return self.control_circuit_role(1) is ControlCircuitRole.BUFFER_TANK
+
+    @property
+    def has_buffer_tank_charging_parameters(self) -> bool:
+        """Return whether PA1 P16-P19 apply to this model/system pair."""
+        definition = self.configuration_definition
+        if definition is None or not self.has_buffer_tank_circuit:
+            return False
+        return definition.supports_buffer_tank_charging_parameters(
+            self.model_definition.model
         )
 
     @property
@@ -254,6 +269,7 @@ class Trovis557x:
             self.sensors,
             *self.control_circuits,
             self.rk4,
+            self.buffer_tank,
             self.solar,
         )
 

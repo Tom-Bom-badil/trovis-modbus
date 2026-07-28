@@ -362,11 +362,11 @@ def _resolve_variant(
         if key != "pulse_rate" or pulse_enabled is not False
     ]
 
-    # CO1 -> F25 (CL2125) explicitly selects the buffer-storage bottom
+    # CO1 -> F25 (CL2125) explicitly selects the buffer-tank bottom
     # sensor SF3. If it is inactive, SF3 is removed from the candidates.
     if "sf3" in candidates:
-        sf3_enabled = getattr(functions, "buffer_storage_bottom_sensor_enabled", None)
-        evidence += (("buffer_storage_bottom_sensor_enabled", sf3_enabled),)
+        sf3_enabled = getattr(functions, "buffer_tank_bottom_sensor_enabled", None)
+        evidence += (("buffer_tank_bottom_sensor_enabled", sf3_enabled),)
         if sf3_enabled is True:
             candidates = [key for key in candidates if key in {"sf3", "pulse_rate"}]
         elif sf3_enabled is False:

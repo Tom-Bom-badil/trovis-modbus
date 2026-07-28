@@ -29,7 +29,7 @@ async def test_shared_functions_and_parameters(trovis: Trovis557x) -> None:
     assert trovis.functions.flow_sensor_4_enabled_cl1829 is False
     assert trovis.functions.flow_sensor_4_enabled is False
     assert trovis.functions.analog_setpoint_correction_enabled is True
-    assert trovis.functions.buffer_storage_bottom_sensor_enabled is False
+    assert trovis.functions.buffer_tank_bottom_sensor_enabled is False
 
     assert trovis.functions.input_is_binary(1) is False
     assert trovis.functions.input_is_binary(2) is True
@@ -67,7 +67,7 @@ def test_three_circuit_ranges_select_all_known_co8_inputs(
     assert device.functions.is_field_readable("flow_sensor_2_enabled")
     assert device.functions.is_field_readable("flow_sensor_4_enabled_cl405")
     assert device.functions.is_field_readable("flow_sensor_4_enabled_cl1829")
-    assert device.functions.is_field_readable("buffer_storage_bottom_sensor_enabled")
+    assert device.functions.is_field_readable("buffer_tank_bottom_sensor_enabled")
     assert device.parameters.is_field_readable("analog_input_selection")
     assert device.parameters.is_field_readable(
         "storage_tank_charging_pump_sensor_input"
@@ -101,9 +101,7 @@ async def test_two_circuit_ranges_filter_unavailable_fields(
     assert device.functions.is_field_readable("flow_sensor_2_enabled")
     assert device.functions.is_field_readable("flow_sensor_4_enabled_cl405")
     assert device.functions.is_field_readable("flow_sensor_4_enabled_cl1829")
-    assert not device.functions.is_field_readable(
-        "buffer_storage_bottom_sensor_enabled"
-    )
+    assert not device.functions.is_field_readable("buffer_tank_bottom_sensor_enabled")
     assert not device.parameters.is_field_readable("analog_input_selection")
     assert not device.parameters.is_field_readable(
         "storage_tank_charging_pump_sensor_input"

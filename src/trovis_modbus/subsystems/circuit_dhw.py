@@ -15,10 +15,10 @@ from ..data_model import (
 )
 from ..enums import (
     OPERATING_MODE_OPTIONS,
+    WEEKDAY_OPTIONS,
     OperatingMode,
     StorageStatus,
     Weekday,
-    WEEKDAY_OPTIONS,
 )
 from ..utils import TemperatureRange
 
