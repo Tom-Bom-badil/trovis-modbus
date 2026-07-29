@@ -10,22 +10,21 @@
 <br/>`trovis-modbus` is an asynchronous Python library for reading from and writing
 to SAMSON TROVIS 557x heating and district heating controllers over Modbus ( compatible OEM variants from SAUTER, YADOS and PEWO are also supported, see below).
 
-The library contains the controller-specific data model. It knows the available
+## Purpose and scope of this library
+
+The library `trovis-modbus`:
+
+- is intended for operational monitoring, and occasional fine adjustment of already commissioned heating systems. It does _NOT_ attempt to reproduce every single controller menu, parameter level, special function, register or coil (there are literally thousands of them). It is also not meant as initial commissioning tool for a new heating system.
+- provides the auto-discovery and auto-configuration logic required to determine the controller model and its capabilities, the configured hydronic system, the sensor and input assignments, and the relevant controller functions, parameters, and configuration settings.
+- contains the controller-specific data model. It knows the available
 registers and coils, their data types and metadata, the configured hydronic
 system, and the rules required for safe reads and writes.
-
-The library also provides the auto-discovery and auto-configuration logic
-required to determine the controller model and its capabilities, the configured
-hydronic system, the sensor and input assignments, and the relevant controller
-functions, parameters, and configuration settings.
-
-It does not create or own the Modbus transport. Applications provide a
-[`modbus_connection.ModbusUnit`](https://github.com/home-assistant-libs/modbus-connection)
-and may use any backend supported by `modbus-connection`.
+- does not create or own the Modbus transport. Applications provide a
+[`modbus_connection.ModbusUnit`](https://github.com/home-assistant-libs/modbus-connection) and may use any backend supported by `modbus-connection`.
 
 ## Data provided by the library
 
-Depending on the controller model and its configuration, the library provides:
+Depending on the controller model and its configuration, `trovis-modbus` provides:
 
 - controller identity, firmware, hardware, serial, and system information,
 - current hydronic system,
@@ -82,7 +81,7 @@ All releases of the library are tested with the following hardware setup:
 Additional software-based tests are part of the project to ensure code quality
 and consistency.
 
-## Documentation, contribution guidelines
+## Documentation, development and contribution guidelines
 
 Detailed architecture, usage examples, datapoint behavior, development setup,
 branch workflow, contribution guidance, and known limitations are documented in
