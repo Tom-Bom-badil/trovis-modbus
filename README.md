@@ -7,20 +7,17 @@
 
 <img width="100%" alt="SAMSON TROVIS controllers" src="https://raw.githubusercontent.com/wiki/Tom-Bom-badil/trovis-modbus/images/cover_pic.png" />
 
-<br/>`trovis-modbus` is an asynchronous Python library for reading from and writing
-to SAMSON TROVIS 557x heating and district heating controllers over Modbus ( compatible OEM variants from SAUTER, YADOS and PEWO are also supported, see below).
+<br/>`trovis-modbus` is an asynchronous Python library for reading from and writing to **SAMSON TROVIS 557x** heating and district heating controllers over Modbus (compatible OEM controller variants from SAUTER, YADOS and PEWO are also covered, see below).
 
 ## Purpose and scope of this library
 
 The library `trovis-modbus`:
 
-- is intended for operational monitoring, and occasional fine adjustment of already commissioned heating systems. It does _NOT_ attempt to reproduce every single controller menu, parameter level, special function, register or coil (there are literally thousands of them). It is also not meant as initial commissioning tool for a new heating system.
+- is intended for operational monitoring, and occasional fine tuning of already commissioned heating systems. It does _NOT_ attempt to reproduce every single controller menu, parameter level, special function, register or coil (there are literally thousands of them). It is also not meant as an initial commissioning tool for new heating systems - use the free SAMSON TrovisView for this.
 - provides the auto-discovery and auto-configuration logic required to determine the controller model and its capabilities, the configured hydronic system, the sensor and input assignments, and the relevant controller functions, parameters, and configuration settings.
 - contains the controller-specific data model. It knows the available
-registers and coils, their data types and metadata, the configured hydronic
-system, and the rules required for safe reads and writes.
-- does not create or own the Modbus transport. Applications provide a
-[`modbus_connection.ModbusUnit`](https://github.com/home-assistant-libs/modbus-connection) and may use any backend supported by `modbus-connection`.
+registers and coils, their data types and metadata, and the rules required for safe reads and writes.
+- does _NOT_ create or own the Modbus transport. Applications utilizing the library provide a [`modbus_connection.ModbusUnit`](https://github.com/home-assistant-libs/modbus-connection) and may use any backend supported by `modbus-connection` (pymodbus, tmodbus, ...).
 
 ## Data provided by the library
 
