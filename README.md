@@ -8,8 +8,7 @@
 <img width="100%" alt="SAMSON TROVIS controllers" src="https://raw.githubusercontent.com/wiki/Tom-Bom-badil/trovis-modbus/images/cover_pic.png" />
 
 <br/>`trovis-modbus` is an asynchronous Python library for reading from and writing
-to SAMSON TROVIS 557x heating and district heating controllers over Modbus,
-including compatible OEM variants from SAUTER, YADOS, and PEWO.
+to SAMSON TROVIS 557x heating and district heating controllers over Modbus ( compatible OEM variants from SAUTER, YADOS and PEWO are also supported, see below).
 
 The library contains the controller-specific data model. It knows the available
 registers and coils, their data types and metadata, the configured hydronic
@@ -38,10 +37,10 @@ Depending on the controller model and its configuration, the library provides:
 - selected derived operating states (incl. heating curves for each heating circuit),
 - neutral datapoint metadata such as unit, scale, limits, step, enum options,<br/>
   invalid values, and writable state,
-- grouped reads and validated writes with TROVIS write-access handling.
+- grouped reads and validated writes with TROVIS write-access handling<br/>(including the mechanisms needed to write-enable 'special/protected' registers).
 
 The exact datapoints available on a device depend on the controller model, the
-selected system code number, active functions and parameters, and the sensor and
+selected hydronic system, active functions and parameters, and the sensor and
 input assignments configured for the connected physical sensors.
 
 ## Supported controllers
@@ -69,29 +68,25 @@ input assignments configured for the connected physical sensors.
 
 <sup>Note: The non-SAMSON models have not yet been tested. The figures are based on the currently available documentation.</sup>
 
-Other compatible OEM controllers will likely work based on the TROVIS model
-identity they provide. OEM controllers use the corresponding TROVIS model
-profile and are not maintained with separate datapoint definitions.
+Other compatible OEM controllers will likely work, based on the TROVIS model identity they provide. OEM controllers return and use the corresponding TROVIS model profile and are not maintained with separate datapoint definitions.
 
 ## Testing and validation
 
 All releases of the library are tested with the following hardware setup:
 
-- 1 × `TROVIS 5576`: live heating controller, Anlage 2.1 and four additional
-  Pt 1000 sensors,
-- 1 × `TROVIS 5578`: dedicated test controller, Anlage 6.1 and fully equipped
-  with 17 Pt 1000 sensors,
-- 1 × `TROVIS 5579`: dedicated test controller, Anlage 5.1 and fully equipped
-  with 17 Pt 1000 sensors.
+- 1× `TROVIS 5576`: live heating controller, Anlage 2.1 (4 required + 4 additional Pt1000 sensors),
+- 1× `TROVIS 5578`: dedicated testing device, Anlage 6.1 (fully equipped with 17 Pt1000 sensors),
+- 1× `TROVIS 5579`: dedicated testing device, Anlage 5.1 (fully equipped
+  with 17 Pt1000 sensors).
 
 Additional software-based tests are part of the project to ensure code quality
 and consistency.
 
-## Documentation
+## Documentation, contribution guidelines
 
 Detailed architecture, usage examples, datapoint behavior, development setup,
 branch workflow, contribution guidance, and known limitations are documented in
 the [project wiki](https://github.com/Tom-Bom-badil/trovis-modbus/wiki).
 
-Home Assistant support is maintained separately in
+Support for the Home Assistant integration is maintained separately in
 [`trovis-modbus-hass`](https://github.com/Tom-Bom-badil/trovis-modbus-hass).
