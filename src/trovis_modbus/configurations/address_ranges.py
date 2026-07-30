@@ -118,8 +118,8 @@ REGISTER_RANGES_2_RK = _hr_ranges(
 )
 
 COIL_RANGES_2_RK = _cl_ranges(
-    (1, 5),
-    (9, 18),
+    (1, 9),
+    (10, 18),
     (22, 23),
     (33, 34),
     (57, 67),
