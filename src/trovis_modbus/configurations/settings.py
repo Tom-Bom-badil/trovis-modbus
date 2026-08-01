@@ -47,7 +47,7 @@ def _function_selector(
 
 
 class Functions(TrovisComponent):
-    """CO/F states needed to interpret configurable sensor inputs.
+    """CO/F states needed to interpret configurable functions.
 
     The selectors use their common manufacturer CL addresses. The selected
     model ranges decide which declared fields are actually read.
@@ -73,6 +73,27 @@ class Functions(TrovisComponent):
         maker_key="FB10_Leist_Beg",
         maker_category="CON-SON",
         description="Flow or power limitation through pulse input enabled",
+    )
+
+    heating_circuit_1_outdoor_sensor_enabled = _function_selector(
+        1026,
+        maker_key="FB02_AF1",
+        maker_category="CON-AT",
+        description="Outdoor sensor for Rk1 enabled",
+    )
+
+    heating_circuit_2_outdoor_sensor_enabled = _function_selector(
+        1226,
+        maker_key="FB02_AF2",
+        maker_category="CON-AT",
+        description="Outdoor sensor for Rk2 enabled",
+    )
+
+    heating_circuit_3_outdoor_sensor_enabled = _function_selector(
+        1426,
+        maker_key="FB02_AF2_Rk3",
+        maker_category="CON-AT",
+        description="Outdoor sensor for Rk3 enabled",
     )
 
     storage_sensor_2_enabled = _function_selector(
@@ -116,6 +137,16 @@ class Functions(TrovisComponent):
         maker_category="CON-SON",
         description="Buffer tank bottom sensor SF3 enabled",
     )
+
+    def heating_circuit_uses_outdoor_sensor(self, index: int) -> bool | None:
+        """Return whether Rk1 through Rk3 uses an outdoor sensor."""
+        if not 1 <= index <= 3:
+            raise ValueError("heating circuit index must be in range 1..3")
+
+        field = f"heating_circuit_{index}_outdoor_sensor_enabled"
+        if not self.is_field_readable(field):
+            return None
+        return getattr(self, field)
 
     def input_is_binary(self, input_number: int) -> bool | None:
         """Return the configured mode of one known CO8 input selector."""

@@ -231,6 +231,17 @@ class Trovis557x:
             if self.control_circuit_role(index) is ControlCircuitRole.HEATING
         )
 
+    def heating_circuit_uses_outdoor_sensor(self, index: int) -> bool | None:
+        """Return whether one active Rk1-Rk3 slot uses weather compensation.
+
+        ``True`` means COx -> F02 is active and the heating-curve parameters
+        apply. ``False`` means fixed set point control. ``None`` keeps callers
+        conservative if the selector is unavailable or not readable.
+        """
+        if not 1 <= index <= len(self._control_circuits):
+            raise ValueError(f"Rk{index} is not available on this controller")
+        return self.functions.heating_circuit_uses_outdoor_sensor(index)
+
     @property
     def has_rk4(self) -> bool:
         """Return whether Rk4/WW is present or retained as safe fallback."""

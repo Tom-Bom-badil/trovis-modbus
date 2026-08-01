@@ -38,6 +38,34 @@ def test_heating_circuit_stride_patterns() -> None:
     assert rk3._address(rk3._bit_fields["room_setpoint_control_autonomous"]) == 123
 
 
+def test_heating_circuit_outdoor_sensor_function_selectors() -> None:
+    device = Trovis557x(unit=None)  # type: ignore[arg-type]
+    functions = device.functions
+
+    assert (
+        functions._address(
+            functions._bit_fields["heating_circuit_1_outdoor_sensor_enabled"]
+        )
+        == 1025
+    )
+    assert (
+        functions._address(
+            functions._bit_fields["heating_circuit_2_outdoor_sensor_enabled"]
+        )
+        == 1225
+    )
+    assert (
+        functions._address(
+            functions._bit_fields["heating_circuit_3_outdoor_sensor_enabled"]
+        )
+        == 1425
+    )
+
+    assert device.heating_circuit_uses_outdoor_sensor(1) is None
+    with pytest.raises(ValueError, match="Rk4 is not available"):
+        device.heating_circuit_uses_outdoor_sensor(4)
+
+
 def test_domestic_hot_water_special_setpoint_is_distinct_from_active_setpoint() -> None:
     device = Trovis557x(unit=None)  # type: ignore[arg-type]
     rk4 = device.rk4
