@@ -5,8 +5,10 @@ from __future__ import annotations
 import pytest
 
 from trovis_modbus import (
+    OUTDOOR_TEMPERATURES,
     BufferTankCircuit,
     BufferTankStatus,
+    HeatingCircuitControlMode,
     Sensors,
     SolarCircuit,
     StorageStatus,
@@ -33,9 +35,49 @@ def test_heating_circuit_stride_patterns() -> None:
     assert rk2._address(rk2._register_fields["fixed_setpoint_day"]) == 1241
     assert rk3._address(rk3._register_fields["fixed_setpoint_day"]) == 1441
 
+    assert (
+        rk1._address(rk1._register_fields["four_point_outdoor_temperature_1"]) == 1012
+    )
+    assert (
+        rk2._address(rk2._register_fields["four_point_outdoor_temperature_1"]) == 1212
+    )
+    assert (
+        rk3._address(rk3._register_fields["four_point_outdoor_temperature_1"]) == 1412
+    )
+    assert (
+        rk1._address(rk1._register_fields["four_point_return_flow_temperature_4"])
+        == 1027
+    )
+    assert (
+        rk2._address(rk2._register_fields["four_point_return_flow_temperature_4"])
+        == 1227
+    )
+    assert (
+        rk3._address(rk3._register_fields["four_point_return_flow_temperature_4"])
+        == 1427
+    )
+
     assert rk1._address(rk1._bit_fields["room_setpoint_control_autonomous"]) == 121
     assert rk2._address(rk2._bit_fields["room_setpoint_control_autonomous"]) == 122
     assert rk3._address(rk3._bit_fields["room_setpoint_control_autonomous"]) == 123
+
+
+def test_return_characteristic_parameters_are_writable() -> None:
+    """Expose PA P11 to P14 as writable return-flow configuration."""
+    device = Trovis557x(unit=None)  # type: ignore[arg-type]
+
+    for circuit in (device.rk1, device.rk2, device.rk3):
+        for field in (
+            "return_flow_gradient",
+            "return_flow_level",
+            "return_flow_base_point",
+            "maximum_return_flow_temperature",
+        ):
+            descriptor = circuit._register_fields[field]
+            metadata = circuit.require_metadata_for(field)
+
+            assert descriptor.writable
+            assert metadata.writable is True
 
 
 def test_heating_circuit_outdoor_sensor_function_selectors() -> None:
@@ -64,6 +106,211 @@ def test_heating_circuit_outdoor_sensor_function_selectors() -> None:
     assert device.heating_circuit_uses_outdoor_sensor(1) is None
     with pytest.raises(ValueError, match="Rk4 is not available"):
         device.heating_circuit_uses_outdoor_sensor(4)
+
+
+def test_heating_circuit_four_point_function_selectors() -> None:
+    device = Trovis557x(unit=None)  # type: ignore[arg-type]
+    functions = device.functions
+
+    for index, address in ((1, 1034), (2, 1234), (3, 1434)):
+        field = f"heating_circuit_{index}_four_point_characteristic_enabled"
+        assert functions._address(functions._bit_fields[field]) == address
+
+    assert device.heating_circuit_uses_four_point_characteristic(1) is None
+    with pytest.raises(ValueError, match="Rk4 is not available"):
+        device.heating_circuit_uses_four_point_characteristic(4)
+
+
+async def test_gradient_heating_and_return_curves(trovis: Trovis557x) -> None:
+    """Calculate flow and return curves for the gradient characteristic."""
+    await trovis.async_update()
+
+    operating_mode = trovis.heating_circuit_operating_mode(1)
+    assert operating_mode is HeatingCircuitControlMode.HEATING_CURVE
+
+    flow_curve = trovis.rk1.heating_curve(operating_mode=operating_mode)
+    night_flow_curve = trovis.rk1.heating_curve(
+        mode="night",
+        operating_mode=operating_mode,
+    )
+    return_curve = trovis.rk1.heating_curve(
+        operating_mode=operating_mode,
+        curve="return",
+    )
+    day_return_curve = trovis.rk1.heating_curve(
+        mode="day",
+        operating_mode=operating_mode,
+        curve="return",
+    )
+    night_return_curve = trovis.rk1.heating_curve(
+        mode="night",
+        operating_mode=operating_mode,
+        curve="return",
+    )
+
+    assert flow_curve is not None
+    assert night_flow_curve is not None
+    assert return_curve is not None
+    assert day_return_curve is not None
+    assert night_return_curve is not None
+    assert return_curve == day_return_curve
+    assert day_return_curve != night_return_curve
+    assert len(flow_curve) == len(OUTDOOR_TEMPERATURES) == 41
+    assert len(return_curve) == len(night_return_curve) == 41
+    assert flow_curve[0] == pytest.approx(78.32)
+    assert flow_curve[20] == pytest.approx(57.08)
+    assert flow_curve[-1] == pytest.approx(26.4)
+    assert night_flow_curve[0] == pytest.approx(71.12)
+    assert night_flow_curve[20] == pytest.approx(49.88)
+    assert night_flow_curve[-1] == pytest.approx(20.0)
+    assert return_curve[0] == pytest.approx(55.0)
+    assert return_curve[20] == pytest.approx(47.3)
+    assert return_curve[-1] == pytest.approx(33.0)
+    assert night_return_curve[0] == pytest.approx(54.2)
+    assert night_return_curve[20] == pytest.approx(44.3)
+    assert night_return_curve[-1] == pytest.approx(30.0)
+
+
+async def test_equal_return_base_and_max_produce_fixed_limit(
+    trovis: Trovis557x,
+    mock_modbus_unit,  # noqa: ANN001
+) -> None:
+    """Use a constant return limit when P13 and P14 are equal."""
+    mock_modbus_unit.holding[1010] = 500  # HR41011 / P14 -> 50.0 °C
+    mock_modbus_unit.holding[1011] = 500  # HR41012 / P13 -> 50.0 °C
+    await trovis.async_update()
+
+    operating_mode = trovis.heating_circuit_operating_mode(1)
+    assert operating_mode is HeatingCircuitControlMode.HEATING_CURVE
+    return_curve = trovis.rk1.heating_curve(
+        operating_mode=operating_mode,
+        curve="return",
+    )
+    night_return_curve = trovis.rk1.heating_curve(
+        mode="night",
+        operating_mode=operating_mode,
+        curve="return",
+    )
+    assert return_curve == night_return_curve == [50.0] * len(OUTDOOR_TEMPERATURES)
+
+
+async def test_fixed_setpoint_heating_and_return_curves(
+    trovis: Trovis557x,
+    mock_modbus_unit,  # noqa: ANN001
+) -> None:
+    """Return constant flow and return curves for fixed set point control."""
+    mock_modbus_unit.coils[1025] = False
+    await trovis.async_update()
+
+    operating_mode = trovis.heating_circuit_operating_mode(1)
+    assert operating_mode is HeatingCircuitControlMode.FIXED_SETPOINT
+
+    flow_curve = trovis.rk1.heating_curve(operating_mode=operating_mode)
+    night_flow_curve = trovis.rk1.heating_curve(
+        mode="night",
+        operating_mode=operating_mode,
+    )
+    return_curve = trovis.rk1.heating_curve(
+        operating_mode=operating_mode,
+        curve="return",
+    )
+    day_return_curve = trovis.rk1.heating_curve(
+        mode="day",
+        operating_mode=operating_mode,
+        curve="return",
+    )
+    night_return_curve = trovis.rk1.heating_curve(
+        mode="night",
+        operating_mode=operating_mode,
+        curve="return",
+    )
+
+    assert flow_curve == [60.0] * 41
+    assert night_flow_curve == [50.0] * 41
+    assert return_curve == day_return_curve == night_return_curve == [45.0] * 41
+
+
+async def test_four_point_heating_and_return_curves(
+    trovis: Trovis557x,
+    mock_modbus_unit,  # noqa: ANN001
+) -> None:
+    """Interpolate the active four-point characteristics with flat ends."""
+    mock_modbus_unit.coils[1034] = True
+    await trovis.async_update()
+
+    operating_mode = trovis.heating_circuit_operating_mode(1)
+    assert operating_mode is HeatingCircuitControlMode.FOUR_POINT
+
+    flow_curve = trovis.rk1.heating_curve(operating_mode=operating_mode)
+    night_flow_curve = trovis.rk1.heating_curve(
+        mode="night",
+        operating_mode=operating_mode,
+    )
+    return_curve = trovis.rk1.heating_curve(
+        operating_mode=operating_mode,
+        curve="return",
+    )
+    day_return_curve = trovis.rk1.heating_curve(
+        mode="day",
+        operating_mode=operating_mode,
+        curve="return",
+    )
+    night_return_curve = trovis.rk1.heating_curve(
+        mode="night",
+        operating_mode=operating_mode,
+        curve="return",
+    )
+
+    assert flow_curve is not None
+    assert night_flow_curve is not None
+    assert return_curve is not None
+    assert flow_curve[0] == pytest.approx(70.0)
+    assert flow_curve[5] == pytest.approx(70.0)
+    assert flow_curve[-1] == pytest.approx(25.0)
+    assert night_flow_curve[0] == pytest.approx(60.0)
+    assert night_flow_curve[5] == pytest.approx(60.0)
+    assert night_flow_curve[-1] == pytest.approx(20.0)
+    assert return_curve == day_return_curve == night_return_curve == [65.0] * 41
+
+
+async def test_four_point_curve_rejects_invalid_outdoor_axis(
+    trovis: Trovis557x,
+    mock_modbus_unit,  # noqa: ANN001
+) -> None:
+    """Report a calculation error for duplicate or unordered outdoor points."""
+    mock_modbus_unit.coils[1034] = True
+    mock_modbus_unit.holding[1013] = 0xFF6A  # P2 duplicates P1 (-15.0 °C)
+    await trovis.async_update()
+
+    operating_mode = trovis.heating_circuit_operating_mode(1)
+    assert operating_mode is HeatingCircuitControlMode.FOUR_POINT
+    assert trovis.rk1.heating_curve(operating_mode=operating_mode) is None
+    assert (
+        trovis.rk1.heating_curve(
+            operating_mode=operating_mode,
+            curve="return",
+        )
+        is None
+    )
+
+
+def test_four_point_characteristic_fields_have_expected_limits() -> None:
+    device = Trovis557x(unit=None)  # type: ignore[arg-type]
+    rk1 = device.rk1
+
+    expected_ranges = {
+        "four_point_outdoor_temperature_1": (-50, 50),
+        "four_point_flow_temperature_day_1": (-5, 150),
+        "four_point_flow_temperature_night_1": (-5, 150),
+        "four_point_return_flow_temperature_1": (5, 90),
+    }
+    for field, (minimum, maximum) in expected_ranges.items():
+        metadata = rk1.require_metadata_for(field)
+        assert metadata.writable is True
+        assert metadata.number is not None
+        assert metadata.number.min_value == minimum
+        assert metadata.number.max_value == maximum
+        assert metadata.number.step == pytest.approx(0.1)
 
 
 def test_domestic_hot_water_special_setpoint_is_distinct_from_active_setpoint() -> None:

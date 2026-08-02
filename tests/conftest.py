@@ -62,6 +62,29 @@ HOLDING: dict[int, int] = {
     1004: 210,  # rk1 room_setpoint_active -> 21.0
     1005: 12,  # rk1 gradient -> 1.2
     1006: 0,  # rk1 level -> 0.0
+    1008: 5,  # rk1 return gradient -> 0.5
+    1009: 20,  # rk1 return level -> 2.0 K
+    1010: 550,  # rk1 maximum return temperature -> 55.0 °C
+    1011: 300,  # rk1 return base point -> 30.0 °C
+    1012: 0xFF6A,  # rk1 four-point outdoor P1 -> -15.0 °C
+    1013: 0xFFCE,  # rk1 four-point outdoor P2 -> -5.0 °C
+    1014: 50,  # rk1 four-point outdoor P3 -> 5.0 °C
+    1015: 150,  # rk1 four-point outdoor P4 -> 15.0 °C
+    1016: 700,  # rk1 four-point flow day P1 -> 70.0 °C
+    1017: 550,  # rk1 four-point flow day P2 -> 55.0 °C
+    1018: 400,  # rk1 four-point flow day P3 -> 40.0 °C
+    1019: 250,  # rk1 four-point flow day P4 -> 25.0 °C
+    1020: 600,  # rk1 four-point flow night P1 -> 60.0 °C
+    1021: 400,  # rk1 four-point flow night P2 -> 40.0 °C
+    1022: 200,  # rk1 four-point flow night P3 -> 20.0 °C
+    1023: 200,  # rk1 four-point flow night P4 -> 20.0 °C
+    1024: 650,  # rk1 four-point return P1 -> 65.0 °C
+    1025: 650,  # rk1 four-point return P2 -> 65.0 °C
+    1026: 650,  # rk1 four-point return P3 -> 65.0 °C
+    1027: 650,  # rk1 four-point return P4 -> 65.0 °C
+    1032: 450,  # rk1 current return setpoint -> 45.0 °C
+    1041: 600,  # rk1 fixed setpoint day -> 60.0 °C
+    1042: 500,  # rk1 fixed setpoint night -> 50.0 °C
     1199: 480,  # rk2 flow_setpoint -> 48.0
     1799: 500,  # rk4 setpoint_day -> 50.0
     1802: 50,  # rk4 hysteresis -> 5.0 K
@@ -87,6 +110,10 @@ COILS: dict[int, bool] = {
     158: False,  # CL159 / GLT timeout inactive
     999: True,  # rk1 automatic
     1000: True,  # rk1 day active
+    1025: True,  # CL1026 / CO1 -> F02: outdoor sensor enabled
+    1034: False,  # CL1035 / CO1 -> F11: gradient characteristic
+    1234: False,  # CL1235 / CO2 -> F11: gradient characteristic
+    1434: False,  # CL1435 / CO3 -> F11: gradient characteristic
     1799: True,  # rk4 automatic
     1807: True,  # CL1808 / solar circuit pump active
     59: True,  # WW storage tank charging pump

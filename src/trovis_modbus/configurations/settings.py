@@ -96,6 +96,27 @@ class Functions(TrovisComponent):
         description="Outdoor sensor for Rk3 enabled",
     )
 
+    heating_circuit_1_four_point_characteristic_enabled = _function_selector(
+        1035,
+        maker_key="FB11_4P_HKL_Rk1",
+        maker_category="CON-BTR",
+        description="Four-point characteristic for Rk1 enabled",
+    )
+
+    heating_circuit_2_four_point_characteristic_enabled = _function_selector(
+        1235,
+        maker_key="FB11_4P_HKL_Rk2",
+        maker_category="CON-BTR",
+        description="Four-point characteristic for Rk2 enabled",
+    )
+
+    heating_circuit_3_four_point_characteristic_enabled = _function_selector(
+        1435,
+        maker_key="FB11_4P_HKL_Rk3",
+        maker_category="CON-BTR",
+        description="Four-point characteristic for Rk3 enabled",
+    )
+
     storage_sensor_2_enabled = _function_selector(
         402,
         maker_key="FB02_SF2",
@@ -144,6 +165,19 @@ class Functions(TrovisComponent):
             raise ValueError("heating circuit index must be in range 1..3")
 
         field = f"heating_circuit_{index}_outdoor_sensor_enabled"
+        if not self.is_field_readable(field):
+            return None
+        return getattr(self, field)
+
+    def heating_circuit_uses_four_point_characteristic(
+        self,
+        index: int,
+    ) -> bool | None:
+        """Return whether Rk1 through Rk3 uses the four-point characteristic."""
+        if not 1 <= index <= 3:
+            raise ValueError("heating circuit index must be in range 1..3")
+
+        field = f"heating_circuit_{index}_four_point_characteristic_enabled"
         if not self.is_field_readable(field):
             return None
         return getattr(self, field)

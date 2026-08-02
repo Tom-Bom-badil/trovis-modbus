@@ -32,7 +32,11 @@ from .data_model import (
     async_read_writing_enabled,
 )
 from .device_info import DeviceInformation
-from .enums import ControlCircuitRole, SystemActivity
+from .enums import (
+    ControlCircuitRole,
+    HeatingCircuitControlMode,
+    SystemActivity,
+)
 from .subsystems import (
     BufferTankCircuit,
     Clock,
@@ -241,6 +245,41 @@ class Trovis557x:
         if not 1 <= index <= len(self._control_circuits):
             raise ValueError(f"Rk{index} is not available on this controller")
         return self.functions.heating_circuit_uses_outdoor_sensor(index)
+
+    def heating_circuit_uses_four_point_characteristic(
+        self,
+        index: int,
+    ) -> bool | None:
+        """Return whether one active Rk1-Rk3 slot uses a four-point curve.
+
+        The selector is relevant only when COx -> F02 enables weather
+        compensation. ``False`` selects the gradient characteristic, ``True``
+        selects the four-point characteristic and ``None`` keeps callers on
+        the established gradient-characteristic fallback.
+        """
+        if not 1 <= index <= len(self._control_circuits):
+            raise ValueError(f"Rk{index} is not available on this controller")
+        return self.functions.heating_circuit_uses_four_point_characteristic(index)
+
+    def heating_circuit_operating_mode(
+        self,
+        index: int,
+    ) -> HeatingCircuitControlMode | None:
+        """Return the active setpoint-generation mode for one heating circuit.
+
+        COx -> F02 disables weather compensation and selects fixed set point
+        control. With weather compensation active, COx -> F11 selects the
+        four-point characteristic; an unavailable F11 selector retains the
+        established gradient-characteristic fallback.
+        """
+        uses_outdoor_sensor = self.heating_circuit_uses_outdoor_sensor(index)
+        if uses_outdoor_sensor is None:
+            return None
+        if not uses_outdoor_sensor:
+            return HeatingCircuitControlMode.FIXED_SETPOINT
+        if self.heating_circuit_uses_four_point_characteristic(index) is True:
+            return HeatingCircuitControlMode.FOUR_POINT
+        return HeatingCircuitControlMode.HEATING_CURVE
 
     @property
     def has_rk4(self) -> bool:

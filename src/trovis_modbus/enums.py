@@ -29,6 +29,14 @@ class ControlCircuitRole(StrEnum):
     DOMESTIC_HOT_WATER = "domestic_hot_water"
 
 
+class HeatingCircuitControlMode(StrEnum):
+    """Setpoint-generation mode used by one heating circuit."""
+
+    HEATING_CURVE = "heating_curve"
+    FOUR_POINT = "four_point"
+    FIXED_SETPOINT = "fixed_setpoint"
+
+
 class OperatingMode(IntEnum):
     """Operating mode of a heating circuit, domestic hot water, or rotary switch.
 

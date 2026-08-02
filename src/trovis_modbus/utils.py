@@ -100,13 +100,20 @@ def heating_curve(
     offset: float,
     minimum_flow_temperature: float,
     maximum_flow_temperature: float,
+    base_temperature: float = 24.0,
 ) -> list[float]:
-    """Calculate flow temperatures for outdoor temperatures from -20 to 20 °C."""
+    """Calculate a temperature characteristic for outdoor temperatures -20..20 °C.
+
+    ``base_temperature`` is the characteristic value at 20 °C outdoor and
+    20 °C room setpoint before applying ``offset``. The TROVIS flow
+    characteristic uses 24 °C; the return characteristic uses its configured
+    return-flow base point.
+    """
     curve: list[float] = []
     for outdoor_temperature in OUTDOOR_TEMPERATURES:
         shifted = outdoor_temperature - 20
         flow = (
-            24
+            base_temperature
             + offset
             + 2 * slope * (room_setpoint - 20)
             - (0.1 + 0.9 * slope) * (1.5 * shifted + 0.01 * (shifted * shifted))
