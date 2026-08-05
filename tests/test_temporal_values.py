@@ -50,17 +50,17 @@ def test_temporal_metadata(trovis: Trovis557x) -> None:
 
 
 def test_temporal_codecs(trovis: Trovis557x) -> None:
-    time_field = trovis.clock._register_fields["time"]
+    time_field = trovis.clock.declared_fields["time"]
     assert time_field.decode([1430]) == time(14, 30)
     assert time_field.decode([2360]) is None
     assert time_field.encode(time(8, 5)) == [805]
 
-    date_field = trovis.clock._register_fields["date"]
+    date_field = trovis.clock.declared_fields["date"]
     assert date_field.decode([2106, 2026]) == date(2026, 6, 21)
     assert date_field.decode([3102, 2025]) is None
     assert date_field.encode(date(2027, 1, 2)) == [201, 2027]
 
-    month_day_field = trovis.controller._register_fields["summer_start"]
+    month_day_field = trovis.controller.declared_fields["summer_start"]
     assert month_day_field.decode([1505]) == MonthDay(15, 5)
     assert month_day_field.decode([3102]) is None
     assert month_day_field.encode(MonthDay(29, 2)) == [2902]
@@ -109,7 +109,7 @@ def test_time_rejects_subminute_precision(
     trovis: Trovis557x,
     value: time,
 ) -> None:
-    field = trovis.clock._register_fields["time"]
+    field = trovis.clock.declared_fields["time"]
     with pytest.raises(TrovisValueValidationError):
         field.encode(value)
 
@@ -117,13 +117,13 @@ def test_time_rejects_subminute_precision(
 def test_disinfection_time_rejects_out_of_range_value(
     trovis: Trovis557x,
 ) -> None:
-    field = trovis.rk4._register_fields["disinfection_start"]
+    field = trovis.rk4.declared_fields["disinfection_start"]
     assert field.decode([2350]) is None
     with pytest.raises(TrovisValueValidationError):
         field.encode(time(23, 50))
 
 
 def test_date_rejects_unsupported_year(trovis: Trovis557x) -> None:
-    field = trovis.clock._register_fields["date"]
+    field = trovis.clock.declared_fields["date"]
     with pytest.raises(TrovisValueValidationError):
         field.encode(date(2099, 1, 1))

@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import date, time
 
 import pytest
+from modbus_connection import ClientClosedError
 from modbus_connection.mock import MockModbusConnection, MockModbusUnit
 
 from trovis_modbus import (
@@ -166,9 +167,7 @@ async def test_full_update_consolidates_reads() -> None:
     unit = _CountingUnit(inner)
     device = Trovis557x(unit)  # type: ignore[arg-type]
 
-    field_count = sum(
-        len(c._register_fields) + len(c._bit_fields) for c in device.components
-    )
+    field_count = sum(len(c.readable_field_names) for c in device.components)
     await device.async_update()
 
     # Many fields collapse into a small number of range-aware block reads — far
@@ -216,6 +215,38 @@ async def test_consolidated_reads_decode_correctly() -> None:
     assert device.sensors.vf1 == pytest.approx(30.0)
     assert device.sensors.vf2 == pytest.approx(31.0)
     assert device.sensors.vf3 == pytest.approx(32.0)
+
+
+async def test_update_survives_a_dropped_connection() -> None:
+    """A dropped link heals on the next update — the device is not rebuilt."""
+    connection = MockModbusConnection()
+    unit = connection.for_unit(1)
+    unit.holding.update(HOLDING)
+    unit.coils.update(COILS)
+    device = Trovis557x(unit)
+    await device.async_update()
+    assert device.rk1.flow_setpoint == pytest.approx(55.0)
+
+    lost: list[int] = []
+    connection.on_connection_lost(lambda: lost.append(1))
+    connection.simulate_connection_lost()
+    assert lost == [1]
+
+    # The same device and unit handles keep working; the request reconnects.
+    await device.async_update()
+    assert device.rk1.flow_setpoint == pytest.approx(55.0)
+
+
+async def test_update_after_close_raises() -> None:
+    """Closing is the owner's permanent end of the connection, not a drop."""
+    connection = MockModbusConnection()
+    unit = connection.for_unit(1)
+    unit.holding.update(HOLDING)
+    device = Trovis557x(unit)
+    await connection.close()
+
+    with pytest.raises(ClientClosedError):
+        await device.async_update()
 
 
 async def test_update_listener(trovis: Trovis557x) -> None:

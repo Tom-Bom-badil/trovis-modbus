@@ -746,13 +746,7 @@ class TrovisComponent(Component):
 
     def _ensure_read_layout_is_configurable(self) -> None:
         """Reject availability changes after the read layout was built."""
-        cached_layout = {
-            "_read_items",
-            "register_items",
-            "bit_items",
-            "_register_blocks",
-            "_bit_blocks",
-        } & self.__dict__.keys()
+        cached_layout = {"_read_items"} & self.__dict__.keys()
         if self.__dict__.get("_plan") is not None:
             cached_layout.add("_plan")
         if cached_layout:
@@ -846,9 +840,7 @@ class TrovisComponent(Component):
 
     def metadata_for(self, field: str) -> DatapointMetadata | None:
         """Return neutral TROVIS metadata for a declared field."""
-        descriptor = type(self)._register_fields.get(field)
-        if descriptor is None:
-            descriptor = type(self)._bit_fields.get(field)
+        descriptor = type(self).declared_fields.get(field)
         if descriptor is None:
             return None
         return getattr(descriptor, "trovis_metadata", None)
