@@ -820,14 +820,7 @@ class TrovisComponent(Component):
         if descriptor.scale_register is None:
             return True
 
-        scale_address = (
-            descriptor.scale_register
-            + descriptor.scale_register_stride * (self._index - 1)
-            + self._base_offset
-        )
-        if getattr(self, "scale_in_block", False):
-            scale_address += self._instance_offset
-        return is_span_readable(scale_address, 1, register_ranges)
+        return is_span_readable(self._scale_address(descriptor), 1, register_ranges)
 
     @property
     def readable_field_names(self) -> frozenset[str]:

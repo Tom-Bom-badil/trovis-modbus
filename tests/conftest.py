@@ -116,3 +116,13 @@ def trovis(mock_modbus_unit: MockModbusUnit) -> Trovis557x:
     mock_modbus_unit.holding.update(HOLDING)
     mock_modbus_unit.coils.update(COILS)
     return Trovis557x(mock_modbus_unit)
+
+
+@pytest.fixture
+def unit(mock_modbus_unit: MockModbusUnit) -> MockModbusUnit:
+    """The mock unit the ``trovis`` fixture reads and writes through.
+
+    Request it alongside ``trovis`` to assert on the register and coil stores a
+    write landed in, rather than reaching for the unit a component holds.
+    """
+    return mock_modbus_unit

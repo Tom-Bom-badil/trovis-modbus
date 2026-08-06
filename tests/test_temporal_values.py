@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime, time
 
 import pytest
+from modbus_connection.mock import MockModbusUnit
 
 from trovis_modbus import MonthDay, Trovis557x, TrovisValueValidationError
 
@@ -66,9 +67,7 @@ def test_temporal_codecs(trovis: Trovis557x) -> None:
     assert month_day_field.encode(MonthDay(29, 2)) == [2902]
 
 
-async def test_clock_native_writes(trovis: Trovis557x) -> None:
-    unit = trovis.clock._unit
-
+async def test_clock_native_writes(trovis: Trovis557x, unit: MockModbusUnit) -> None:
     await trovis.clock.set_time(time(8, 15))
     assert (await unit.read_holding_registers(99, 1))[0] == 815
 
@@ -88,10 +87,8 @@ async def test_datetime_write(trovis: Trovis557x) -> None:
 
 
 async def test_recurring_date_and_disinfection_writes(
-    trovis: Trovis557x,
+    trovis: Trovis557x, unit: MockModbusUnit
 ) -> None:
-    unit = trovis.controller._unit
-
     await trovis.controller.set_summer_start(MonthDay(1, 4))
     assert (await unit.read_holding_registers(112, 1))[0] == 104
 

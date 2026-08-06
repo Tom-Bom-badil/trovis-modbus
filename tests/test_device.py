@@ -181,34 +181,33 @@ async def test_full_update_consolidates_reads() -> None:
     assert all(count <= 50 for _, count in unit.coil_blocks)
 
 
-async def test_full_update_never_reads_across_an_unreadable_gap() -> None:
+async def test_full_update_never_reads_across_an_unreadable_gap(
+    unit: MockModbusUnit,
+) -> None:
     """Every block stays inside the controller's readable ranges (no NAK risk)."""
-    inner = MockModbusConnection().for_unit(1)
-    unit = _CountingUnit(inner)
-    device = Trovis557x(unit)  # type: ignore[arg-type]
-    await device.async_update()
+    device = Trovis557x(unit)
+    # async_read_raw reports every address the pooled read touched, so a block
+    # spanning a gap shows up as a read of an address no range declares.
+    raw = await device._group.async_read_raw()
+    read = set(raw["holding"])
 
-    def readable(address: int) -> bool:
-        return any(low <= address <= high for low, high in REGISTER_RANGES)
-
-    for start, count in unit.register_blocks:
-        assert all(readable(start + i) for i in range(count)), (
-            f"block {start}..{start + count - 1} crosses an unreadable gap"
-        )
+    unreadable = {
+        address
+        for address in read
+        if not any(low <= address <= high for low, high in REGISTER_RANGES)
+    }
+    assert not unreadable, f"read addresses outside every readable range: {unreadable}"
     # Addresses 7-8 (between ranges [0,6] and [9,40]) are never read — the low
     # registers split there instead of being merged into one 0..26 block.
-    read = {start + i for start, count in unit.register_blocks for i in range(count)}
     assert 7 not in read and 8 not in read
 
 
-async def test_consolidated_reads_decode_correctly() -> None:
+async def test_consolidated_reads_decode_correctly(unit: MockModbusUnit) -> None:
     """Adjacent physical sensor registers decode to the right sensor inputs."""
-    inner = MockModbusConnection().for_unit(1)
     # Flow sensors VF1/VF2/VF3 are at adjacent addresses 12/13/14 — fetched in
     # one block, then decoded on the central Sensors component.
-    inner.holding.update({12: 300, 13: 310, 14: 320})
-    unit = _CountingUnit(inner)
-    device = Trovis557x(unit)  # type: ignore[arg-type]
+    unit.holding.update({12: 300, 13: 310, 14: 320})
+    device = Trovis557x(unit)
 
     await device.async_update()
 
@@ -276,10 +275,10 @@ async def test_write_rejects_readonly(trovis: Trovis557x) -> None:
         await trovis.rk1.write("flow_setpoint", 50.0)
 
 
-async def test_mode_write_releases_override_coil(trovis: Trovis557x) -> None:
+async def test_mode_write_releases_override_coil(
+    trovis: Trovis557x, unit: MockModbusUnit
+) -> None:
     """Setting the mode first releases the Ebene coil (0 = remote control)."""
-    unit = trovis.rk1._unit
-
     await trovis.async_enable_writing()
     await unit.write_coil(88, True)  # start "autonomous" (controller-controlled)
     await trovis.rk1.set_mode(OperatingMode.DAY)
@@ -289,18 +288,19 @@ async def test_mode_write_releases_override_coil(trovis: Trovis557x) -> None:
     assert (await unit.read_holding_registers(105, 1))[0] == int(OperatingMode.DAY)
 
 
-async def test_circuit2_mode_uses_strided_override(trovis: Trovis557x) -> None:
+async def test_circuit2_mode_uses_strided_override(
+    trovis: Trovis557x, unit: MockModbusUnit
+) -> None:
     """Circuit 2's override coil follows the +2 stride (90, not 88)."""
-    unit = trovis.rk2._unit
     await unit.write_coil(90, True)
     await trovis.rk2.set_mode(OperatingMode.NIGHT)
     assert (await unit.read_coils(90, 1))[0] is False
     assert (await unit.read_holding_registers(107, 1))[0] == int(OperatingMode.NIGHT)
 
 
-async def test_write_access_enable_disable(trovis: Trovis557x) -> None:
-    unit = trovis.controller._unit
-
+async def test_write_access_enable_disable(
+    trovis: Trovis557x, unit: MockModbusUnit
+) -> None:
     assert await trovis.async_read_writing_enabled() is False
 
     await trovis.async_enable_writing()
@@ -312,10 +312,10 @@ async def test_write_access_enable_disable(trovis: Trovis557x) -> None:
     assert (await unit.read_holding_registers(144, 1))[0] == 0
 
 
-async def test_write_refreshes_access_code(trovis: Trovis557x) -> None:
+async def test_write_refreshes_access_code(
+    trovis: Trovis557x, unit: MockModbusUnit
+) -> None:
     """The public write path refreshes HR40145 before writing the datapoint."""
-    unit = trovis.controller._unit
-
     assert await trovis.async_read_writing_enabled() is False
 
     await trovis.rk1.set_room_setpoint_day(21.5)
