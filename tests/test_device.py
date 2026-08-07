@@ -17,37 +17,12 @@ from trovis_modbus import (
     Trovis557x,
     Weekday,
 )
-from trovis_modbus.configurations.address_ranges import REGISTER_RANGES
+from trovis_modbus.configurations.address_ranges import (
+    COIL_RANGES,
+    REGISTER_RANGES,
+)
 
 from .conftest import COILS, HOLDING
-
-
-class _CountingUnit:
-    """Wraps a ModbusUnit and records read calls; delegates everything else."""
-
-    def __init__(self, inner: MockModbusUnit) -> None:
-        self._inner = inner
-        self.register_blocks: list[tuple[int, int]] = []
-        self.coil_blocks: list[tuple[int, int]] = []
-
-    @property
-    def register_reads(self) -> int:
-        return len(self.register_blocks)
-
-    @property
-    def coil_reads(self) -> int:
-        return len(self.coil_blocks)
-
-    async def read_holding_registers(self, address: int, count: int) -> list[int]:
-        self.register_blocks.append((address, count))
-        return await self._inner.read_holding_registers(address, count)
-
-    async def read_coils(self, address: int, count: int) -> list[bool]:
-        self.coil_blocks.append((address, count))
-        return await self._inner.read_coils(address, count)
-
-    def __getattr__(self, name: str) -> object:
-        return getattr(self._inner, name)
 
 
 async def test_device_info(trovis: Trovis557x) -> None:
@@ -159,46 +134,46 @@ async def test_independent_component_update(trovis: Trovis557x) -> None:
     assert trovis.rk1.flow_setpoint is None  # not updated yet
 
 
-async def test_full_update_consolidates_reads() -> None:
+async def test_full_update_consolidates_reads(
+    trovis: Trovis557x, unit: MockModbusUnit
+) -> None:
     """A full device update pools all sub-systems into a few block reads."""
-    inner = MockModbusConnection().for_unit(1)
-    inner.holding.update(HOLDING)
-    inner.coils.update(COILS)
-    unit = _CountingUnit(inner)
-    device = Trovis557x(unit)  # type: ignore[arg-type]
-
-    field_count = sum(len(c.readable_field_names) for c in device.components)
-    await device.async_update()
+    field_count = sum(len(c.readable_field_names) for c in trovis.components)
+    await trovis.async_update()
 
     # Many fields collapse into a small number of range-aware block reads — far
     # fewer than the field count, and well under a naive per-field strategy.
-    total_reads = unit.register_reads + unit.coil_reads
-    assert total_reads < field_count // 4
+    assert len(unit.read_events) < field_count // 4
 
     # The exact number of blocks may change when manufacturer ranges or the
     # planner improve. The stable safety guarantee is the configured max_span.
-    assert all(count <= 50 for _, count in unit.register_blocks)
-    assert all(count <= 50 for _, count in unit.coil_blocks)
+    assert all(event.count <= 50 for event in unit.read_events)
 
 
 async def test_full_update_never_reads_across_an_unreadable_gap(
-    unit: MockModbusUnit,
+    trovis: Trovis557x, unit: MockModbusUnit
 ) -> None:
     """Every block stays inside the controller's readable ranges (no NAK risk)."""
-    device = Trovis557x(unit)
-    # async_read_raw reports every address the pooled read touched, so a block
-    # spanning a gap shows up as a read of an address no range declares.
-    raw = await device._group.async_read_raw()
-    read = set(raw["holding"])
+    await trovis.async_update()
 
-    unreadable = {
-        address
-        for address in read
-        if not any(low <= address <= high for low, high in REGISTER_RANGES)
-    }
-    assert not unreadable, f"read addresses outside every readable range: {unreadable}"
+    ranges = {"holding": REGISTER_RANGES, "coil": COIL_RANGES}
+    for event in unit.read_events:
+        declared = ranges[event.register_type]
+        covered = range(event.address, event.address + event.count)
+        assert all(
+            any(low <= address <= high for low, high in declared) for address in covered
+        ), (
+            f"{event.register_type} block {covered.start}..{covered.stop - 1} "
+            "crosses an unreadable gap"
+        )
     # Addresses 7-8 (between ranges [0,6] and [9,40]) are never read — the low
     # registers split there instead of being merged into one 0..26 block.
+    read = {
+        event.address + i
+        for event in unit.read_events
+        if event.register_type == "holding"
+        for i in range(event.count)
+    }
     assert 7 not in read and 8 not in read
 
 
