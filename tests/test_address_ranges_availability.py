@@ -33,10 +33,7 @@ def test_ranges_must_be_configured_before_read_layout(
     from trovis_modbus import Functions
 
     functions = Functions(mock_modbus_unit)
-    if hasattr(type(functions), "register_items"):
-        _ = functions.register_items
-    else:
-        _ = functions._read_items
+    _ = functions._read_items  # build and cache the read layout
 
     register_ranges, coil_ranges = ranges_for_model(5578)
     try:

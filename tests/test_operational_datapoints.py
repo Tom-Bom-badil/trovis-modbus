@@ -27,39 +27,33 @@ def test_heating_circuit_stride_patterns() -> None:
     rk2 = device.rk2
     rk3 = device.rk3
 
-    assert rk1._address(rk1._bit_fields["valve_closing"]) == 61
-    assert rk2._address(rk2._bit_fields["valve_closing"]) == 63
-    assert rk3._address(rk3._bit_fields["valve_closing"]) == 65
+    assert rk1._address(rk1.declared_fields["valve_closing"]) == 61
+    assert rk2._address(rk2.declared_fields["valve_closing"]) == 63
+    assert rk3._address(rk3.declared_fields["valve_closing"]) == 65
 
-    assert rk1._address(rk1._register_fields["fixed_setpoint_day"]) == 1041
-    assert rk2._address(rk2._register_fields["fixed_setpoint_day"]) == 1241
-    assert rk3._address(rk3._register_fields["fixed_setpoint_day"]) == 1441
+    assert rk1._address(rk1.declared_fields["fixed_setpoint_day"]) == 1041
+    assert rk2._address(rk2.declared_fields["fixed_setpoint_day"]) == 1241
+    assert rk3._address(rk3.declared_fields["fixed_setpoint_day"]) == 1441
 
+    assert rk1._address(rk1.declared_fields["four_point_outdoor_temperature_1"]) == 1012
+    assert rk2._address(rk2.declared_fields["four_point_outdoor_temperature_1"]) == 1212
+    assert rk3._address(rk3.declared_fields["four_point_outdoor_temperature_1"]) == 1412
     assert (
-        rk1._address(rk1._register_fields["four_point_outdoor_temperature_1"]) == 1012
-    )
-    assert (
-        rk2._address(rk2._register_fields["four_point_outdoor_temperature_1"]) == 1212
-    )
-    assert (
-        rk3._address(rk3._register_fields["four_point_outdoor_temperature_1"]) == 1412
-    )
-    assert (
-        rk1._address(rk1._register_fields["four_point_return_flow_temperature_4"])
+        rk1._address(rk1.declared_fields["four_point_return_flow_temperature_4"])
         == 1027
     )
     assert (
-        rk2._address(rk2._register_fields["four_point_return_flow_temperature_4"])
+        rk2._address(rk2.declared_fields["four_point_return_flow_temperature_4"])
         == 1227
     )
     assert (
-        rk3._address(rk3._register_fields["four_point_return_flow_temperature_4"])
+        rk3._address(rk3.declared_fields["four_point_return_flow_temperature_4"])
         == 1427
     )
 
-    assert rk1._address(rk1._bit_fields["room_setpoint_control_autonomous"]) == 121
-    assert rk2._address(rk2._bit_fields["room_setpoint_control_autonomous"]) == 122
-    assert rk3._address(rk3._bit_fields["room_setpoint_control_autonomous"]) == 123
+    assert rk1._address(rk1.declared_fields["room_setpoint_control_autonomous"]) == 121
+    assert rk2._address(rk2.declared_fields["room_setpoint_control_autonomous"]) == 122
+    assert rk3._address(rk3.declared_fields["room_setpoint_control_autonomous"]) == 123
 
 
 def test_return_characteristic_parameters_are_writable() -> None:
@@ -73,7 +67,7 @@ def test_return_characteristic_parameters_are_writable() -> None:
             "return_flow_base_point",
             "maximum_return_flow_temperature",
         ):
-            descriptor = circuit._register_fields[field]
+            descriptor = circuit.declared_fields[field]
             metadata = circuit.require_metadata_for(field)
 
             assert descriptor.writable
@@ -86,19 +80,19 @@ def test_heating_circuit_outdoor_sensor_function_selectors() -> None:
 
     assert (
         functions._address(
-            functions._bit_fields["heating_circuit_1_outdoor_sensor_enabled"]
+            functions.declared_fields["heating_circuit_1_outdoor_sensor_enabled"]
         )
         == 1025
     )
     assert (
         functions._address(
-            functions._bit_fields["heating_circuit_2_outdoor_sensor_enabled"]
+            functions.declared_fields["heating_circuit_2_outdoor_sensor_enabled"]
         )
         == 1225
     )
     assert (
         functions._address(
-            functions._bit_fields["heating_circuit_3_outdoor_sensor_enabled"]
+            functions.declared_fields["heating_circuit_3_outdoor_sensor_enabled"]
         )
         == 1425
     )
@@ -114,7 +108,7 @@ def test_heating_circuit_four_point_function_selectors() -> None:
 
     for index, address in ((1, 1034), (2, 1234), (3, 1434)):
         field = f"heating_circuit_{index}_four_point_characteristic_enabled"
-        assert functions._address(functions._bit_fields[field]) == address
+        assert functions._address(functions.declared_fields[field]) == address
 
     assert device.heating_circuit_uses_four_point_characteristic(1) is None
     with pytest.raises(ValueError, match="Rk4 is not available"):
@@ -317,8 +311,8 @@ def test_domestic_hot_water_special_setpoint_is_distinct_from_active_setpoint() 
     device = Trovis557x(unit=None)  # type: ignore[arg-type]
     rk4 = device.rk4
 
-    assert rk4._address(rk4._register_fields["setpoint_active"]) == 1807
-    assert rk4._address(rk4._register_fields["special_setpoint"]) == 1808
+    assert rk4._address(rk4.declared_fields["setpoint_active"]) == 1807
+    assert rk4._address(rk4.declared_fields["special_setpoint"]) == 1808
     assert rk4.ebene_coils["special_setpoint"] == (112, 0)
 
 
@@ -346,11 +340,11 @@ def test_legacy_gap_registers_and_intermediate_heating_points() -> None:
     controller = device.controller
     rk4 = device.rk4
 
-    assert controller._address(controller._register_fields["special_functions"]) == 4
+    assert controller._address(controller.declared_fields["special_functions"]) == 4
 
     overrun = rk4.require_metadata_for("storage_tank_charging_pump_lag_factor")
     assert (
-        rk4._address(rk4._register_fields["storage_tank_charging_pump_lag_factor"])
+        rk4._address(rk4.declared_fields["storage_tank_charging_pump_lag_factor"])
         == 1804
     )
     assert overrun.writable is True
@@ -359,28 +353,31 @@ def test_legacy_gap_registers_and_intermediate_heating_points() -> None:
     assert overrun.number.max_value == pytest.approx(10.0)
     assert overrun.number.step == pytest.approx(0.1)
 
-    assert rk4._address(rk4._bit_fields["intermediate_heating_function_enabled"]) == 406
-    assert rk4._address(rk4._bit_fields["intermediate_heating_operation"]) == 1830
+    assert (
+        rk4._address(rk4.declared_fields["intermediate_heating_function_enabled"])
+        == 406
+    )
+    assert rk4._address(rk4.declared_fields["intermediate_heating_operation"]) == 1830
 
 
 def test_additional_5578_sensor_addresses() -> None:
     sensors = Sensors(unit=None)  # type: ignore[arg-type]
 
-    assert sensors._address(sensors._register_fields["af2"]) == 10
-    assert sensors._address(sensors._register_fields["sf3"]) == 24
-    assert sensors._address(sensors._register_fields["ae1"]) == 25
-    assert sensors._address(sensors._register_fields["fg1"]) == 25
-    assert sensors._address(sensors._register_fields["ae2"]) == 26
-    assert sensors._address(sensors._register_fields["fg2"]) == 26
-    assert sensors._address(sensors._register_fields["ae3"]) == 27
-    assert sensors._address(sensors._register_fields["fg3"]) == 27
-    assert sensors._address(sensors._register_fields["pulse_rate"]) == 28
-    assert sensors._address(sensors._register_fields["analog_input_voltage"]) == 41
-    assert sensors._address(sensors._register_fields["analog_input_current"]) == 41
+    assert sensors._address(sensors.declared_fields["af2"]) == 10
+    assert sensors._address(sensors.declared_fields["sf3"]) == 24
+    assert sensors._address(sensors.declared_fields["ae1"]) == 25
+    assert sensors._address(sensors.declared_fields["fg1"]) == 25
+    assert sensors._address(sensors.declared_fields["ae2"]) == 26
+    assert sensors._address(sensors.declared_fields["fg2"]) == 26
+    assert sensors._address(sensors.declared_fields["ae3"]) == 27
+    assert sensors._address(sensors.declared_fields["fg3"]) == 27
+    assert sensors._address(sensors.declared_fields["pulse_rate"]) == 28
+    assert sensors._address(sensors.declared_fields["analog_input_voltage"]) == 41
+    assert sensors._address(sensors.declared_fields["analog_input_current"]) == 41
 
-    assert "ae1_fg1" not in sensors._register_fields
-    assert "ae2_fg2" not in sensors._register_fields
-    assert "ae3_fg3" not in sensors._register_fields
+    assert "ae1_fg1" not in sensors.declared_fields
+    assert "ae2_fg2" not in sensors.declared_fields
+    assert "ae3_fg3" not in sensors.declared_fields
 
     for field in ("ae1", "fg1", "ae2", "fg2", "ae3", "fg3"):
         metadata = sensors.require_metadata_for(field)
@@ -419,11 +416,11 @@ def test_controller_monitoring_metadata_and_timeout() -> None:
 
     timeout = controller.require_metadata_for("glt_timeout_active")
     assert timeout.writable is True
-    assert controller._address(controller._bit_fields["glt_timeout_active"]) == 158
+    assert controller._address(controller.declared_fields["glt_timeout_active"]) == 158
 
     assert (
         controller._address(
-            controller._register_fields["summer_outdoor_temperature_average"]
+            controller.declared_fields["summer_outdoor_temperature_average"]
         )
         == 42
     )
@@ -433,15 +430,14 @@ def test_solar_circuit_uses_dedicated_register_and_coil_block() -> None:
     solar = SolarCircuit(unit=None)  # type: ignore[arg-type]
 
     assert (
-        solar._address(solar._register_fields["pump_on_temperature_difference"]) == 1809
+        solar._address(solar.declared_fields["pump_on_temperature_difference"]) == 1809
     )
     assert (
-        solar._address(solar._register_fields["pump_off_temperature_difference"])
-        == 1810
+        solar._address(solar.declared_fields["pump_off_temperature_difference"]) == 1810
     )
-    assert solar._address(solar._register_fields["maximum_storage_temperature"]) == 1811
-    assert solar._address(solar._register_fields["operating_hours"]) == 1812
-    assert solar._address(solar._bit_fields["pump_running"]) == 1807
+    assert solar._address(solar.declared_fields["maximum_storage_temperature"]) == 1811
+    assert solar._address(solar.declared_fields["operating_hours"]) == 1812
+    assert solar._address(solar.declared_fields["pump_running"]) == 1807
 
     pump_on = solar.require_metadata_for("pump_on_temperature_difference")
     assert pump_on.writable is True
@@ -467,10 +463,10 @@ def test_solar_circuit_uses_dedicated_register_and_coil_block() -> None:
 def test_solar_datapoints_are_no_longer_owned_by_rk4() -> None:
     device = Trovis557x(unit=None)  # type: ignore[arg-type]
 
-    assert "solar_operating_hours" not in device.rk4._register_fields
-    assert "solar_circuit_pump_running" not in device.rk4._bit_fields
-    assert "operating_hours" in device.solar._register_fields
-    assert "pump_running" in device.solar._bit_fields
+    assert "solar_operating_hours" not in device.rk4.declared_fields
+    assert "solar_circuit_pump_running" not in device.rk4.declared_fields
+    assert "operating_hours" in device.solar.declared_fields
+    assert "pump_running" in device.solar.declared_fields
 
 
 def test_buffer_tank_status_enum_matches_firmware_values() -> None:
@@ -481,22 +477,22 @@ def test_buffer_tank_circuit_uses_rk1_extension_registers() -> None:
     buffer_tank = BufferTankCircuit(unit=None)  # type: ignore[arg-type]
 
     assert (
-        buffer_tank._address(buffer_tank._register_fields["minimum_charging_setpoint"])
+        buffer_tank._address(buffer_tank.declared_fields["minimum_charging_setpoint"])
         == 1099
     )
     assert (
-        buffer_tank._address(buffer_tank._register_fields["charging_end_temperature"])
+        buffer_tank._address(buffer_tank.declared_fields["charging_end_temperature"])
         == 1100
     )
     assert (
-        buffer_tank._address(buffer_tank._register_fields["charging_temperature_boost"])
+        buffer_tank._address(buffer_tank.declared_fields["charging_temperature_boost"])
         == 1101
     )
     assert (
-        buffer_tank._address(buffer_tank._register_fields["charging_pump_lag_factor"])
+        buffer_tank._address(buffer_tank.declared_fields["charging_pump_lag_factor"])
         == 1102
     )
-    assert buffer_tank._address(buffer_tank._register_fields["status"]) == 1103
+    assert buffer_tank._address(buffer_tank.declared_fields["status"]) == 1103
 
     minimum = buffer_tank.require_metadata_for("minimum_charging_setpoint")
     assert minimum.writable is True
@@ -529,6 +525,6 @@ def test_buffer_tank_circuit_uses_rk1_extension_registers() -> None:
 def test_buffer_tank_extension_does_not_duplicate_rk1_fields() -> None:
     device = Trovis557x(unit=None)  # type: ignore[arg-type]
 
-    assert set(device.buffer_tank._register_fields).isdisjoint(
-        device.rk1._register_fields
+    assert set(device.buffer_tank.declared_fields).isdisjoint(
+        device.rk1.declared_fields
     )

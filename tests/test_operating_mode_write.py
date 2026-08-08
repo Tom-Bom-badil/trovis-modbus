@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from modbus_connection.mock import MockModbusUnit
+
 from trovis_modbus import OperatingMode, Trovis557x
 from trovis_modbus.enums import OPERATING_MODE_OPTIONS
 
@@ -18,10 +20,9 @@ def test_circuits_share_operating_mode_metadata(trovis: Trovis557x) -> None:
 
 
 async def test_heating_automatic_restores_autark_without_register_write(
-    trovis: Trovis557x,
+    trovis: Trovis557x, unit: MockModbusUnit
 ) -> None:
     """Automatic mode is selected through the Ebene coil, not the mode HR."""
-    unit = trovis.rk1._unit
     await unit.write_register(105, int(OperatingMode.DAY))
     await unit.write_coil(88, False)
 
@@ -32,10 +33,9 @@ async def test_heating_automatic_restores_autark_without_register_write(
 
 
 async def test_domestic_hot_water_automatic_uses_its_own_ebene_coil(
-    trovis: Trovis557x,
+    trovis: Trovis557x, unit: MockModbusUnit
 ) -> None:
     """Domestic hot water restores AUTARK through CL95 and leaves HR40112 intact."""
-    unit = trovis.rk4._unit
     await unit.write_register(111, int(OperatingMode.NIGHT))
     await unit.write_coil(94, False)
 
