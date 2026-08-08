@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime, time
 
 import pytest
-from modbus_connection.mock import MockModbusUnit
+from modbus_connection.mock import MockModbusUnit, WriteEvent
 
 from trovis_modbus import MonthDay, Trovis557x, TrovisValueValidationError
 
@@ -78,6 +78,27 @@ async def test_clock_native_writes(trovis: Trovis557x, unit: MockModbusUnit) -> 
     await trovis.clock.async_update()
     assert trovis.clock.time == time(8, 15)
     assert trovis.clock.date == date(2027, 1, 2)
+
+
+async def test_clock_date_write_sends_the_year_first_as_two_single_writes(
+    trovis: Trovis557x, unit: MockModbusUnit
+) -> None:
+    """The 55Pro sequence: HR40102 then HR40101, never one FC16 across both.
+
+    Asserting the resulting register values cannot see the difference — a single
+    FC16 leaves the same two words behind — so this pins the function codes and
+    their order instead.
+    """
+    writes: list[WriteEvent] = []
+    unit.on_write(writes.append)
+
+    await trovis.clock.set_date(date(2027, 1, 2))
+
+    assert [
+        (event.address, event.values, event.function_code)
+        for event in writes
+        if event.address in (100, 101)
+    ] == [(101, [2027], 0x06), (100, [201], 0x06)]
 
 
 async def test_datetime_write(trovis: Trovis557x) -> None:

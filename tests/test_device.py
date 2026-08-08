@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, time
 
 import pytest
-from modbus_connection import ClientClosedError
+from modbus_connection import ClientClosedError, GatewayTargetError
 from modbus_connection.mock import MockModbusConnection, MockModbusUnit
 
 from trovis_modbus import (
@@ -15,6 +15,7 @@ from trovis_modbus import (
     SystemActivity,
     TemperatureRange,
     Trovis557x,
+    TrovisWriteAccessError,
     Weekday,
 )
 from trovis_modbus.configurations.address_ranges import (
@@ -211,6 +212,25 @@ async def test_update_survives_a_dropped_connection() -> None:
     assert device.rk1.flow_setpoint == pytest.approx(55.0)
 
 
+async def test_update_survives_a_recycled_connection() -> None:
+    """disconnect() recycles a stuck link; the device keeps its handles."""
+    connection = MockModbusConnection()
+    unit = connection.for_unit(1)
+    unit.holding.update(HOLDING)
+    unit.coils.update(COILS)
+    device = Trovis557x(unit)
+    await device.async_update()
+
+    lost: list[int] = []
+    connection.on_connection_lost(lambda: lost.append(1))
+    await connection.disconnect()
+
+    await device.async_update()
+    assert device.rk1.flow_setpoint == pytest.approx(55.0)
+    # The owner tore the link down; nothing was lost.
+    assert lost == []
+
+
 async def test_update_after_close_raises() -> None:
     """Closing is the owner's permanent end of the connection, not a drop."""
     connection = MockModbusConnection()
@@ -297,6 +317,27 @@ async def test_write_refreshes_access_code(
 
     assert (await unit.read_holding_registers(144, 1))[0] == 1732
     assert (await unit.read_holding_registers(1002, 1))[0] == 215
+
+
+async def test_write_access_reports_a_device_that_answers_nothing(
+    trovis: Trovis557x, unit: MockModbusUnit
+) -> None:
+    """Every HR40145 path reports a refusal as a TROVIS write-access failure."""
+    # A gateway that answers for itself while the controller behind it does not
+    # — the usual failure of a TROVIS on an RTU-over-TCP bridge.
+    unit.fail_requests(GatewayTargetError())
+
+    with pytest.raises(TrovisWriteAccessError):
+        await trovis.async_read_writing_enabled()
+    with pytest.raises(TrovisWriteAccessError):
+        await trovis.async_enable_writing()
+    with pytest.raises(TrovisWriteAccessError):
+        await trovis.async_disable_writing()
+    # The public datapoint write refreshes the access code first, so it fails
+    # there rather than reaching the register it was asked to write.
+    with pytest.raises(TrovisWriteAccessError):
+        await trovis.rk1.set_room_setpoint_day(21.5)
+    assert trovis.writing_enabled is False
 
 
 async def test_5576_anlage_2_1_exposes_rk1_and_rk4(
