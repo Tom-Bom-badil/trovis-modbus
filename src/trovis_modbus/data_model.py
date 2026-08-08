@@ -746,13 +746,7 @@ class TrovisComponent(Component):
 
     def _ensure_read_layout_is_configurable(self) -> None:
         """Reject availability changes after the read layout was built."""
-        cached_layout = {
-            "_read_items",
-            "register_items",
-            "bit_items",
-            "_register_blocks",
-            "_bit_blocks",
-        } & self.__dict__.keys()
+        cached_layout = {"_read_items"} & self.__dict__.keys()
         if self.__dict__.get("_plan") is not None:
             cached_layout.add("_plan")
         if cached_layout:
@@ -826,14 +820,7 @@ class TrovisComponent(Component):
         if descriptor.scale_register is None:
             return True
 
-        scale_address = (
-            descriptor.scale_register
-            + descriptor.scale_register_stride * (self._index - 1)
-            + self._base_offset
-        )
-        if getattr(self, "scale_in_block", False):
-            scale_address += self._instance_offset
-        return is_span_readable(scale_address, 1, register_ranges)
+        return is_span_readable(self._scale_address(descriptor), 1, register_ranges)
 
     @property
     def readable_field_names(self) -> frozenset[str]:
@@ -846,9 +833,7 @@ class TrovisComponent(Component):
 
     def metadata_for(self, field: str) -> DatapointMetadata | None:
         """Return neutral TROVIS metadata for a declared field."""
-        descriptor = type(self)._register_fields.get(field)
-        if descriptor is None:
-            descriptor = type(self)._bit_fields.get(field)
+        descriptor = type(self).declared_fields.get(field)
         if descriptor is None:
             return None
         return getattr(descriptor, "trovis_metadata", None)

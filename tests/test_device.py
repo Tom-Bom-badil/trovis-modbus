@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import date, time
 
 import pytest
+from modbus_connection import ClientClosedError, GatewayTargetError
 from modbus_connection.mock import MockModbusConnection, MockModbusUnit
 
 from trovis_modbus import (
@@ -14,39 +15,15 @@ from trovis_modbus import (
     SystemActivity,
     TemperatureRange,
     Trovis557x,
+    TrovisWriteAccessError,
     Weekday,
 )
-from trovis_modbus.configurations.address_ranges import REGISTER_RANGES
+from trovis_modbus.configurations.address_ranges import (
+    COIL_RANGES,
+    REGISTER_RANGES,
+)
 
 from .conftest import COILS, HOLDING
-
-
-class _CountingUnit:
-    """Wraps a ModbusUnit and records read calls; delegates everything else."""
-
-    def __init__(self, inner: MockModbusUnit) -> None:
-        self._inner = inner
-        self.register_blocks: list[tuple[int, int]] = []
-        self.coil_blocks: list[tuple[int, int]] = []
-
-    @property
-    def register_reads(self) -> int:
-        return len(self.register_blocks)
-
-    @property
-    def coil_reads(self) -> int:
-        return len(self.coil_blocks)
-
-    async def read_holding_registers(self, address: int, count: int) -> list[int]:
-        self.register_blocks.append((address, count))
-        return await self._inner.read_holding_registers(address, count)
-
-    async def read_coils(self, address: int, count: int) -> list[bool]:
-        self.coil_blocks.append((address, count))
-        return await self._inner.read_coils(address, count)
-
-    def __getattr__(self, name: str) -> object:
-        return getattr(self._inner, name)
 
 
 async def test_device_info(trovis: Trovis557x) -> None:
@@ -158,64 +135,112 @@ async def test_independent_component_update(trovis: Trovis557x) -> None:
     assert trovis.rk1.flow_setpoint is None  # not updated yet
 
 
-async def test_full_update_consolidates_reads() -> None:
+async def test_full_update_consolidates_reads(
+    trovis: Trovis557x, unit: MockModbusUnit
+) -> None:
     """A full device update pools all sub-systems into a few block reads."""
-    inner = MockModbusConnection().for_unit(1)
-    inner.holding.update(HOLDING)
-    inner.coils.update(COILS)
-    unit = _CountingUnit(inner)
-    device = Trovis557x(unit)  # type: ignore[arg-type]
-
-    field_count = sum(
-        len(c._register_fields) + len(c._bit_fields) for c in device.components
-    )
-    await device.async_update()
+    field_count = sum(len(c.readable_field_names) for c in trovis.components)
+    await trovis.async_update()
 
     # Many fields collapse into a small number of range-aware block reads — far
     # fewer than the field count, and well under a naive per-field strategy.
-    total_reads = unit.register_reads + unit.coil_reads
-    assert total_reads < field_count // 4
+    assert len(unit.read_events) < field_count // 4
 
     # The exact number of blocks may change when manufacturer ranges or the
     # planner improve. The stable safety guarantee is the configured max_span.
-    assert all(count <= 50 for _, count in unit.register_blocks)
-    assert all(count <= 50 for _, count in unit.coil_blocks)
+    assert all(event.count <= 50 for event in unit.read_events)
 
 
-async def test_full_update_never_reads_across_an_unreadable_gap() -> None:
+async def test_full_update_never_reads_across_an_unreadable_gap(
+    trovis: Trovis557x, unit: MockModbusUnit
+) -> None:
     """Every block stays inside the controller's readable ranges (no NAK risk)."""
-    inner = MockModbusConnection().for_unit(1)
-    unit = _CountingUnit(inner)
-    device = Trovis557x(unit)  # type: ignore[arg-type]
-    await device.async_update()
+    await trovis.async_update()
 
-    def readable(address: int) -> bool:
-        return any(low <= address <= high for low, high in REGISTER_RANGES)
-
-    for start, count in unit.register_blocks:
-        assert all(readable(start + i) for i in range(count)), (
-            f"block {start}..{start + count - 1} crosses an unreadable gap"
+    ranges = {"holding": REGISTER_RANGES, "coil": COIL_RANGES}
+    for event in unit.read_events:
+        declared = ranges[event.register_type]
+        covered = range(event.address, event.address + event.count)
+        assert all(
+            any(low <= address <= high for low, high in declared) for address in covered
+        ), (
+            f"{event.register_type} block {covered.start}..{covered.stop - 1} "
+            "crosses an unreadable gap"
         )
     # Addresses 7-8 (between ranges [0,6] and [9,40]) are never read — the low
     # registers split there instead of being merged into one 0..26 block.
-    read = {start + i for start, count in unit.register_blocks for i in range(count)}
+    read = {
+        event.address + i
+        for event in unit.read_events
+        if event.register_type == "holding"
+        for i in range(event.count)
+    }
     assert 7 not in read and 8 not in read
 
 
-async def test_consolidated_reads_decode_correctly() -> None:
+async def test_consolidated_reads_decode_correctly(unit: MockModbusUnit) -> None:
     """Adjacent physical sensor registers decode to the right sensor inputs."""
-    inner = MockModbusConnection().for_unit(1)
     # Flow sensors VF1/VF2/VF3 are at adjacent addresses 12/13/14 — fetched in
     # one block, then decoded on the central Sensors component.
-    inner.holding.update({12: 300, 13: 310, 14: 320})
-    unit = _CountingUnit(inner)
-    device = Trovis557x(unit)  # type: ignore[arg-type]
+    unit.holding.update({12: 300, 13: 310, 14: 320})
+    device = Trovis557x(unit)
 
     await device.async_update()
 
     assert device.sensors.vf1 == pytest.approx(30.0)
     assert device.sensors.vf2 == pytest.approx(31.0)
     assert device.sensors.vf3 == pytest.approx(32.0)
+
+
+async def test_update_survives_a_dropped_connection() -> None:
+    """A dropped link heals on the next update — the device is not rebuilt."""
+    connection = MockModbusConnection()
+    unit = connection.for_unit(1)
+    unit.holding.update(HOLDING)
+    unit.coils.update(COILS)
+    device = Trovis557x(unit)
+    await device.async_update()
+    assert device.rk1.flow_setpoint == pytest.approx(55.0)
+
+    lost: list[int] = []
+    connection.on_connection_lost(lambda: lost.append(1))
+    connection.simulate_connection_lost()
+    assert lost == [1]
+
+    # The same device and unit handles keep working; the request reconnects.
+    await device.async_update()
+    assert device.rk1.flow_setpoint == pytest.approx(55.0)
+
+
+async def test_update_survives_a_recycled_connection() -> None:
+    """disconnect() recycles a stuck link; the device keeps its handles."""
+    connection = MockModbusConnection()
+    unit = connection.for_unit(1)
+    unit.holding.update(HOLDING)
+    unit.coils.update(COILS)
+    device = Trovis557x(unit)
+    await device.async_update()
+
+    lost: list[int] = []
+    connection.on_connection_lost(lambda: lost.append(1))
+    await connection.disconnect()
+
+    await device.async_update()
+    assert device.rk1.flow_setpoint == pytest.approx(55.0)
+    # The owner tore the link down; nothing was lost.
+    assert lost == []
+
+
+async def test_update_after_close_raises() -> None:
+    """Closing is the owner's permanent end of the connection, not a drop."""
+    connection = MockModbusConnection()
+    unit = connection.for_unit(1)
+    unit.holding.update(HOLDING)
+    device = Trovis557x(unit)
+    await connection.close()
+
+    with pytest.raises(ClientClosedError):
+        await device.async_update()
 
 
 async def test_update_listener(trovis: Trovis557x) -> None:
@@ -245,10 +270,10 @@ async def test_write_rejects_readonly(trovis: Trovis557x) -> None:
         await trovis.rk1.write("flow_setpoint", 50.0)
 
 
-async def test_mode_write_releases_override_coil(trovis: Trovis557x) -> None:
+async def test_mode_write_releases_override_coil(
+    trovis: Trovis557x, unit: MockModbusUnit
+) -> None:
     """Setting the mode first releases the Ebene coil (0 = remote control)."""
-    unit = trovis.rk1._unit
-
     await trovis.async_enable_writing()
     await unit.write_coil(88, True)  # start "autonomous" (controller-controlled)
     await trovis.rk1.set_mode(OperatingMode.DAY)
@@ -258,18 +283,19 @@ async def test_mode_write_releases_override_coil(trovis: Trovis557x) -> None:
     assert (await unit.read_holding_registers(105, 1))[0] == int(OperatingMode.DAY)
 
 
-async def test_circuit2_mode_uses_strided_override(trovis: Trovis557x) -> None:
+async def test_circuit2_mode_uses_strided_override(
+    trovis: Trovis557x, unit: MockModbusUnit
+) -> None:
     """Circuit 2's override coil follows the +2 stride (90, not 88)."""
-    unit = trovis.rk2._unit
     await unit.write_coil(90, True)
     await trovis.rk2.set_mode(OperatingMode.NIGHT)
     assert (await unit.read_coils(90, 1))[0] is False
     assert (await unit.read_holding_registers(107, 1))[0] == int(OperatingMode.NIGHT)
 
 
-async def test_write_access_enable_disable(trovis: Trovis557x) -> None:
-    unit = trovis.controller._unit
-
+async def test_write_access_enable_disable(
+    trovis: Trovis557x, unit: MockModbusUnit
+) -> None:
     assert await trovis.async_read_writing_enabled() is False
 
     await trovis.async_enable_writing()
@@ -281,16 +307,37 @@ async def test_write_access_enable_disable(trovis: Trovis557x) -> None:
     assert (await unit.read_holding_registers(144, 1))[0] == 0
 
 
-async def test_write_refreshes_access_code(trovis: Trovis557x) -> None:
+async def test_write_refreshes_access_code(
+    trovis: Trovis557x, unit: MockModbusUnit
+) -> None:
     """The public write path refreshes HR40145 before writing the datapoint."""
-    unit = trovis.controller._unit
-
     assert await trovis.async_read_writing_enabled() is False
 
     await trovis.rk1.set_room_setpoint_day(21.5)
 
     assert (await unit.read_holding_registers(144, 1))[0] == 1732
     assert (await unit.read_holding_registers(1002, 1))[0] == 215
+
+
+async def test_write_access_reports_a_device_that_answers_nothing(
+    trovis: Trovis557x, unit: MockModbusUnit
+) -> None:
+    """Every HR40145 path reports a refusal as a TROVIS write-access failure."""
+    # A gateway that answers for itself while the controller behind it does not
+    # — the usual failure of a TROVIS on an RTU-over-TCP bridge.
+    unit.fail_requests(GatewayTargetError())
+
+    with pytest.raises(TrovisWriteAccessError):
+        await trovis.async_read_writing_enabled()
+    with pytest.raises(TrovisWriteAccessError):
+        await trovis.async_enable_writing()
+    with pytest.raises(TrovisWriteAccessError):
+        await trovis.async_disable_writing()
+    # The public datapoint write refreshes the access code first, so it fails
+    # there rather than reaching the register it was asked to write.
+    with pytest.raises(TrovisWriteAccessError):
+        await trovis.rk1.set_room_setpoint_day(21.5)
+    assert trovis.writing_enabled is False
 
 
 async def test_5576_anlage_2_1_exposes_rk1_and_rk4(

@@ -57,7 +57,7 @@ def test_corrected_domestic_hot_water_setpoint_limits(trovis: Trovis557x) -> Non
 def test_outdoor_temperature_delay_uses_hardware_verified_scale(
     trovis: Trovis557x,
 ) -> None:
-    field = trovis.controller._register_fields["outdoor_temperature_delay"]
+    field = trovis.controller.declared_fields["outdoor_temperature_delay"]
 
     assert field.decode([30]) == pytest.approx(3.0)
     assert field.encode(3) == [30]
@@ -65,7 +65,7 @@ def test_outdoor_temperature_delay_uses_hardware_verified_scale(
 
 def test_all_writable_numbers_have_complete_ranges(trovis: Trovis557x) -> None:
     for component in trovis.components:
-        for field in component._register_fields:
+        for field in component.declared_fields:
             metadata = component.require_metadata_for(field)
             if metadata.value_kind != "number" or not metadata.writable:
                 continue
@@ -88,7 +88,7 @@ def test_all_writable_temporal_values_have_complete_ranges(
     }
 
     for component in trovis.components:
-        for field in component._register_fields:
+        for field in component.declared_fields:
             metadata = component.require_metadata_for(field)
             expected_type = expected_types.get(metadata.value_kind)
             if expected_type is None or not metadata.writable:

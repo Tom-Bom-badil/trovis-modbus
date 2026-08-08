@@ -17,7 +17,12 @@ import asyncio
 import sys
 import time
 
-from modbus_connection import ModbusConnection, ModbusError
+from modbus_connection import (
+    ModbusConnection,
+    ModbusError,
+    ModbusSerialParams,
+    ModbusTcpParams,
+)
 from modbus_connection.cli_helper import CountingUnit, print_component
 
 from trovis_modbus import Trovis557x
@@ -82,19 +87,24 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-async def _open(args: argparse.Namespace) -> ModbusConnection:
+def _connection(args: argparse.Namespace) -> ModbusConnection:
+    """Build the connection described by the arguments. Performs no I/O."""
     # Imported here so the module loads (and --help works) without a backend.
-    from modbus_connection.pymodbus import connect_serial, connect_tcp
+    from modbus_connection.pymodbus import PymodbusConnection
 
     if args.transport == "serial":
-        return await connect_serial(
-            args.device,
-            baudrate=args.baudrate,
-            parity=args.parity,
-            stopbits=args.stopbits,
-            bytesize=args.bytesize,
+        return PymodbusConnection(
+            ModbusSerialParams(
+                device=args.device,
+                baudrate=args.baudrate,
+                parity=args.parity,
+                stopbits=args.stopbits,
+                bytesize=args.bytesize,
+            )
         )
-    return await connect_tcp(args.host, port=args.port, framer=args.framer)
+    return PymodbusConnection(
+        ModbusTcpParams(host=args.host, port=args.port, framer=args.framer)
+    )
 
 
 def _format_evidence(
@@ -148,8 +158,9 @@ def _print(device: Trovis557x) -> None:
 
 
 async def _run(args: argparse.Namespace) -> int:
+    connection = _connection(args)
     try:
-        connection = await _open(args)
+        await connection.connect()
     except ModbusError as err:
         print(f"Could not connect: {err}", file=sys.stderr)
         return 1
