@@ -656,7 +656,9 @@ def temperature(
     maker_category: str | None = None,
     description: str | None = None,
 ) -> RegisterField[float]:
-    """A signed 0.1-scaled temperature register with the Trovis NaN sentinel."""
+    """A signed 0.1-scaled temperature register with Trovis NaN sentinel."""
+    effective_step = 1 if step is None else step
+
     return gauge(
         hr_number,
         0.1,
@@ -667,7 +669,7 @@ def temperature(
         unit=unit,
         min_value=min_value,
         max_value=max_value,
-        step=step,
+        step=effective_step,
         digits=digits,
         raw_min=raw_min,
         raw_max=raw_max,

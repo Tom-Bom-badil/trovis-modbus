@@ -15,7 +15,7 @@ class DeviceInformation(TrovisComponent):
     _model_raw = integer(40001, signed=False)
     system_code = gauge(40002, 0.1, signed=False)
     _firmware_raw = gauge(40003, 0.01, signed=False)
-    _hardware_raw = gauge(40004, 0.01, signed=False)
+    _hardware_raw = integer(40004, signed=False)
     _serial_raw = integer(40006, signed=False)
 
     @property
