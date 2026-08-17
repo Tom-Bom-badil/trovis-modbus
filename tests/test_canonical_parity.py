@@ -66,6 +66,7 @@ KNOWN_NON_CANONICAL_COILS = {
         (123, False),
         (124, False),  # Active room-setpoint control level Rk1-Rk3
         (407, True),  # Hot-water intermediate-heating function block
+        (414, True),  # CO4 F14 thermal-disinfection function block
         (703, True),
         (704, True),
         (705, True),  # Room control unit Rk1-Rk3

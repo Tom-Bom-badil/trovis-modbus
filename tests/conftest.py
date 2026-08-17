@@ -119,6 +119,7 @@ COILS: dict[int, bool] = {
     59: True,  # WW storage tank charging pump
     401: False,  # CL402 / FB02 / SF2 inactive -> RF2
     404: False,  # CL405 / FB05 / VF4 inactive
+    413: True,  # CL414 / CO4 -> F14 / thermal disinfection enabled
     800: False,  # CL801 / input 1 configured as sensor input
     801: True,  # CL802 / input 2 configured as binary input
     802: False,  # CL803 / input 3 configured as sensor input

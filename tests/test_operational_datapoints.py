@@ -357,6 +357,11 @@ def test_legacy_gap_registers_and_intermediate_heating_points() -> None:
         rk4._address(rk4.declared_fields["intermediate_heating_function_enabled"])
         == 406
     )
+
+    disinfection = rk4.require_metadata_for("disinfection_enabled")
+    assert rk4._address(rk4.declared_fields["disinfection_enabled"]) == 413
+    assert disinfection.writable is True
+
     assert rk4._address(rk4.declared_fields["intermediate_heating_operation"]) == 1830
 
 
