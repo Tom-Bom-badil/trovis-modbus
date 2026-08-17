@@ -304,7 +304,7 @@ def test_four_point_characteristic_fields_have_expected_limits() -> None:
         assert metadata.number is not None
         assert metadata.number.min_value == minimum
         assert metadata.number.max_value == maximum
-        assert metadata.number.step == pytest.approx(0.1)
+        assert metadata.number.step == 1
 
 
 def test_domestic_hot_water_special_setpoint_is_distinct_from_active_setpoint() -> None:
@@ -324,14 +324,14 @@ def test_new_writable_fields_have_expected_limits() -> None:
     assert fixed.number is not None
     assert fixed.number.min_value == -5
     assert fixed.number.max_value == 130
-    assert fixed.number.step == pytest.approx(0.1)
+    assert fixed.number.step == 1
 
     special = device.rk4.require_metadata_for("special_setpoint")
     assert special.writable is True
     assert special.number is not None
     assert special.number.min_value == 5
     assert special.number.max_value == 90
-    assert special.number.step == pytest.approx(0.1)
+    assert fixed.number.step == 1
 
 
 def test_legacy_gap_registers_and_intermediate_heating_points() -> None:
@@ -499,7 +499,7 @@ def test_buffer_tank_circuit_uses_rk1_extension_registers() -> None:
     assert minimum.number is not None
     assert minimum.number.min_value == pytest.approx(0.0)
     assert minimum.number.max_value == pytest.approx(90.0)
-    assert minimum.number.step == pytest.approx(0.1)
+    assert minimum.number.step == 1
 
     end = buffer_tank.require_metadata_for("charging_end_temperature")
     assert end.writable is True

@@ -6,13 +6,28 @@ PYTHON_BIN="${PYTHON_BIN:-python}"
 
 cd "$ROOT_DIR"
 
+echo "==> Installing project dependencies"
+"$PYTHON_BIN" -m pip install \
+    --root-user-action=ignore \
+    -e .
+
 if ! "$PYTHON_BIN" -m ruff --version >/dev/null 2>&1; then
+    echo "==> Installing Ruff"
     "$PYTHON_BIN" -m pip install \
         --root-user-action=ignore \
         "ruff>=0.15,<0.16"
 fi
 
+if ! "$PYTHON_BIN" -c "import pytest, pytest_asyncio" >/dev/null 2>&1; then
+    echo "==> Installing test dependencies"
+    "$PYTHON_BIN" -m pip install \
+        --root-user-action=ignore \
+        "pytest>=8" \
+        "pytest-asyncio>=0.24"
+fi
+
 if ! "$PYTHON_BIN" -c "import build" >/dev/null 2>&1; then
+    echo "==> Installing build"
     "$PYTHON_BIN" -m pip install \
         --root-user-action=ignore \
         build
@@ -28,7 +43,7 @@ echo "==> Compiling sources"
 "$PYTHON_BIN" -m compileall -q src tests
 
 echo "==> Running tests"
-"$ROOT_DIR/script/libtest.sh"
+"$PYTHON_BIN" -m pytest
 
 echo "==> Building package"
 rm -rf "$ROOT_DIR/dist"

@@ -30,7 +30,10 @@ CANON_COIL: dict[int, dict[str, Any]] = {e["id"]: e for e in _REF["coils"].value
 # Scales confirmed on real hardware that differ from the canonical table (whose
 # factors are not perfectly reliable). Tom-Bom-badil's Trovis 5578 reads register
 # 117 (AT adaptation rate) as 3.0 K/h, i.e. scale 0.1 — the table lists factor 1.
-HARDWARE_VERIFIED_SCALE: dict[int, float] = {117: 0.1}
+HARDWARE_VERIFIED_SCALE: dict[int, float] = {
+    3: 1.0,  # HR40004 hardware version: raw 1 -> hardware 1.00
+    117: 0.1,
+}
 
 # Manufacturer-documented points that are modeled by the library but are not
 # present in the older SmartHomeNG/5576-derived canonical reference file.

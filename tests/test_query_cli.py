@@ -43,8 +43,10 @@ def test_parse_args_serial() -> None:
     assert args.baudrate == 19200  # Trovis serial default
 
 
-def test_values_lists_every_subsystem_field(mock_modbus_unit: MockModbusUnit) -> None:
-    """Each sub-system's public fields are enumerated, methods excluded."""
+def test_values_lists_available_subsystem_fields(
+    mock_modbus_unit: MockModbusUnit,
+) -> None:
+    """Each sub-system's available public fields are enumerated, methods excluded."""
     device = Trovis557x(mock_modbus_unit)
 
     circuit_rows = field_rows(device.rk1)
@@ -99,16 +101,15 @@ def test_values_lists_every_subsystem_field(mock_modbus_unit: MockModbusUnit) ->
         "fg3",
         "analog_input_voltage",
     } <= sensor_names
-    # field_rows() enumerates the component's public descriptor API. Logical
-    # views therefore remain visible here even when the current model excludes
-    # them from its instance-specific Modbus read layout.
+    # field_rows() honors the component's restricted field set and therefore
+    # omits logical views excluded from the instance-specific Modbus read layout.
     unsupported_sensor_views = {
         "ae1",
         "ae2",
         "ae3",
         "analog_input_current",
     }
-    assert unsupported_sensor_views <= sensor_names
+    assert unsupported_sensor_views.isdisjoint(sensor_names)
     assert unsupported_sensor_views.isdisjoint(device.sensors.readable_field_names)
     assert {
         "af1",
