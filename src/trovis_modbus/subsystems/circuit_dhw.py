@@ -345,6 +345,14 @@ class DomesticHotWater(TrovisComponent):
         description="Funktionsblock CO4-FB07 Zwischenheizbetrieb",
     )
 
+    disinfection_enabled = coil(
+        414,
+        writable=True,
+        maker_key="FB14_ThermDes",
+        maker_category="CON-WW",
+        description="Funktionsblock CO4-FB14 Thermische Desinfektion",
+    )
+
     automatic = coil(1800)
 
     disinfection_active = coil(1801)
