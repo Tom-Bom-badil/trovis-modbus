@@ -9,3 +9,6 @@ dist/
 .mypy_cache/
 .coverage
 uv.lock
+
+# ignore local-only files (eg developer mode switch)
+**/_local_dev_overrides/
