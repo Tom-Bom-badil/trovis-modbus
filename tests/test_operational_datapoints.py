@@ -35,6 +35,10 @@ def test_heating_circuit_stride_patterns() -> None:
     assert rk2._address(rk2.declared_fields["fixed_setpoint_day"]) == 1241
     assert rk3._address(rk3.declared_fields["fixed_setpoint_day"]) == 1441
 
+    assert rk1._address(rk1.declared_fields["trovis_5570_room_control_unit"]) == 702
+    assert rk2._address(rk2.declared_fields["trovis_5570_room_control_unit"]) == 703
+    assert rk3._address(rk3.declared_fields["trovis_5570_room_control_unit"]) == 704
+
     assert rk1._address(rk1.declared_fields["four_point_outdoor_temperature_1"]) == 1012
     assert rk2._address(rk2.declared_fields["four_point_outdoor_temperature_1"]) == 1212
     assert rk3._address(rk3.declared_fields["four_point_outdoor_temperature_1"]) == 1412
@@ -384,11 +388,25 @@ def test_additional_5578_sensor_addresses() -> None:
     assert "ae2_fg2" not in sensors.declared_fields
     assert "ae3_fg3" not in sensors.declared_fields
 
-    for field in ("ae1", "fg1", "ae2", "fg2", "ae3", "fg3"):
+    for field in ("ae1", "ae2", "ae3"):
         metadata = sensors.require_metadata_for(field)
         assert metadata.number is not None
         assert metadata.number.min_value == pytest.approx(-5)
         assert metadata.number.max_value == pytest.approx(2000)
+        assert metadata.number.raw_min == -50
+        assert metadata.number.raw_max == 20000
+        assert metadata.number.step == pytest.approx(0.1)
+        assert metadata.number.unit is None
+
+    for field in ("fg1", "fg2", "fg3"):
+        metadata = sensors.require_metadata_for(field)
+        assert metadata.number is not None
+        # Keep the canonical register descriptor at scale 0.1. Trovis557x
+        # applies the role-aware conversion for resistance remotes (x10 -> ohms).
+        assert metadata.number.min_value == pytest.approx(-5)
+        assert metadata.number.max_value == pytest.approx(2000)
+        assert metadata.number.raw_min == -50
+        assert metadata.number.raw_max == 20000
         assert metadata.number.step == pytest.approx(0.1)
         assert metadata.number.unit is None
 

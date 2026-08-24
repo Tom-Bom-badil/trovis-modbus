@@ -37,6 +37,13 @@ class HeatingCircuitControlMode(StrEnum):
     FIXED_SETPOINT = "fixed_setpoint"
 
 
+class RemoteInputRole(StrEnum):
+    """Resolved physical meaning of one FG1-FG3 input."""
+
+    ROOM_UNIT_OFFSET = "room_unit_offset"
+    RESISTANCE_REMOTE = "resistance_remote"
+
+
 class OperatingMode(IntEnum):
     """Operating mode of a heating circuit, domestic hot water, or rotary switch.
 

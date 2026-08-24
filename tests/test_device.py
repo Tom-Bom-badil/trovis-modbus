@@ -12,6 +12,7 @@ from trovis_modbus import (
     ControlCircuitRole,
     MonthDay,
     OperatingMode,
+    RemoteInputRole,
     SystemActivity,
     TemperatureRange,
     Trovis557x,
@@ -44,11 +45,17 @@ async def test_sensors(trovis: Trovis557x) -> None:
     assert trovis.sensors.sf2 is None  # NaN sentinel
     assert trovis.sensors.sf3 == pytest.approx(65.0)
     assert trovis.sensors.ae1 is None
+    # The register descriptors keep the canonical 0.1 scale. The configured
+    # role then decides whether that scaled value is kelvin or must be
+    # converted back to whole ohms by ``sensor_value``.
     assert trovis.sensors.fg1 == pytest.approx(95.2)
     assert trovis.sensors.ae2 is None
     assert trovis.sensors.fg2 == pytest.approx(325.0)
     assert trovis.sensors.ae3 is None
     assert trovis.sensors.fg3 == pytest.approx(12.5)
+    assert trovis.sensor_value("fg1") == pytest.approx(95.2)
+    assert trovis.sensor_value("fg2") == 3250
+    assert trovis.sensor_value("fg3") == 125
     # The raw IMP register is read for supported models so it remains available
     # for diagnostics. CL139 decides whether IMP is exposed as a canonical sensor.
     assert trovis.sensors.pulse_rate == 240
@@ -427,6 +434,281 @@ async def test_5579_anlage_5_1_exposes_precontrol_and_heating_roles(
     assert device.control_circuit_role(4) is ControlCircuitRole.DOMESTIC_HOT_WATER
     assert device.room_heating_circuit_indices == (2, 3)
     assert device.has_rk4 is True
+
+
+@pytest.mark.parametrize(
+    (
+        "room_feedback",
+        "outdoor_sensor",
+        "four_point",
+        "optimization",
+        "adaptation",
+    ),
+    (
+        (False, True, False, False, False),
+        (True, False, False, False, False),
+        (True, True, False, True, True),
+        (True, True, True, True, False),
+    ),
+)
+async def test_heating_function_availability_follows_configuration(
+    mock_modbus_unit: MockModbusUnit,
+    room_feedback: bool,
+    outdoor_sensor: bool,
+    four_point: bool,
+    optimization: bool,
+    adaptation: bool,
+) -> None:
+    """Rk function availability follows F01/F02/F11, not live sensor values."""
+    mock_modbus_unit.holding.update(HOLDING)
+    mock_modbus_unit.holding[1] = 40  # Anlage 4.0: Rk1 and Rk2 are heating circuits.
+    mock_modbus_unit.coils.update(COILS)
+    mock_modbus_unit.coils.update(
+        {
+            1024: room_feedback,  # CL1025 / CO1-F01
+            1025: outdoor_sensor,  # CL1026 / CO1-F02
+            1034: four_point,  # CL1035 / CO1-F11
+        }
+    )
+    device = Trovis557x(mock_modbus_unit, model=5579)
+
+    await device.async_update()
+
+    assert device.heating_circuit_uses_room_feedback(1) is room_feedback
+    assert device.heating_circuit_optimization_available(1) is optimization
+    assert device.heating_circuit_adaptation_available(1) is adaptation
+
+
+async def test_room_dependent_functions_are_not_available_for_precontrol(
+    mock_modbus_unit: MockModbusUnit,
+) -> None:
+    """Optimization and adaptation are exposed only for real heating circuits."""
+    mock_modbus_unit.holding.update(HOLDING)
+    mock_modbus_unit.holding[1] = 51  # Anlage 5.1: Rk1 precontrol, Rk2/Rk3 heating.
+    mock_modbus_unit.coils.update(COILS)
+    mock_modbus_unit.coils.update(
+        {
+            1024: True,  # CL1025 / CO1-F01
+            1025: True,  # CL1026 / CO1-F02
+            1034: False,  # CL1035 / CO1-F11
+            1224: True,  # CL1225 / CO2-F01
+            1225: True,  # CL1226 / CO2-F02
+            1234: False,  # CL1235 / CO2-F11
+            1424: True,  # CL1425 / CO3-F01
+            1425: True,  # CL1426 / CO3-F02
+            1434: False,  # CL1435 / CO3-F11
+        }
+    )
+    device = Trovis557x(mock_modbus_unit, model=5579)
+
+    await device.async_update()
+
+    assert device.control_circuit_role(1) is ControlCircuitRole.PRECONTROL
+    assert device.heating_circuit_uses_room_feedback(1) is False
+    assert device.heating_circuit_uses_outdoor_sensor(1) is False
+    assert device.heating_circuit_uses_four_point_characteristic(1) is False
+    assert device.heating_circuit_operating_mode(1) is None
+    assert device.heating_circuit_optimization_available(1) is False
+    assert device.heating_circuit_adaptation_available(1) is False
+    assert device.remote_input_role(1) is RemoteInputRole.RESISTANCE_REMOTE
+
+    assert device.control_circuit_role(2) is ControlCircuitRole.HEATING
+    assert device.heating_circuit_optimization_available(2) is True
+    assert device.heating_circuit_adaptation_available(2) is True
+
+    assert device.control_circuit_role(3) is ControlCircuitRole.HEATING
+    assert device.heating_circuit_optimization_available(3) is True
+    assert device.heating_circuit_adaptation_available(3) is True
+
+
+@pytest.mark.parametrize("model", (5573, 55731, 5575, 5576, 5578, 55781, 5579))
+async def test_rk2_room_functions_use_only_rk2_f02(
+    mock_modbus_unit: MockModbusUnit,
+    model: int,
+) -> None:
+    """Optimization uses the same Rk's F02 selector on every model."""
+    mock_modbus_unit.holding.update(HOLDING)
+    mock_modbus_unit.holding[1] = 40  # Anlage 4.0: Rk1 and Rk2 are heating circuits.
+    mock_modbus_unit.coils.update(COILS)
+    mock_modbus_unit.coils.update(
+        {
+            1025: False,  # CL1026 / CO1-F02
+            1224: True,  # CL1225 / CO2-F01
+            1225: True,  # CL1226 / CO2-F02
+            1234: False,  # CL1235 / CO2-F11
+        }
+    )
+    device = Trovis557x(mock_modbus_unit, model=model)
+
+    await device.async_update()
+
+    assert device.control_circuit_role(2) is ControlCircuitRole.HEATING
+    assert device.heating_circuit_optimization_available(2) is True
+
+
+@pytest.mark.parametrize("model", (5573, 55731, 5575, 5576, 5578, 55781, 5579))
+async def test_rk1_f02_does_not_enable_rk2_room_functions(
+    mock_modbus_unit: MockModbusUnit,
+    model: int,
+) -> None:
+    """Another circuit's F02 must never satisfy Rk2 room-function gating."""
+    mock_modbus_unit.holding.update(HOLDING)
+    mock_modbus_unit.holding[1] = 40  # Anlage 4.0: Rk1 and Rk2 are heating circuits.
+    mock_modbus_unit.coils.update(COILS)
+    mock_modbus_unit.coils.update(
+        {
+            1025: True,  # CL1026 / CO1-F02
+            1224: True,  # CL1225 / CO2-F01
+            1225: False,  # CL1226 / CO2-F02
+            1234: False,  # CL1235 / CO2-F11
+        }
+    )
+    device = Trovis557x(mock_modbus_unit, model=model)
+
+    await device.async_update()
+
+    assert device.control_circuit_role(2) is ControlCircuitRole.HEATING
+    assert device.heating_circuit_optimization_available(2) is False
+
+
+@pytest.mark.parametrize(
+    (
+        "room_feedback",
+        "trovis_5570",
+        "expected_role",
+        "expected_unit",
+        "expected_min",
+        "expected_max",
+        "expected_step",
+        "expected_digits",
+        "expected_value",
+    ),
+    (
+        (
+            False,
+            False,
+            RemoteInputRole.RESISTANCE_REMOTE,
+            "Ω",
+            0,
+            2000,
+            1,
+            0,
+            3250,
+        ),
+        (
+            True,
+            False,
+            RemoteInputRole.ROOM_UNIT_OFFSET,
+            "K",
+            -5,
+            5,
+            0.1,
+            1,
+            325.0,
+        ),
+        (
+            True,
+            True,
+            RemoteInputRole.RESISTANCE_REMOTE,
+            "Ω",
+            0,
+            2000,
+            1,
+            0,
+            3250,
+        ),
+    ),
+)
+async def test_fg_role_and_metadata_follow_room_configuration(
+    mock_modbus_unit: MockModbusUnit,
+    room_feedback: bool,
+    trovis_5570: bool,
+    expected_role: RemoteInputRole,
+    expected_unit: str,
+    expected_min: int,
+    expected_max: int,
+    expected_step: float | int,
+    expected_digits: int,
+    expected_value: float | int,
+) -> None:
+    """FG2 semantics follow F01 and the TROVIS 5570 device-bus exception."""
+    mock_modbus_unit.holding.update(HOLDING)
+    mock_modbus_unit.holding[1] = 40  # Rk2 is a real heating circuit.
+    mock_modbus_unit.coils.update(COILS)
+    mock_modbus_unit.coils.update(
+        {
+            1224: room_feedback,  # CL1225 / CO2-F01
+            703: trovis_5570,  # CL704 / CO7-F04 / TROVIS 5570 in Rk2
+        }
+    )
+    device = Trovis557x(mock_modbus_unit, model=5579)
+
+    await device.async_update()
+
+    assert device.heating_circuit_uses_trovis_5570(2) is trovis_5570
+    assert device.remote_input_role(2) is expected_role
+
+    metadata = device.sensor_number_metadata("fg2")
+    assert metadata.unit == expected_unit
+    assert metadata.min_value == expected_min
+    assert metadata.max_value == expected_max
+    assert metadata.step == pytest.approx(expected_step)
+    assert metadata.digits == expected_digits
+    assert device.sensor_value("fg2") == pytest.approx(expected_value)
+
+
+@pytest.mark.parametrize(
+    ("model", "system_code", "expected"),
+    (
+        (5578, 60, (True, True, True)),
+        (5578, 61, (False, False, False)),
+        (55781, 60, (True, True, True)),
+        (55781, 61, (True, True, True)),
+        (5579, 60, (True, True, True)),
+        (5579, 61, (False, False, False)),
+        (5576, 40, (True, True, False)),
+        (5575, 40, (True, True, False)),
+        (5573, 40, (False, False, False)),
+        (55731, 40, (False, False, False)),
+    ),
+)
+async def test_trovis_5570_availability_follows_model_and_hydronic_system(
+    mock_modbus_unit: MockModbusUnit,
+    model: int,
+    system_code: int,
+    expected: tuple[bool, bool, bool],
+) -> None:
+    """CO7-F03/F04/F05 availability comes from manual model/system lists."""
+    mock_modbus_unit.holding.update(HOLDING)
+    mock_modbus_unit.holding[1] = system_code
+    mock_modbus_unit.coils.update(COILS)
+    device = Trovis557x(mock_modbus_unit, model=model)
+
+    await device.async_update()
+
+    for index, available in enumerate(expected, start=1):
+        if index > len(device.control_circuits):
+            assert available is False
+            continue
+        assert device.trovis_5570_room_control_unit_available(index) is available
+
+
+async def test_unsupported_trovis_5570_coil_is_ignored(
+    mock_modbus_unit: MockModbusUnit,
+) -> None:
+    """A dormant true CO7-F03 bit must not affect 5578 Anlage 6.1."""
+    mock_modbus_unit.holding.update(HOLDING)
+    mock_modbus_unit.holding[1] = 61
+    mock_modbus_unit.coils.update(COILS)
+    mock_modbus_unit.coils[702] = True  # CL703 / CO7-F03, unsupported in 5578/6.1
+    mock_modbus_unit.coils[1024] = True  # CO1-F01: local room feedback configured
+    device = Trovis557x(mock_modbus_unit, model=5578)
+
+    await device.async_update()
+
+    assert device.trovis_5570_room_control_unit_available(1) is False
+    assert device.heating_circuit_uses_trovis_5570(1) is False
+    assert device.remote_input_role(1) is RemoteInputRole.ROOM_UNIT_OFFSET
 
 
 async def test_5578_anlage_16_1_exposes_buffer_tank_role(

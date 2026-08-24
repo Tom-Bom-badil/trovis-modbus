@@ -94,6 +94,7 @@ KNOWN_NON_CANONICAL_COILS = {
         (816, False),
         (817, False),  # CO8 inputs 15-17: sensor or binary input
         (905, False),  # Setpoint correction through 0 to 10 V input
+        (1425, False),  # CO3 F01 room-temperature feedback
         (1426, False),  # CO3 F02 outdoor sensor / weather-compensated control
         (1435, False),  # CO3 F11 four-point characteristic
         (2125, False),  # CO1 F25 buffer-tank bottom sensor SF3

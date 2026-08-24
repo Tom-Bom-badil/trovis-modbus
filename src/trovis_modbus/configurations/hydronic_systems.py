@@ -246,6 +246,170 @@ SUPPORTED_SYSTEM_CODES_BY_MODEL = MappingProxyType(
     }
 )
 
+
+def _system_codes(
+    *ranges: tuple[int, int],
+    exact: tuple[int, ...] = (),
+) -> frozenset[int]:
+    """Return raw system-code numbers covered by manual range notation."""
+    codes = set(exact)
+    for start, end in ranges:
+        codes.update(range(start, end + 1))
+    return frozenset(codes)
+
+
+# CO7-F03/F04/F05 do not exist for every heating circuit in every hydronic
+# system. Keep the manufacturer availability lists here, close to the static
+# system-code model, so higher layers never infer room-panel support from a
+# readable/dormant coil. The sets are intersected with the model's documented
+# hydronic systems to avoid manufacturing impossible combinations.
+_TROVIS_5570_ROOM_CONTROL_SYSTEM_CODES_BY_MODEL = MappingProxyType(
+    {
+        ControllerModel.TROVIS_5573: MappingProxyType({}),
+        ControllerModel.TROVIS_5573_1: MappingProxyType({}),
+        ControllerModel.TROVIS_5575: MappingProxyType(
+            {
+                1: _TROVIS_5575_SYSTEM_CODES
+                & _system_codes(
+                    (10, 13),
+                    (20, 29),
+                    (40, 49),
+                    (100, 109),
+                    (110, 119),
+                ),
+                2: _TROVIS_5575_SYSTEM_CODES
+                & _system_codes((30, 39), (40, 49), (100, 109)),
+            }
+        ),
+        ControllerModel.TROVIS_5576: MappingProxyType(
+            {
+                1: _TROVIS_5576_SYSTEM_CODES
+                & _system_codes(
+                    (10, 14),
+                    (20, 29),
+                    (40, 49),
+                    (100, 109),
+                    (110, 119),
+                ),
+                2: _TROVIS_5576_SYSTEM_CODES
+                & _system_codes((30, 34), (40, 49), (100, 109)),
+            }
+        ),
+        ControllerModel.TROVIS_5578: MappingProxyType(
+            {
+                1: _TROVIS_5578_SYSTEM_CODES
+                & _system_codes(
+                    (10, 14),
+                    (20, 29),
+                    (40, 49),
+                    (100, 109),
+                    (110, 119),
+                    (130, 139),
+                    (210, 219),
+                    (250, 259),
+                    exact=(60, 95, 96),
+                ),
+                2: _TROVIS_5578_SYSTEM_CODES
+                & _system_codes(
+                    (30, 34),
+                    (40, 49),
+                    (50, 59),
+                    (100, 109),
+                    (250, 259),
+                    exact=(60, 161, 166, 168),
+                ),
+                3: _TROVIS_5578_SYSTEM_CODES
+                & _system_codes(
+                    (50, 59),
+                    (90, 99),
+                    (120, 129),
+                    (130, 139),
+                    (150, 159),
+                    (210, 219),
+                    (250, 259),
+                    exact=(60, 165, 167, 168),
+                ),
+            }
+        ),
+        ControllerModel.TROVIS_5578_E: MappingProxyType(
+            {
+                1: _TROVIS_5578_E_SYSTEM_CODES
+                & _system_codes(
+                    (10, 14),
+                    (20, 29),
+                    (40, 49),
+                    (60, 69),
+                    (100, 109),
+                    (110, 119),
+                    (130, 139),
+                    (210, 219),
+                    (250, 259),
+                    exact=(95, 96),
+                ),
+                2: _TROVIS_5578_E_SYSTEM_CODES
+                & _system_codes(
+                    (30, 34),
+                    (40, 49),
+                    (50, 59),
+                    (60, 69),
+                    (100, 109),
+                    (170, 179),
+                    (180, 189),
+                    (250, 259),
+                    exact=(38, 39, 161, 166, 168, 200),
+                ),
+                3: _TROVIS_5578_E_SYSTEM_CODES
+                & _system_codes(
+                    (50, 59),
+                    (60, 69),
+                    (90, 99),
+                    (120, 129),
+                    (130, 139),
+                    (150, 159),
+                    (210, 219),
+                    (250, 259),
+                    exact=(165, 167, 168, 178),
+                ),
+            }
+        ),
+        ControllerModel.TROVIS_5579: MappingProxyType(
+            {
+                1: _TROVIS_5579_SYSTEM_CODES
+                & _system_codes(
+                    (10, 14),
+                    (20, 29),
+                    (40, 49),
+                    (100, 109),
+                    (110, 119),
+                    (130, 139),
+                    (210, 219),
+                    (250, 259),
+                    exact=(60, 95, 96),
+                ),
+                2: _TROVIS_5579_SYSTEM_CODES
+                & _system_codes(
+                    (30, 34),
+                    (40, 49),
+                    (50, 59),
+                    (100, 109),
+                    (250, 259),
+                    exact=(60,),
+                ),
+                3: _TROVIS_5579_SYSTEM_CODES
+                & _system_codes(
+                    (50, 59),
+                    (90, 99),
+                    (120, 129),
+                    (130, 139),
+                    (210, 219),
+                    (250, 259),
+                    exact=(60,),
+                ),
+            }
+        ),
+    }
+)
+
 # PA1 P16-P19 are not effective in every hydronic system whose Rk1 role is
 # BUFFER_TANK. The current model manuals explicitly document them for the
 # 16.x family on all models, and additionally for selected 5578/5578-E
@@ -459,6 +623,19 @@ class ConfigurationDefinition:
             model,
             frozenset(),
         )
+
+    def supports_trovis_5570_room_control_unit(
+        self,
+        model: ControllerModel,
+        index: int,
+    ) -> bool:
+        """Return whether CO7-F03/F04/F05 exists for this model/system/Rk."""
+        if index not in (1, 2, 3):
+            raise ValueError("control circuit index must be in range 1..3")
+        by_circuit = _TROVIS_5570_ROOM_CONTROL_SYSTEM_CODES_BY_MODEL.get(model)
+        if by_circuit is None:
+            return False
+        return self.code in by_circuit.get(index, frozenset())
 
 
 # ---------------------------------------------------------------------------

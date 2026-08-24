@@ -211,6 +211,12 @@ REGISTER_RANGES_3_RK = _hr_ranges(
     (47875, 47908),
 )
 
+# TROVIS 5575/5576 add the CO7-F03/F04 device-bus room-panel coils.
+# Keep them out of the shared 2-Rk base profile because TROVIS 5573/5573-1
+# do not document these functions and ranges are hard read-safety boundaries.
+COIL_RANGES_5575_5576 = tuple(sorted((*COIL_RANGES_2_RK, *_cl_ranges((703, 704)))))
+
+
 COIL_RANGES_3_RK = _cl_ranges(
     (1, 9),
     (10, 18),
@@ -288,8 +294,10 @@ def ranges_for_model(
     tuple[tuple[int, int], ...],
 ]:
     """Return register and coil ranges for a TROVIS model."""
-    if model in TWO_CONTROL_CIRCUIT_MODELS:
+    if model in {5573, 55731}:
         return REGISTER_RANGES_2_RK, COIL_RANGES_2_RK
+    if model in {5575, 5576}:
+        return REGISTER_RANGES_2_RK, COIL_RANGES_5575_5576
     if model in THREE_CONTROL_CIRCUIT_MODELS:
         return REGISTER_RANGES_3_RK, COIL_RANGES_3_RK
     raise ValueError(f"Unsupported TROVIS model: {model}")

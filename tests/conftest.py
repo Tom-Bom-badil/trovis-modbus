@@ -110,9 +110,17 @@ COILS: dict[int, bool] = {
     158: False,  # CL159 / GLT timeout inactive
     999: True,  # rk1 automatic
     1000: True,  # rk1 day active
+    # Rk1 heating configuration
+    1024: True,  # CL1025 / CO1 -> F01: room-temperature feedback enabled
     1025: True,  # CL1026 / CO1 -> F02: outdoor sensor enabled
     1034: False,  # CL1035 / CO1 -> F11: gradient characteristic
+    # Rk2 heating configuration
+    1224: True,  # CL1225 / CO2 -> F01: room-temperature feedback enabled
+    1225: True,  # CL1226 / CO2 -> F02: outdoor sensor enabled
     1234: False,  # CL1235 / CO2 -> F11: gradient characteristic
+    # Rk3 heating configuration
+    1424: True,  # CL1425 / CO3 -> F01: room-temperature feedback enabled
+    1425: True,  # CL1426 / CO3 -> F02: outdoor sensor enabled
     1434: False,  # CL1435 / CO3 -> F11: gradient characteristic
     1799: True,  # rk4 automatic
     1807: True,  # CL1808 / solar circuit pump active

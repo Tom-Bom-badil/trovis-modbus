@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING
 
 from modbus_connection.model import Component, ComponentGroup
@@ -35,8 +35,10 @@ from .device_info import DeviceInformation
 from .enums import (
     ControlCircuitRole,
     HeatingCircuitControlMode,
+    RemoteInputRole,
     SystemActivity,
 )
+from .metadata import NumberMetadata
 from .subsystems import (
     BufferTankCircuit,
     Clock,
@@ -236,29 +238,159 @@ class Trovis557x:
         )
 
     def heating_circuit_uses_outdoor_sensor(self, index: int) -> bool | None:
-        """Return whether one active Rk1-Rk3 slot uses weather compensation.
+        """Return whether one room-heating Rk uses weather compensation.
 
-        ``True`` means COx -> F02 is active and the heating-curve parameters
-        apply. ``False`` means fixed set point control. ``None`` keeps callers
-        conservative if the selector is unavailable or not readable.
+        ``True`` means the same circuit's COx -> F02 is active. Non-heating
+        circuit roles do not have a heating-curve mode and therefore return
+        ``False`` even if a dormant function coil happens to be set.
         """
         if not 1 <= index <= len(self._control_circuits):
             raise ValueError(f"Rk{index} is not available on this controller")
+        if self.control_circuit_role(index) is not ControlCircuitRole.HEATING:
+            return False
         return self.functions.heating_circuit_uses_outdoor_sensor(index)
+
+    def heating_circuit_uses_room_feedback(self, index: int) -> bool | None:
+        """Return whether one room-heating Rk uses room feedback.
+
+        COx -> F01 configures room-temperature feedback. The result never
+        depends on the current RFx measurement, so a later sensor failure does
+        not change the configured capability. Non-heating circuit roles return
+        ``False`` because room feedback is not an effective circuit function.
+        """
+        if not 1 <= index <= len(self._control_circuits):
+            raise ValueError(f"Rk{index} is not available on this controller")
+        if self.control_circuit_role(index) is not ControlCircuitRole.HEATING:
+            return False
+        return self.functions.heating_circuit_uses_room_feedback(index)
+
+    def trovis_5570_room_control_unit_available(self, index: int) -> bool:
+        """Return whether this model/system offers CO7-F03/F04/F05 for Rk."""
+        if not 1 <= index <= len(self._control_circuits):
+            raise ValueError(f"Rk{index} is not available on this controller")
+        if self.control_circuit_role(index) is not ControlCircuitRole.HEATING:
+            return False
+
+        definition = self.configuration_definition
+        if definition is None or not definition.supports_model(
+            self.model_definition.model
+        ):
+            return False
+        if not definition.supports_trovis_5570_room_control_unit(
+            self.model_definition.model,
+            index,
+        ):
+            return False
+
+        circuit = self._control_circuits[index - 1]
+        return circuit.is_field_readable("trovis_5570_room_control_unit")
+
+    def heating_circuit_uses_trovis_5570(self, index: int) -> bool | None:
+        """Return whether a supported room-heating Rk uses TROVIS 5570."""
+        if not 1 <= index <= len(self._control_circuits):
+            raise ValueError(f"Rk{index} is not available on this controller")
+        if not self.trovis_5570_room_control_unit_available(index):
+            # Ignore dormant CO7-F03/F04/F05 values in hydronic systems where
+            # the manufacturer does not offer the corresponding function.
+            return False
+
+        circuit = self._control_circuits[index - 1]
+        return circuit.trovis_5570_room_control_unit
+
+    def remote_input_role(self, index: int) -> RemoteInputRole | None:
+        """Return the configured physical meaning of FG1, FG2 or FG3.
+
+        A local 5244/5257 room unit uses FGx for the room-setpoint correction
+        when COx -> F01 is active. If a TROVIS 5570 is used over the device
+        bus, or room feedback is disabled, the local FGx input remains a free
+        0..2000-ohm resistance remote input. Signal validity is deliberately
+        not part of this configuration-only role decision.
+        """
+        if not 1 <= index <= 3:
+            raise ValueError(f"FG{index} is not available")
+        if index > len(self._control_circuits):
+            return None
+
+        if self.control_circuit_role(index) is not ControlCircuitRole.HEATING:
+            return RemoteInputRole.RESISTANCE_REMOTE
+
+        uses_bus_panel = self.heating_circuit_uses_trovis_5570(index)
+        if uses_bus_panel is True:
+            return RemoteInputRole.RESISTANCE_REMOTE
+        if uses_bus_panel is None:
+            return None
+
+        room_feedback = self.heating_circuit_uses_room_feedback(index)
+        if room_feedback is True:
+            return RemoteInputRole.ROOM_UNIT_OFFSET
+        if room_feedback is False:
+            return RemoteInputRole.RESISTANCE_REMOTE
+        return None
+
+    def sensor_number_metadata(self, sensor_key: str) -> NumberMetadata:
+        """Return role-aware numeric metadata for one global sensor key."""
+        metadata = self.sensors.require_metadata_for(sensor_key)
+        if metadata.number is None:
+            raise TypeError(f"sensor {sensor_key!r} is not numeric")
+
+        number = metadata.number
+        if sensor_key not in {"fg1", "fg2", "fg3"}:
+            return number
+
+        role = self.remote_input_role(int(sensor_key[-1]))
+        if role is RemoteInputRole.ROOM_UNIT_OFFSET:
+            return replace(
+                number,
+                min_value=-5,
+                max_value=5,
+                step=0.1,
+                digits=1,
+                raw_min=-50,
+                raw_max=50,
+                unit="K",
+            )
+        if role is RemoteInputRole.RESISTANCE_REMOTE:
+            return replace(
+                number,
+                min_value=0,
+                max_value=2000,
+                step=1,
+                digits=0,
+                raw_min=0,
+                raw_max=2000,
+                unit="Ω",
+            )
+        return number
+
+    def sensor_value(self, sensor_key: str) -> float | int | None:
+        """Return one global sensor value using its resolved semantic role."""
+        value = getattr(self.sensors, sensor_key)
+        if value is None or sensor_key not in {"fg1", "fg2", "fg3"}:
+            return value
+
+        role = self.remote_input_role(int(sensor_key[-1]))
+        if role is RemoteInputRole.ROOM_UNIT_OFFSET:
+            # The canonical register field already applies the documented
+            # 0.1 scale, which is the correct representation for the local
+            # room-panel correction in kelvin.
+            return value
+        if role is RemoteInputRole.RESISTANCE_REMOTE:
+            # The same physical register is documented as a 0..2000-ohm
+            # resistance input. Hardware testing shows that the register's
+            # canonical 0.1-scaled value must therefore be converted back to
+            # whole ohms for this semantic role.
+            return value * 10
+        return None
 
     def heating_circuit_uses_four_point_characteristic(
         self,
         index: int,
     ) -> bool | None:
-        """Return whether one active Rk1-Rk3 slot uses a four-point curve.
-
-        The selector is relevant only when COx -> F02 enables weather
-        compensation. ``False`` selects the gradient characteristic, ``True``
-        selects the four-point characteristic and ``None`` keeps callers on
-        the established gradient-characteristic fallback.
-        """
+        """Return whether one room-heating Rk uses a four-point curve."""
         if not 1 <= index <= len(self._control_circuits):
             raise ValueError(f"Rk{index} is not available on this controller")
+        if self.control_circuit_role(index) is not ControlCircuitRole.HEATING:
+            return False
         return self.functions.heating_circuit_uses_four_point_characteristic(index)
 
     def heating_circuit_operating_mode(
@@ -272,6 +404,9 @@ class Trovis557x:
         four-point characteristic; an unavailable F11 selector retains the
         established gradient-characteristic fallback.
         """
+        if self.control_circuit_role(index) is not ControlCircuitRole.HEATING:
+            return None
+
         uses_outdoor_sensor = self.heating_circuit_uses_outdoor_sensor(index)
         if uses_outdoor_sensor is None:
             return None
@@ -280,6 +415,47 @@ class Trovis557x:
         if self.heating_circuit_uses_four_point_characteristic(index) is True:
             return HeatingCircuitControlMode.FOUR_POINT
         return HeatingCircuitControlMode.HEATING_CURVE
+
+    def heating_circuit_optimization_available(self, index: int) -> bool:
+        """Return whether optimization is available for one heating circuit.
+
+        The documented base requirements are room-temperature feedback
+        (COx -> F01) and weather-compensated control. Optional fast-heat-up
+        blockers are intentionally not modeled yet because their Modbus
+        addresses are not sufficiently verified.
+        """
+        if not 1 <= index <= len(self._control_circuits):
+            raise ValueError(f"Rk{index} is not available on this controller")
+
+        if self.control_circuit_role(index) is not ControlCircuitRole.HEATING:
+            return False
+
+        return self.heating_circuit_uses_room_feedback(
+            index
+        ) is True and self._heating_circuit_room_function_uses_weather(index)
+
+    def heating_circuit_adaptation_available(self, index: int) -> bool:
+        """Return whether adaptation is available for one heating circuit.
+
+        Adaptation requires room-temperature feedback and weather-compensated
+        control and is only available with the gradient characteristic, i.e.
+        when COx -> F11 is disabled.
+        """
+        if not 1 <= index <= len(self._control_circuits):
+            raise ValueError(f"Rk{index} is not available on this controller")
+
+        if self.control_circuit_role(index) is not ControlCircuitRole.HEATING:
+            return False
+
+        return (
+            self.heating_circuit_uses_room_feedback(index) is True
+            and self._heating_circuit_room_function_uses_weather(index)
+            and self.heating_circuit_uses_four_point_characteristic(index) is False
+        )
+
+    def _heating_circuit_room_function_uses_weather(self, index: int) -> bool:
+        """Return the F02 weather prerequisite for F07/F08 of the same Rk."""
+        return self.heating_circuit_uses_outdoor_sensor(index) is True
 
     @property
     def has_rk4(self) -> bool:

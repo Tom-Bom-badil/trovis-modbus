@@ -231,3 +231,11 @@ def test_model_rejects_an_unsupported_variant_sensor() -> None:
             sensor_keys=("af1",),
             sensor_variants=(sensor_variant("fg1"),),
         )
+
+
+@pytest.mark.parametrize("definition", MODEL_DEFINITIONS.values())
+def test_every_model_supports_analog_output_voltage(
+    definition: ModelDefinition,
+) -> None:
+    """AA1 is part of the common TROVIS 557x measurement set."""
+    assert definition.supports_sensor("analog_output_voltage")

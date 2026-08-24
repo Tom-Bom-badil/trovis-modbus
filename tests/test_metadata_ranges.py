@@ -23,6 +23,7 @@ from trovis_modbus import MonthDay, Trovis557x
         ("rk4", "maximum_charging_temperature", 0, 90, 0, 900),
         ("rk4", "maximum_return_flow_temperature", 5, 90, 50, 900),
         ("rk4", "disinfection_temperature", 60, 90, 600, 900),
+        ("sensors", "analog_output_voltage", 0, 10, 0, 100),
     ],
 )
 def test_number_ranges_from_reference_data(
@@ -99,3 +100,14 @@ def test_all_writable_temporal_values_have_complete_ranges(
             assert isinstance(metadata.temporal.max_value, expected_type), field
             assert metadata.temporal.raw_min is not None, field
             assert metadata.temporal.raw_max is not None, field
+
+
+def test_analog_output_voltage_metadata(trovis: Trovis557x) -> None:
+    """AA1 exposes the documented 0-10 V output value."""
+    metadata = trovis.sensors.require_metadata_for("analog_output_voltage")
+
+    assert metadata.number is not None
+    assert metadata.number.unit == "V"
+    assert metadata.number.digits == 1
+    assert metadata.number.min_value == 0
+    assert metadata.number.max_value == 10

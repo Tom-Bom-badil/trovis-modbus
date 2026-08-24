@@ -1,4 +1,4 @@
-"""Global physical and analog sensor inputs."""
+"""Global physical I/O measurements."""
 
 from __future__ import annotations
 
@@ -35,23 +35,26 @@ class Sensors(TrovisComponent):
         nan=NAN_INT16,
         min_value=-5,
         max_value=2000,
+        raw_min=-50,
+        raw_max=20000,
         digits=1,
         maker_key="AE1",
         maker_category="FÜH-FG",
         description="Analogeingang AE1",
     )
-    fg1 = gauge(  # FernGeber 1 (alternative ae1)
+    fg1 = gauge(  # FG1 register; semantic unit/value depends on configured role
         40026,
         0.1,
         signed=True,
         nan=NAN_INT16,
         min_value=-5,
         max_value=2000,
-        unit="K",
+        raw_min=-50,
+        raw_max=20000,
         digits=1,
         maker_key="FG1",
         maker_category="FÜH-FG",
-        description="Ferngeber FG1",
+        description="Ferngeber FG1 (role-dependent value)",
     )
 
     ae2 = gauge(  # AnalogEingang 0-10V 2
@@ -61,23 +64,26 @@ class Sensors(TrovisComponent):
         nan=NAN_INT16,
         min_value=-5,
         max_value=2000,
+        raw_min=-50,
+        raw_max=20000,
         digits=1,
         maker_key="AE2",
         maker_category="FÜH-FG",
         description="Analogeingang AE2",
     )
-    fg2 = gauge(  # FernGeber 2 (alternative ae2)
+    fg2 = gauge(  # FG2 register; semantic unit/value depends on configured role
         40027,
         0.1,
         signed=True,
         nan=NAN_INT16,
         min_value=-5,
         max_value=2000,
-        unit="K",
+        raw_min=-50,
+        raw_max=20000,
         digits=1,
         maker_key="FG2",
         maker_category="FÜH-FG",
-        description="Ferngeber FG2",
+        description="Ferngeber FG2 (role-dependent value)",
     )
 
     ae3 = gauge(  # AnalogEingang 0-10V 3
@@ -87,23 +93,26 @@ class Sensors(TrovisComponent):
         nan=NAN_INT16,
         min_value=-5,
         max_value=2000,
+        raw_min=-50,
+        raw_max=20000,
         digits=1,
         maker_key="AE3",
         maker_category="FÜH-FG",
         description="Analogeingang AE3",
     )
-    fg3 = gauge(  # FernGeber 3 (alternative ae3)
+    fg3 = gauge(  # FG3 register; semantic unit/value depends on configured role
         40028,
         0.1,
         signed=True,
         nan=NAN_INT16,
         min_value=-5,
         max_value=2000,
-        unit="K",
+        raw_min=-50,
+        raw_max=20000,
         digits=1,
         maker_key="FG3",
         maker_category="FÜH-FG",
-        description="Ferngeber FG3",
+        description="Ferngeber FG3 (role-dependent value)",
     )
 
     pulse_rate = integer(
@@ -140,6 +149,21 @@ class Sensors(TrovisComponent):
         unit="mA",
         maker_category="FÜH-EA",
         description="Analogeingang 0 bis 20 mA über 50-Ω-Shunt",
+    )
+
+    analog_output_voltage = gauge(  # AnalogAusgang AA1 0-10 V
+        40031,
+        0.1,
+        signed=False,
+        min_value=0,
+        max_value=10,
+        raw_min=0,
+        raw_max=100,
+        digits=1,
+        unit="V",
+        maker_key="AA1",
+        maker_category="FÜH-EA",
+        description="Analogausgang AA1",
     )
 
     @property

@@ -127,7 +127,7 @@ def sensor_variant(*sensor_keys: str) -> SensorVariant:
     return SensorVariant(sensor_keys=sensor_keys)
 
 
-# Logical sensor registers available throughout the supported 557x family.
+# Logical measurement registers available throughout the supported 557x family.
 # Physical terminals deliberately remain outside the model definition.
 COMMON_SENSOR_KEYS = (
     "af1",
@@ -144,6 +144,7 @@ COMMON_SENSOR_KEYS = (
     "fg1",
     "fg2",
     "analog_input_voltage",
+    "analog_output_voltage",
 )
 
 # Additional logical sensors used by the three-control-circuit models.

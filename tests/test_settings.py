@@ -31,6 +31,10 @@ async def test_shared_functions_and_parameters(trovis: Trovis557x) -> None:
     assert trovis.functions.analog_setpoint_correction_enabled is True
     assert trovis.functions.buffer_tank_bottom_sensor_enabled is False
 
+    assert trovis.functions.heating_circuit_uses_room_feedback(1) is True
+    assert trovis.functions.heating_circuit_uses_room_feedback(2) is True
+    assert trovis.functions.heating_circuit_uses_room_feedback(3) is True
+
     assert trovis.functions.input_is_binary(1) is False
     assert trovis.functions.input_is_binary(2) is True
     with pytest.raises(KeyError):
@@ -39,6 +43,18 @@ async def test_shared_functions_and_parameters(trovis: Trovis557x) -> None:
     assert trovis.parameters.analog_input_selection == 5
     assert trovis.parameters.selected_analog_inputs == (1, 3)
     assert trovis.parameters.storage_tank_charging_pump_sensor_input == 15
+
+
+def test_room_feedback_rejects_invalid_circuit_index(
+    mock_modbus_unit: MockModbusUnit,
+) -> None:
+    device = Trovis557x(mock_modbus_unit, model=5579)
+
+    with pytest.raises(ValueError):
+        device.functions.heating_circuit_uses_room_feedback(0)
+
+    with pytest.raises(ValueError):
+        device.functions.heating_circuit_uses_room_feedback(4)
 
 
 def test_three_circuit_ranges_select_all_known_co8_inputs(

@@ -75,6 +75,27 @@ class Functions(TrovisComponent):
         description="Flow or power limitation through pulse input enabled",
     )
 
+    heating_circuit_1_room_sensor_enabled = _function_selector(
+        1025,
+        maker_key="FB01_RF1",
+        maker_category="CON-RT",
+        description="Room-temperature feedback for Rk1 enabled",
+    )
+
+    heating_circuit_2_room_sensor_enabled = _function_selector(
+        1225,
+        maker_key="FB01_RF2",
+        maker_category="CON-RT",
+        description="Room-temperature feedback for Rk2 enabled",
+    )
+
+    heating_circuit_3_room_sensor_enabled = _function_selector(
+        1425,
+        maker_key="FB01_RF3",
+        maker_category="CON-RT",
+        description="Room-temperature feedback for Rk3 enabled",
+    )
+
     heating_circuit_1_outdoor_sensor_enabled = _function_selector(
         1026,
         maker_key="FB02_AF1",
@@ -158,6 +179,16 @@ class Functions(TrovisComponent):
         maker_category="CON-SON",
         description="Buffer tank bottom sensor SF3 enabled",
     )
+
+    def heating_circuit_uses_room_feedback(self, index: int) -> bool | None:
+        """Return whether Rk1 through Rk3 uses room-temperature feedback."""
+        if not 1 <= index <= 3:
+            raise ValueError("heating circuit index must be in range 1..3")
+
+        field = f"heating_circuit_{index}_room_sensor_enabled"
+        if not self.is_field_readable(field):
+            return None
+        return getattr(self, field)
 
     def heating_circuit_uses_outdoor_sensor(self, index: int) -> bool | None:
         """Return whether Rk1 through Rk3 uses an outdoor sensor."""

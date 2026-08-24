@@ -598,7 +598,14 @@ class HeatingCircuit(TrovisComponent):
         description="Steuerungsebene aktiver Raumsollwert",
     )
 
-    room_control_unit = coil(703, stride=1, writable=True)
+    trovis_5570_room_control_unit = coil(
+        703,
+        stride=1,
+        writable=True,
+        maker_key="FB03_RaumleitRk1",
+        maker_category="CON-SON",
+        description="TROVIS 5570 room control unit on device bus",
+    )
 
     automatic = coil(1000, stride=200)
 
