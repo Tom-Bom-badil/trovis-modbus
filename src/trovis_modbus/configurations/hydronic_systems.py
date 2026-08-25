@@ -410,6 +410,57 @@ _TROVIS_5570_ROOM_CONTROL_SYSTEM_CODES_BY_MODEL = MappingProxyType(
     }
 )
 
+# CO4-F07 intermediate heating is only offered for selected hydronic systems.
+# Keep this as a model/system capability instead of exposing a readable dormant
+# coil. The current manuals document the 2.x and 4.1..4.5 families on all
+# models, 8.x on 5576/5578/5578-E/5579, and 9.5/9.6 on the three-Rk models.
+# Anlage 6.1 is additionally project-confirmed for 5578 and explicitly
+# documented for 5578-E. The 5579 manual does not publish F07 for 6.1.
+INTERMEDIATE_HEATING_SYSTEM_CODES_BY_MODEL = MappingProxyType(
+    {
+        ControllerModel.TROVIS_5573: (
+            _TROVIS_5573_SYSTEM_CODES & _system_codes((20, 29), (41, 45))
+        ),
+        ControllerModel.TROVIS_5573_1: (
+            _TROVIS_5573_SYSTEM_CODES & _system_codes((20, 29), (41, 45))
+        ),
+        ControllerModel.TROVIS_5575: (
+            _TROVIS_5575_SYSTEM_CODES & _system_codes((20, 29), (41, 45))
+        ),
+        ControllerModel.TROVIS_5576: (
+            _TROVIS_5576_SYSTEM_CODES & _system_codes((20, 29), (41, 45), (80, 89))
+        ),
+        ControllerModel.TROVIS_5578: (
+            _TROVIS_5578_SYSTEM_CODES
+            & _system_codes(
+                (20, 29),
+                (41, 45),
+                (80, 89),
+                exact=(61, 95, 96),
+            )
+        ),
+        ControllerModel.TROVIS_5578_E: (
+            _TROVIS_5578_E_SYSTEM_CODES
+            & _system_codes(
+                (20, 29),
+                (41, 45),
+                (80, 89),
+                exact=(61, 95, 96),
+            )
+        ),
+        ControllerModel.TROVIS_5579: (
+            _TROVIS_5579_SYSTEM_CODES
+            & _system_codes(
+                (20, 29),
+                (41, 45),
+                (80, 89),
+                exact=(95, 96),
+            )
+        ),
+    }
+)
+
+
 # PA1 P16-P19 are not effective in every hydronic system whose Rk1 role is
 # BUFFER_TANK. The current model manuals explicitly document them for the
 # 16.x family on all models, and additionally for selected 5578/5578-E
@@ -620,6 +671,16 @@ class ConfigurationDefinition:
     ) -> bool:
         """Return whether PA1 P16-P19 are documented for this combination."""
         return self.code in BUFFER_TANK_CHARGING_SYSTEM_CODES_BY_MODEL.get(
+            model,
+            frozenset(),
+        )
+
+    def supports_intermediate_heating(
+        self,
+        model: ControllerModel,
+    ) -> bool:
+        """Return whether CO4-F07 is documented for this model/system."""
+        return self.code in INTERMEDIATE_HEATING_SYSTEM_CODES_BY_MODEL.get(
             model,
             frozenset(),
         )
@@ -3260,6 +3321,7 @@ def get_configuration_definition(system_code: int) -> ConfigurationDefinition:
 __all__ = [
     "FUNCTIONAL_SENSOR_ROLE_KEYS",
     "HYDRONIC_CONFIGURATIONS",
+    "INTERMEDIATE_HEATING_SYSTEM_CODES_BY_MODEL",
     "SUPPORTED_MODELS_BY_SYSTEM_CODE",
     "SUPPORTED_SYSTEM_CODES_BY_MODEL",
     "UNDOCUMENTED_SYSTEM_CODES",

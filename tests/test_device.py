@@ -711,6 +711,34 @@ async def test_unsupported_trovis_5570_coil_is_ignored(
     assert device.remote_input_role(1) is RemoteInputRole.ROOM_UNIT_OFFSET
 
 
+@pytest.mark.parametrize(
+    ("model", "system_code", "expected"),
+    (
+        (5578, 61, True),
+        (55781, 61, True),
+        (5579, 61, False),
+        (5579, 51, False),
+        (5579, 95, True),
+        (5576, 81, True),
+        (5575, 45, True),
+    ),
+)
+async def test_intermediate_heating_availability_follows_model_and_system(
+    mock_modbus_unit: MockModbusUnit,
+    model: int,
+    system_code: int,
+    expected: bool,
+) -> None:
+    mock_modbus_unit.holding.update(HOLDING)
+    mock_modbus_unit.holding[1] = system_code
+    mock_modbus_unit.coils.update(COILS)
+    device = Trovis557x(mock_modbus_unit, model=model)
+
+    await device.async_update()
+
+    assert device.intermediate_heating_available is expected
+
+
 async def test_5578_anlage_16_1_exposes_buffer_tank_role(
     mock_modbus_unit: MockModbusUnit,
 ) -> None:

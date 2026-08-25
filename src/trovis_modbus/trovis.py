@@ -463,6 +463,20 @@ class Trovis557x:
         return self.control_circuit_role(4) is ControlCircuitRole.DOMESTIC_HOT_WATER
 
     @property
+    def intermediate_heating_available(self) -> bool:
+        """Return whether CO4-F07 is available for this model/system pair."""
+        definition = self.configuration_definition
+        if (
+            definition is None
+            or not definition.supports_model(self.model_definition.model)
+            or not self.has_rk4
+        ):
+            return False
+        if not definition.supports_intermediate_heating(self.model_definition.model):
+            return False
+        return self.rk4.is_field_readable("intermediate_heating_function_enabled")
+
+    @property
     def has_buffer_tank_circuit(self) -> bool:
         """Return whether Rk1 is assigned the buffer-tank circuit role."""
         return self.control_circuit_role(1) is ControlCircuitRole.BUFFER_TANK

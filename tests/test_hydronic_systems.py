@@ -9,6 +9,7 @@ from trovis_modbus.configurations import (
     BUFFER_TANK_CHARGING_SYSTEM_CODES_BY_MODEL,
     FUNCTIONAL_SENSOR_ROLE_KEYS,
     HYDRONIC_CONFIGURATIONS,
+    INTERMEDIATE_HEATING_SYSTEM_CODES_BY_MODEL,
     MODEL_DEFINITIONS,
     SUPPORTED_MODELS_BY_SYSTEM_CODE,
     SUPPORTED_SYSTEM_CODES_BY_MODEL,
@@ -1219,6 +1220,82 @@ def test_topology_rejects_invalid_control_circuit_index() -> None:
         match="control circuit index must be in range 1..4",
     ):
         topology.control_circuit_role(5)
+
+
+def test_intermediate_heating_support_matches_manuals_and_project_confirmation() -> (
+    None
+):
+    expected = {
+        ControllerModel.TROVIS_5573: {20, 21, 22, 23, 41, 45},
+        ControllerModel.TROVIS_5573_1: {20, 21, 22, 23, 41, 45},
+        ControllerModel.TROVIS_5575: {20, 21, 22, 23, 41, 45},
+        ControllerModel.TROVIS_5576: {20, 21, 22, 23, 24, 41, 42, 43, 45, 81, 82},
+        ControllerModel.TROVIS_5578: {
+            20,
+            21,
+            22,
+            23,
+            24,
+            41,
+            42,
+            43,
+            45,
+            61,
+            81,
+            82,
+            95,
+            96,
+        },
+        ControllerModel.TROVIS_5578_E: {
+            20,
+            21,
+            22,
+            23,
+            24,
+            41,
+            42,
+            43,
+            45,
+            61,
+            81,
+            82,
+            95,
+            96,
+        },
+        ControllerModel.TROVIS_5579: {
+            20,
+            21,
+            22,
+            23,
+            24,
+            41,
+            42,
+            43,
+            45,
+            81,
+            82,
+            95,
+            96,
+        },
+    }
+
+    assert {
+        model: set(codes)
+        for model, codes in INTERMEDIATE_HEATING_SYSTEM_CODES_BY_MODEL.items()
+    } == expected
+
+    assert HYDRONIC_CONFIGURATIONS[61].supports_intermediate_heating(
+        ControllerModel.TROVIS_5578
+    )
+    assert HYDRONIC_CONFIGURATIONS[61].supports_intermediate_heating(
+        ControllerModel.TROVIS_5578_E
+    )
+    assert not HYDRONIC_CONFIGURATIONS[61].supports_intermediate_heating(
+        ControllerModel.TROVIS_5579
+    )
+    assert not HYDRONIC_CONFIGURATIONS[51].supports_intermediate_heating(
+        ControllerModel.TROVIS_5579
+    )
 
 
 def test_buffer_tank_charging_parameter_support_matches_manuals() -> None:
