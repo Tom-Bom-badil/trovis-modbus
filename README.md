@@ -43,11 +43,11 @@ An example script `query.py` in the code of the library shows how to build an ap
 | SAUTER EQJW146F002       |         2         |     x     |        29        | TROVIS 5573-1                        |
 | SAUTER EQJW246F002       |         3         |     x     |        90        | TROVIS 5578                          |
 | SAUTER EQJW246F003       |         3         |     x     |        95        | TROVIS 5578-E                        |
-| YADOS YADO|MATIC 01      |         2         |     x     |        33        | TROVIS 5575                          |
-| YADOS YADO|MATIC 01-0003 |         2         |     x     |        33        | TROVIS 5575                          |
-| YADOS YADO|MATIC 03      |         2         |     x     |        29        | TROVIS 5573                          |
-| YADOS YADO|MATIC 03-1003 |         2         |     x     |        29        | TROVIS 5573-1                        |
-| YADOS YADO|MATIC 08      |         3         |     x     |        90        | TROVIS 5578-1114                     |
+| YADOS YADO\|MATIC 01      |         2         |     x     |        33        | TROVIS 5575                          |
+| YADOS YADO\|MATIC 01-0003 |         2         |     x     |        33        | TROVIS 5575                          |
+| YADOS YADO\|MATIC 03      |         2         |     x     |        29        | TROVIS 5573                          |
+| YADOS YADO\|MATIC 03-1003 |         2         |     x     |        29        | TROVIS 5573-1                        |
+| YADOS YADO\|MATIC 08      |         3         |     x     |        90        | TROVIS 5578-1114                     |
 | PEWO PCR06               |         2         |     x     |        33        | TROVIS 5575                          |
 
 <sup>Note: Not all non-SAMSON models have yet been tested. The figures are based on the currently available documentation.</sup>
