@@ -5,7 +5,7 @@
 [![Python](https://img.shields.io/pypi/pyversions/trovis-modbus.svg)](https://pypi.org/project/trovis-modbus/)
 [![License](https://img.shields.io/github/license/Tom-Bom-badil/trovis-modbus.svg)](LICENSE)
 
-<img width="100%" alt="SAMSON TROVIS controllers" src="https://raw.githubusercontent.com/wiki/Tom-Bom-badil/trovis-modbus/images/cover_pic.png" />
+<img width="100%" alt="SAMSON TROVIS controllers" src="https://github.com/Tom-Bom-badil/trovis-modbus/wiki/images/trovis-lib-pic.png" />
 
 <br/>`trovis-modbus` is an asynchronous Python library for reading from and writing to **SAMSON TROVIS 557x** heating and district heating controllers over Modbus (compatible OEM controller variants from SAUTER, YADOS and PEWO are also covered, see below).
 
@@ -62,18 +62,16 @@ input assignments configured for the connected physical sensors.
 | YADOS YADO\|MATIC 08      |                3 |    x    |               90 | TROVIS 5578-1114                     |
 | PEWO PCR06                |                2 |    x    |               33 | TROVIS 5575                          |
 
-<sup>Note: The non-SAMSON models have not yet been tested. The figures are based on the currently available documentation.</sup>
-
-Other compatible OEM controllers will likely work, based on the TROVIS model identity they provide. OEM controllers return and use the corresponding TROVIS model profile and are not maintained with separate datapoint definitions.
+<sup>Note: Not all non-SAMSON models have yet been tested. The figures are based on the currently available documentation.</sup>
 
 ## Testing and validation
 
 All releases of the library are tested with the following hardware setup:
 
-- 1× `TROVIS 5576`: live heating controller, Anlage 2.1 (4 required + 4 additional Pt1000 sensors),
 - 1× `TROVIS 5578`: dedicated testing device, Anlage 6.1 (fully equipped with 17 Pt1000 sensors),
 - 1× `TROVIS 5579`: dedicated testing device, Anlage 5.1 (fully equipped
-  with 17 Pt1000 sensors).
+  with 17 Pt1000 sensors),
+- 1× `TROVIS 5576`: live heating controller, Anlage 2.1 (4 required + 4 additional Pt1000 sensors).
 
 Additional software-based tests are part of the project to ensure code quality
 and consistency.
