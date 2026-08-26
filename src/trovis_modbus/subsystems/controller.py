@@ -324,6 +324,17 @@ class Controller(TrovisComponent):
         description="Automatische Sommer-/Winterzeitumschaltung",
     )
 
+    temperature_monitoring_enabled = coil(
+        148,
+        writable=True,
+        false_key="inactive",
+        true_key="active",
+        false_label="Inaktiv",
+        true_label="Aktiv",
+        maker_key="FB19Tempueberw",
+        description="Temperaturüberwachung",
+    )
+
     manual_levels_locked = coil(150, writable=True)
 
     rotary_switch_locked = coil(151, writable=True)
