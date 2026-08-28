@@ -480,6 +480,106 @@ class HeatingCircuit(TrovisComponent):
         description="Sollwert Nachtbetrieb bei Festwertregelung",
     )
 
+    control_parameter_kp = gauge(
+        41065,
+        0.1,
+        stride=200,
+        writable=True,
+        min_value=0.1,
+        max_value=50.0,
+        raw_min=1,
+        raw_max=500,
+        digits=1,
+        maker_key="KpRk1Y1",
+        description="Proportionalverstärkung Rk",
+    )
+
+    control_parameter_tn = integer(
+        41066,
+        stride=200,
+        writable=True,
+        min_value=1,
+        max_value=999,
+        raw_min=1,
+        raw_max=999,
+        digits=0,
+        unit="s",
+        maker_key="TnRk1Y1",
+        description="Nachstellzeit Rk",
+    )
+
+    control_parameter_ty = integer(
+        41067,
+        stride=200,
+        writable=True,
+        min_value=15,
+        max_value=240,
+        raw_min=15,
+        raw_max=240,
+        digits=0,
+        unit="s",
+        maker_key="TyRk1",
+        description="Laufzeit Stellantrieb Rk (bei 3-Punkt)",
+    )
+
+    control_parameter_tv = integer(
+        41068,
+        stride=200,
+        writable=True,
+        min_value=0,
+        max_value=999,
+        raw_min=0,
+        raw_max=999,
+        digits=0,
+        unit="s",
+        maker_key="TvY1",
+        description="Vorhaltezeit Rk (bei 0-10V)",
+    )
+
+    control_parameter_hysteresis = gauge(
+        41069,
+        0.1,
+        stride=200,
+        writable=True,
+        min_value=1.0,
+        max_value=30.0,
+        raw_min=10,
+        raw_max=300,
+        step=1,
+        digits=1,
+        unit="K",
+        maker_key="SchaltdiffRk1",
+        description="Schaltdifferenz Rk (bei 2-Punkt)",
+    )
+
+    control_parameter_minimum_on_time = integer(
+        41070,
+        stride=200,
+        writable=True,
+        min_value=0,
+        max_value=10,
+        raw_min=0,
+        raw_max=10,
+        digits=0,
+        unit="min",
+        maker_key="MinEinRk1",
+        description="Minimale Einschaltzeit Rk (bei 2-Punkt)",
+    )
+
+    control_parameter_minimum_off_time = integer(
+        41071,
+        stride=200,
+        writable=True,
+        min_value=0,
+        max_value=10,
+        raw_min=0,
+        raw_max=10,
+        digits=0,
+        unit="min",
+        maker_key="MinAusRk1",
+        description="Minimale Ausschaltzeit Rk (bei 2-Punkt)",
+    )
+
     flow_control_deviation = gauge(
         41063,
         0.1,
@@ -497,6 +597,18 @@ class HeatingCircuit(TrovisComponent):
     )
 
     ### coils
+
+    three_point_control_enabled = coil(
+        1036,
+        stride=200,
+        writable=True,
+        false_key="two_point",
+        true_key="three_point",
+        false_label="Zweipunkt",
+        true_label="3-Punkt",
+        maker_key="FB123PktRegRk1",
+        description="FB12: Regelungsart 3-Punkt Rk",
+    )
 
     manual_active = coil(5, stride=1)
 

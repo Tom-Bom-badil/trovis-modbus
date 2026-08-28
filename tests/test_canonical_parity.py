@@ -46,6 +46,7 @@ KNOWN_NON_CANONICAL_REGISTERS = {
     register_address(41102),  # PA1 P18 buffer-tank charging temperature boost
     register_address(41103),  # PA1 P19 buffer-tank charging-pump lag factor
     register_address(41104),  # Current buffer-tank charging status
+    register_address(41268),  # Rk2 Tv; corrected manufacturer address vs old reference
     register_address(41827),  # Current domestic hot-water storage status
     register_address(42002),  # Analog-input selection (AE_Auswahl)
     register_address(42003),  # Charging-pump sensor selection (SLP_Sensor)
@@ -66,6 +67,7 @@ KNOWN_NON_CANONICAL_COILS = {
         (123, False),
         (124, False),  # Active room-setpoint control level Rk1-Rk3
         (407, True),  # Hot-water intermediate-heating function block
+        (412, True),  # CO4 F12 three-point/two-point control mode
         (414, True),  # CO4 F14 thermal-disinfection function block
         (703, True),
         (704, True),
@@ -97,6 +99,7 @@ KNOWN_NON_CANONICAL_COILS = {
         (1425, False),  # CO3 F01 room-temperature feedback
         (1426, False),  # CO3 F02 outdoor sensor / weather-compensated control
         (1435, False),  # CO3 F11 four-point characteristic
+        (1436, True),  # CO3 F12 three-point/two-point control mode
         (2125, False),  # CO1 F25 buffer-tank bottom sensor SF3
     )
 }

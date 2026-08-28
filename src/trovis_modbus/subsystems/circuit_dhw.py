@@ -285,6 +285,99 @@ class DomesticHotWater(TrovisComponent):
         description="Regeldifferenz Trinkwasserkreis",
     )
 
+    control_parameter_kp = gauge(
+        41865,
+        0.1,
+        writable=True,
+        min_value=0.1,
+        max_value=50.0,
+        raw_min=1,
+        raw_max=500,
+        digits=1,
+        maker_key="KpTW",
+        description="Proportionalverstärkung Trinkwasserkreis",
+    )
+
+    control_parameter_tn = integer(
+        41866,
+        writable=True,
+        min_value=1,
+        max_value=999,
+        raw_min=1,
+        raw_max=999,
+        digits=0,
+        unit="s",
+        maker_key="TnTW",
+        description="Nachstellzeit Trinkwasserkreis",
+    )
+
+    control_parameter_ty = integer(
+        41867,
+        writable=True,
+        min_value=15,
+        max_value=240,
+        raw_min=15,
+        raw_max=240,
+        digits=0,
+        unit="s",
+        maker_key="TyTW",
+        description="Laufzeit Stellantrieb Trinkwasserkreis (bei 3-Punkt)",
+    )
+
+    control_parameter_tv = integer(
+        41868,
+        writable=True,
+        min_value=0,
+        max_value=999,
+        raw_min=0,
+        raw_max=999,
+        digits=0,
+        unit="s",
+        maker_key="TvTW",
+        description="Vorhaltezeit Trinkwasserkreis (bei 0-10V)",
+    )
+
+    control_parameter_hysteresis = gauge(
+        41869,
+        0.1,
+        writable=True,
+        min_value=1.0,
+        max_value=30.0,
+        raw_min=10,
+        raw_max=300,
+        step=1,
+        digits=1,
+        unit="K",
+        maker_key="SchaltdiffTW2P",
+        description="Schaltdifferenz Trinkwasserkreis (bei 2-Punkt)",
+    )
+
+    control_parameter_minimum_on_time = integer(
+        41870,
+        writable=True,
+        min_value=0,
+        max_value=10,
+        raw_min=0,
+        raw_max=10,
+        digits=0,
+        unit="min",
+        maker_key="MinEinTW",
+        description="Minimale Einschaltzeit Trinkwasserkreis (bei 2-Punkt)",
+    )
+
+    control_parameter_minimum_off_time = integer(
+        41871,
+        writable=True,
+        min_value=0,
+        max_value=10,
+        raw_min=0,
+        raw_max=10,
+        digits=0,
+        unit="min",
+        maker_key="MinAusTW",
+        description="Minimale Ausschaltzeit Trinkwasserkreis (bei 2-Punkt)",
+    )
+
     ### coils
 
     manual_active = coil(8)
@@ -335,6 +428,16 @@ class DomesticHotWater(TrovisComponent):
         maker_key="EBN_Son_TW_Sollw",
         maker_category="EBN-VL",
         description="Steuerungsebene Sonder-Trinkwassersollwert",
+    )
+
+    three_point_control_enabled = coil(
+        412,
+        writable=True,
+        false_key="two_point",
+        true_key="three_point",
+        false_label="Zweipunkt",
+        true_label="3-Punkt",
+        description="FB12: Regelungsart 3-Punkt Trinkwasserkreis",
     )
 
     intermediate_heating_function_enabled = coil(

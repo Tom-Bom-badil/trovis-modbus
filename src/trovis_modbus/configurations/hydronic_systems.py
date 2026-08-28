@@ -461,6 +461,131 @@ INTERMEDIATE_HEATING_SYSTEM_CODES_BY_MODEL = MappingProxyType(
 )
 
 
+# COx-F12 control parameters belong to the technical Rk slot. Rk1-Rk3 use
+# the regular circuit block whenever that slot is present. Rk4/WW only has
+# CO4-F12 in selected hydronic systems, so its availability remains an
+# explicit model/system capability. TROVIS 5578-E systems 3.7 and 3.8 are
+# intentionally included by project decision despite conflicting manual
+# table/text information. CO4-F36 and other 5578-E special parameter blocks
+# are deliberately outside this capability.
+CONTROL_PARAMETER_RK4_SYSTEM_CODES_BY_MODEL = MappingProxyType(
+    {
+        ControllerModel.TROVIS_5573: (
+            _TROVIS_5573_SYSTEM_CODES & _system_codes((110, 119), exact=(19,))
+        ),
+        ControllerModel.TROVIS_5573_1: (
+            _TROVIS_5573_SYSTEM_CODES & _system_codes((110, 119), exact=(19,))
+        ),
+        ControllerModel.TROVIS_5575: (
+            _TROVIS_5575_SYSTEM_CODES & _system_codes((110, 119), exact=(19,))
+        ),
+        ControllerModel.TROVIS_5576: (
+            _TROVIS_5576_SYSTEM_CODES & _system_codes((70, 89), (110, 119), exact=(19,))
+        ),
+        ControllerModel.TROVIS_5578: (
+            _TROVIS_5578_SYSTEM_CODES
+            & _system_codes(
+                (70, 99),
+                (110, 139),
+                (170, 189),
+                (210, 219),
+                exact=(19, 39, 59),
+            )
+        ),
+        ControllerModel.TROVIS_5578_E: (
+            _TROVIS_5578_E_SYSTEM_CODES
+            & _system_codes(
+                (70, 99),
+                (110, 139),
+                (170, 189),
+                (210, 219),
+                exact=(19, 37, 38, 39, 59, 200),
+            )
+        ),
+        ControllerModel.TROVIS_5579: (
+            _TROVIS_5579_SYSTEM_CODES
+            & _system_codes(
+                (70, 99),
+                (110, 139),
+                (210, 219),
+                exact=(19,),
+            )
+        ),
+    }
+)
+
+# F12=0 (two-point control) is more restrictive than F12 itself on several
+# models/circuits. Keep those restrictions separate so the PI/PID parameter
+# group can still be exposed where two-point control is not meaningful.
+TWO_POINT_CONTROL_PARAMETER_SYSTEM_CODES_BY_MODEL = MappingProxyType(
+    {
+        ControllerModel.TROVIS_5573: MappingProxyType(
+            {
+                1: _TROVIS_5573_SYSTEM_CODES,
+                2: _TROVIS_5573_SYSTEM_CODES,
+                4: CONTROL_PARAMETER_RK4_SYSTEM_CODES_BY_MODEL[
+                    ControllerModel.TROVIS_5573
+                ],
+            }
+        ),
+        ControllerModel.TROVIS_5573_1: MappingProxyType(
+            {
+                1: _TROVIS_5573_SYSTEM_CODES,
+                2: _TROVIS_5573_SYSTEM_CODES,
+                4: CONTROL_PARAMETER_RK4_SYSTEM_CODES_BY_MODEL[
+                    ControllerModel.TROVIS_5573_1
+                ],
+            }
+        ),
+        ControllerModel.TROVIS_5575: MappingProxyType(
+            {
+                1: _TROVIS_5575_SYSTEM_CODES,
+                2: _TROVIS_5575_SYSTEM_CODES & frozenset({100}),
+                4: _TROVIS_5575_SYSTEM_CODES & frozenset({110, 111}),
+            }
+        ),
+        ControllerModel.TROVIS_5576: MappingProxyType(
+            {
+                1: _TROVIS_5576_SYSTEM_CODES,
+                2: _TROVIS_5576_SYSTEM_CODES & frozenset({100, 101, 103}),
+                4: _TROVIS_5576_SYSTEM_CODES & frozenset({110, 111, 113}),
+            }
+        ),
+        ControllerModel.TROVIS_5578: MappingProxyType(
+            {
+                1: _TROVIS_5578_SYSTEM_CODES,
+                2: _TROVIS_5578_SYSTEM_CODES,
+                3: _TROVIS_5578_SYSTEM_CODES,
+                4: CONTROL_PARAMETER_RK4_SYSTEM_CODES_BY_MODEL[
+                    ControllerModel.TROVIS_5578
+                ]
+                - frozenset({39, 59, 171, 178, 181}),
+            }
+        ),
+        ControllerModel.TROVIS_5578_E: MappingProxyType(
+            {
+                1: _TROVIS_5578_E_SYSTEM_CODES,
+                2: _TROVIS_5578_E_SYSTEM_CODES,
+                3: _TROVIS_5578_E_SYSTEM_CODES,
+                4: CONTROL_PARAMETER_RK4_SYSTEM_CODES_BY_MODEL[
+                    ControllerModel.TROVIS_5578_E
+                ]
+                - frozenset({38, 39, 59, 171, 178, 181, 200}),
+            }
+        ),
+        ControllerModel.TROVIS_5579: MappingProxyType(
+            {
+                1: _TROVIS_5579_SYSTEM_CODES,
+                2: _TROVIS_5579_SYSTEM_CODES & frozenset({100, 101, 103}),
+                3: _TROVIS_5579_SYSTEM_CODES & _system_codes((210, 219), exact=(250,)),
+                4: _TROVIS_5579_SYSTEM_CODES
+                & frozenset({110, 111, 113, 120, 121, 130, 131, 210, 211}),
+            }
+        ),
+    }
+)
+
+
 # PA1 P16-P19 are not effective in every hydronic system whose Rk1 role is
 # BUFFER_TANK. The current model manuals explicitly document them for the
 # 16.x family on all models, and additionally for selected 5578/5578-E
@@ -684,6 +809,38 @@ class ConfigurationDefinition:
             model,
             frozenset(),
         )
+
+    def supports_control_parameters(
+        self,
+        model: ControllerModel,
+        index: int,
+    ) -> bool:
+        """Return whether COx-F12 parameters apply to this model/system/Rk."""
+        if not 1 <= index <= 4:
+            raise ValueError("control circuit index must be in range 1..4")
+        if not self.supports_model(model):
+            return False
+        if self.topology.control_circuit_role(index) is ControlCircuitRole.UNUSED:
+            return False
+        if index <= 3:
+            return True
+        return self.code in CONTROL_PARAMETER_RK4_SYSTEM_CODES_BY_MODEL.get(
+            model,
+            frozenset(),
+        )
+
+    def supports_two_point_control_parameters(
+        self,
+        model: ControllerModel,
+        index: int,
+    ) -> bool:
+        """Return whether the F12=0 parameter set applies to this Rk."""
+        if not self.supports_control_parameters(model, index):
+            return False
+        by_circuit = TWO_POINT_CONTROL_PARAMETER_SYSTEM_CODES_BY_MODEL.get(model)
+        if by_circuit is None:
+            return False
+        return self.code in by_circuit.get(index, frozenset())
 
     def supports_trovis_5570_room_control_unit(
         self,
@@ -3319,11 +3476,13 @@ def get_configuration_definition(system_code: int) -> ConfigurationDefinition:
 
 
 __all__ = [
+    "CONTROL_PARAMETER_RK4_SYSTEM_CODES_BY_MODEL",
     "FUNCTIONAL_SENSOR_ROLE_KEYS",
     "HYDRONIC_CONFIGURATIONS",
     "INTERMEDIATE_HEATING_SYSTEM_CODES_BY_MODEL",
     "SUPPORTED_MODELS_BY_SYSTEM_CODE",
     "SUPPORTED_SYSTEM_CODES_BY_MODEL",
+    "TWO_POINT_CONTROL_PARAMETER_SYSTEM_CODES_BY_MODEL",
     "UNDOCUMENTED_SYSTEM_CODES",
     "ConfigurationDefinition",
     "ConfigurationTopology",

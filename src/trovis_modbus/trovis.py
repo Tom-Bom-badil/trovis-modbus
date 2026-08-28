@@ -462,6 +462,45 @@ class Trovis557x:
         """Return whether Rk4/WW is present or retained as safe fallback."""
         return self.control_circuit_role(4) is ControlCircuitRole.DOMESTIC_HOT_WATER
 
+    def control_parameters_available(self, index: int) -> bool:
+        """Return whether the COx-F12 control-parameter block applies to Rk."""
+        if not 1 <= index <= 4:
+            raise ValueError("control circuit index must be in range 1..4")
+        definition = self.configuration_definition
+        if definition is None or not definition.supports_model(
+            self.model_definition.model
+        ):
+            return False
+        if not definition.supports_control_parameters(
+            self.model_definition.model,
+            index,
+        ):
+            return False
+
+        if index <= 3:
+            if index > len(self._control_circuits):
+                return False
+            component = self._control_circuits[index - 1]
+        else:
+            if not self.has_rk4:
+                return False
+            component = self.rk4
+
+        return component.is_field_readable(
+            "three_point_control_enabled"
+        ) and component.is_field_readable("control_parameter_kp")
+
+    def two_point_control_parameters_available(self, index: int) -> bool:
+        """Return whether the F12=0 parameter set applies to technical Rk."""
+        if not self.control_parameters_available(index):
+            return False
+        definition = self.configuration_definition
+        assert definition is not None
+        return definition.supports_two_point_control_parameters(
+            self.model_definition.model,
+            index,
+        )
+
     @property
     def intermediate_heating_available(self) -> bool:
         """Return whether CO4-F07 is available for this model/system pair."""
