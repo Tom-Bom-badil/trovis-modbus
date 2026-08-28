@@ -37,6 +37,7 @@ from .enums import (
     HeatingCircuitControlMode,
     RemoteInputRole,
     SystemActivity,
+    SystemOverallStatus,
 )
 from .metadata import NumberMetadata
 from .subsystems import (
@@ -621,6 +622,57 @@ class Trovis557x:
         if ww_active:
             return SystemActivity.DOMESTIC_HOT_WATER
         return SystemActivity.IDLE
+
+    @property
+    def system_overall_status(self) -> SystemOverallStatus | None:
+        """Return the actuator-state bit mask for the configured hydronic system."""
+        status = SystemOverallStatus.NONE
+        known_state = False
+
+        valve_flags = (
+            SystemOverallStatus.RK1_VALVE_OPEN,
+            SystemOverallStatus.RK2_VALVE_OPEN,
+            SystemOverallStatus.RK3_VALVE_OPEN,
+        )
+        pump_flags = (
+            SystemOverallStatus.UP1_RUNNING,
+            SystemOverallStatus.UP2_RUNNING,
+            SystemOverallStatus.UP3_RUNNING,
+        )
+
+        for index in self.control_circuit_indices:
+            if index > 3:
+                continue
+
+            circuit = self._control_circuits[index - 1]
+            valve_setpoint = circuit.valve_setpoint
+            pump_running = circuit.pump_running
+
+            if valve_setpoint is not None:
+                known_state = True
+                if valve_setpoint != 0:
+                    status |= valve_flags[index - 1]
+
+            if pump_running is not None:
+                known_state = True
+                if pump_running is True:
+                    status |= pump_flags[index - 1]
+
+        if self.has_rk4:
+            slp_running = self.rk4.storage_tank_charging_pump_running
+            zp_running = self.rk4.circulation_pump_running
+
+            if slp_running is not None:
+                known_state = True
+                if slp_running is True:
+                    status |= SystemOverallStatus.SLP_RUNNING
+
+            if zp_running is not None:
+                known_state = True
+                if zp_running is True:
+                    status |= SystemOverallStatus.ZP_RUNNING
+
+        return status if known_state else None
 
     @property
     def writing_enabled(self) -> bool:

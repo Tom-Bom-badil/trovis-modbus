@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from enum import IntEnum, StrEnum
+from enum import IntEnum, IntFlag, StrEnum
 
 from .metadata import OptionMetadata
 
@@ -143,9 +143,22 @@ class SystemActivity(IntEnum):
     HEATING_AND_DOMESTIC_HOT_WATER = 3
 
 
+class SystemOverallStatus(IntFlag):
+    """Bit mask of current pump and valve output states."""
+
+    NONE = 0
+    RK1_VALVE_OPEN = 1
+    RK2_VALVE_OPEN = 2
+    RK3_VALVE_OPEN = 4
+    SLP_RUNNING = 8
+    UP1_RUNNING = 16
+    UP2_RUNNING = 32
+    UP3_RUNNING = 64
+    ZP_RUNNING = 128
+
+
 # Reusable option metadata for the enums above.
-# Rk1 through Rk4 share one
-# writable operating-mode list.
+# Rk1 through Rk4 share one writable operating-mode list.
 # PROGRAM remains readable through OperatingMode, but it is a timer-program
 # state rather than a normal mode selected through a writable field.
 OPERATING_MODE_OPTIONS = (

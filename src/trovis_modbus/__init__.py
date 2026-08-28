@@ -36,6 +36,7 @@ from .enums import (
     RemoteInputRole,
     StorageStatus,
     SystemActivity,
+    SystemOverallStatus,
     VolumeUnit,
     Weekday,
 )
@@ -116,4 +117,6 @@ __all__ = [
     "NumberMetadata",
     "OptionMetadata",
     "TemporalMetadata",
+    "SystemActivity",
+    "SystemOverallStatus",
 ]

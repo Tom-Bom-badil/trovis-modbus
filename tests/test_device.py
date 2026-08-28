@@ -14,6 +14,7 @@ from trovis_modbus import (
     OperatingMode,
     RemoteInputRole,
     SystemActivity,
+    SystemOverallStatus,
     TemperatureRange,
     Trovis557x,
     TrovisWriteAccessError,
@@ -133,6 +134,59 @@ async def test_domestic_hot_water(trovis: Trovis557x) -> None:
 async def test_combined_activity(trovis: Trovis557x) -> None:
     await trovis.async_update()
     assert trovis.system_activity is SystemActivity.HEATING_AND_DOMESTIC_HOT_WATER
+
+
+async def test_system_overall_status(trovis: Trovis557x) -> None:
+    """The overall status combines the configured actuator states."""
+    await trovis.async_update()
+
+    assert trovis.system_overall_status == (
+        SystemOverallStatus.RK1_VALVE_OPEN
+        | SystemOverallStatus.SLP_RUNNING
+        | SystemOverallStatus.UP1_RUNNING
+    )
+    assert int(trovis.system_overall_status) == 25
+
+
+async def test_system_overall_status_bit_order(
+    mock_modbus_unit: MockModbusUnit,
+) -> None:
+    """Every actuator state occupies its permanently assigned bit."""
+    mock_modbus_unit.holding.update(HOLDING)
+    mock_modbus_unit.holding.update(
+        {
+            1: 61,  # Anlage 6.1: Rk1, Rk2, Rk3 and Rk4
+            106: 10,  # Rk1 valve setpoint
+            108: 20,  # Rk2 valve setpoint
+            110: 30,  # Rk3 valve setpoint
+        }
+    )
+    mock_modbus_unit.coils.update(COILS)
+    mock_modbus_unit.coils.update(
+        {
+            56: True,  # UP1
+            57: True,  # UP2
+            58: True,  # UP3
+            59: True,  # SLP
+            60: True,  # ZP
+        }
+    )
+
+    device = Trovis557x(mock_modbus_unit, model=5579)
+    await device.async_update()
+
+    assert device.control_circuit_indices == (1, 2, 3, 4)
+    assert device.system_overall_status == (
+        SystemOverallStatus.RK1_VALVE_OPEN
+        | SystemOverallStatus.RK2_VALVE_OPEN
+        | SystemOverallStatus.RK3_VALVE_OPEN
+        | SystemOverallStatus.SLP_RUNNING
+        | SystemOverallStatus.UP1_RUNNING
+        | SystemOverallStatus.UP2_RUNNING
+        | SystemOverallStatus.UP3_RUNNING
+        | SystemOverallStatus.ZP_RUNNING
+    )
+    assert int(device.system_overall_status) == 255
 
 
 async def test_independent_component_update(trovis: Trovis557x) -> None:
