@@ -24,9 +24,14 @@ class DeviceInformation(TrovisComponent):
         return "SAMSON"
 
     @property
+    def model_code(self) -> int | None:
+        """Reported controller model code from HR40001."""
+        return self._model_raw
+
+    @property
     def model(self) -> str:
         """Model name, e.g. 'TROVIS 5579'."""
-        value = self._model_raw
+        value = self.model_code
         return f"TROVIS {value}" if value else "TROVIS 557x"
 
     @property
