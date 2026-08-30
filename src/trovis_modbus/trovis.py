@@ -40,6 +40,10 @@ from .enums import (
     SystemOverallStatus,
 )
 from .metadata import NumberMetadata
+from .read_exclusions import (
+    normalize_excluded_addresses,
+    ranges_excluding_addresses,
+)
 from .subsystems import (
     BufferTankCircuit,
     Clock,
@@ -76,11 +80,14 @@ class Trovis557x:
         *,
         model: int = 5578,
         detected_sensors: Iterable[str] = (),
+        excluded_registers: Iterable[int] = (),
+        excluded_coils: Iterable[int] = (),
     ) -> None:
         self._unit = unit
         self.model = model
         self.model_definition = get_model_definition_for_reported_model(model)
-
+        self.excluded_registers = normalize_excluded_addresses(excluded_registers)
+        self.excluded_coils = normalize_excluded_addresses(excluded_coils)
         # Probe results may contain several descriptor views of the same raw
         # register. Keep only logical sensor keys supported by this model. This
         # also sanitizes existing config entries created before ModelDefinition
@@ -92,7 +99,6 @@ class Trovis557x:
             if self.model_definition.supports_sensor(sensor_key)
         )
         self.unsupported_detected_sensors = self.probed_sensors - self.detected_sensors
-
         self.info = DeviceInformation(unit)
         self.controller = Controller(unit)
         self.clock = Clock(unit)
@@ -103,7 +109,6 @@ class Trovis557x:
         self.rk1 = HeatingCircuit(unit, index=1)
         self.rk2 = HeatingCircuit(unit, index=2)
         self.rk3 = HeatingCircuit(unit, index=3)
-
         self.rk4 = DomesticHotWater(unit)
         self.buffer_tank = BufferTankCircuit(unit)
         self.solar = SolarCircuit(unit)
@@ -123,15 +128,21 @@ class Trovis557x:
             self.buffer_tank,
             self.solar,
         )
-
         register_ranges, coil_ranges = ranges_for_model(model)
+        register_ranges = ranges_excluding_addresses(
+            register_ranges,
+            self.excluded_registers,
+        )
+        coil_ranges = ranges_excluding_addresses(
+            coil_ranges,
+            self.excluded_coils,
+        )
         for component in all_components:
             component.configure_readable_ranges(register_ranges, coil_ranges)
 
         # Ranges describe address availability. ModelDefinition additionally
         # limits logical sensor views that may share one readable register.
         self.sensors.configure_readable_fields(self.model_definition.sensor_keys)
-
         self._control_circuits = (
             self.rk1,
             self.rk2,
