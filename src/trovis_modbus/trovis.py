@@ -58,7 +58,7 @@ if TYPE_CHECKING:
     from modbus_connection import ModbusUnit
 
 
-_TROVIS_MODBUS_TIMEOUT = 5
+_TROVIS_MODBUS_TIMEOUT = 1
 _TROVIS_MODBUS_CONNECT_DELAY = 0
 
 
