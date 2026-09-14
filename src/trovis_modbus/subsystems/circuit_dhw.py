@@ -470,6 +470,19 @@ class DomesticHotWater(TrovisComponent):
 
     frost_protection = coil(1806)
 
+    # IMPORTANT: CL1807 is treated as a command/trigger, not as an ordinary
+    # persistent state coil. The historical API explicitly describes it as
+    # "Trigger a one-off storage charge". Until real-controller/sniffer
+    # tests prove that repeating CL1807 is harmless, a missing Modbus write
+    # response must therefore remain ambiguous: the controller may already
+    # have accepted the trigger even though the response was lost. Blindly
+    # retrying could start the action twice, restart it, or extend its effect.
+    # For that reason CL1807 is EXPLICITLY excluded from the generic
+    # write -> targeted readback -> retry mechanism below. A timeout is
+    # surfaced to the caller without a second CL1807 write. This exception
+    # must not be removed merely because ordinary writable coils are safe to
+    # retry; change it only after the command semantics have been verified on
+    # real hardware.
     forced_charging = coil(1807, writable=True)
 
     forced_charging_uses_storage_tank_sensor_2 = coil(
@@ -528,6 +541,10 @@ class DomesticHotWater(TrovisComponent):
             "Legacy-Konfiguration verwendeter Spiegelpunkt"
         ),
     )
+
+    # See the CL1807 warning above: command/edge-trigger writes are not
+    # automatically repeated when their response is lost.
+    non_retryable_write_fields = frozenset({"forced_charging"})
 
     # Override coils released before a write (no per-index stride here).
     ebene_coils = {

@@ -5,7 +5,11 @@ from __future__ import annotations
 from datetime import date, time
 
 import pytest
-from modbus_connection import ClientClosedError, GatewayTargetError
+from modbus_connection import (
+    ClientClosedError,
+    GatewayTargetError,
+    ModbusTimeoutError,
+)
 from modbus_connection.mock import MockModbusConnection, MockModbusUnit
 
 from trovis_modbus import (
@@ -18,6 +22,7 @@ from trovis_modbus import (
     TemperatureRange,
     Trovis557x,
     TrovisWriteAccessError,
+    TrovisWriteVerificationError,
     Weekday,
 )
 from trovis_modbus.configurations.address_ranges import (
@@ -371,13 +376,174 @@ async def test_write_access_enable_disable(
 async def test_write_refreshes_access_code(
     trovis: Trovis557x, unit: MockModbusUnit
 ) -> None:
-    """The public write path refreshes HR40145 before writing the datapoint."""
+    """The public write path refreshes HR40145 and caches verified readback."""
     assert await trovis.async_read_writing_enabled() is False
 
-    await trovis.rk1.set_room_setpoint_day(21.5)
+    verified = await trovis.rk1.async_write_datapoint("room_setpoint_day", 21.5)
 
+    assert verified is True
     assert (await unit.read_holding_registers(144, 1))[0] == 1732
     assert (await unit.read_holding_registers(1002, 1))[0] == 215
+    assert trovis.rk1.room_setpoint_day == pytest.approx(21.5)
+
+
+async def test_write_access_timeout_is_read_back_before_retry(
+    trovis: Trovis557x, unit: MockModbusUnit, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A lost HR40145 response must not cause an unnecessary second write."""
+    original_write_register = unit.write_register
+    access_writes = 0
+
+    async def write_access_with_lost_response(address: int, value: int) -> None:
+        nonlocal access_writes
+        await original_write_register(address, value)
+        if address == 144:
+            access_writes += 1
+            if access_writes == 1:
+                raise ModbusTimeoutError("simulated lost HR40145 response")
+
+    monkeypatch.setattr(unit, "write_register", write_access_with_lost_response)
+
+    await trovis.async_enable_writing()
+
+    assert access_writes == 1
+    assert trovis.writing_enabled is True
+    assert (await unit.read_holding_registers(144, 1))[0] == 1732
+
+
+async def test_write_timeout_is_read_back_before_retry(
+    trovis: Trovis557x, unit: MockModbusUnit, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A lost write response must not duplicate a write that already landed."""
+    original_write_register = unit.write_register
+    datapoint_writes = 0
+
+    async def write_register_with_lost_response(address: int, value: int) -> None:
+        nonlocal datapoint_writes
+        await original_write_register(address, value)
+        if address == 1002:
+            datapoint_writes += 1
+            if datapoint_writes == 1:
+                raise ModbusTimeoutError("simulated lost write response")
+
+    monkeypatch.setattr(unit, "write_register", write_register_with_lost_response)
+
+    verified = await trovis.rk1.async_write_datapoint("room_setpoint_day", 21.5)
+
+    assert verified is True
+    assert datapoint_writes == 1
+    assert trovis.rk1.room_setpoint_day == pytest.approx(21.5)
+
+
+async def test_coil_write_timeout_is_read_back_before_retry(
+    trovis: Trovis557x, unit: MockModbusUnit, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A lost response for an ordinary state coil is verified before retrying."""
+    original_write_coil = unit.write_coil
+    datapoint_writes = 0
+
+    async def write_coil_with_lost_response(address: int, value: bool) -> None:
+        nonlocal datapoint_writes
+        await original_write_coil(address, value)
+        if address == 1810:
+            datapoint_writes += 1
+            if datapoint_writes == 1:
+                raise ModbusTimeoutError("simulated lost coil response")
+
+    monkeypatch.setattr(unit, "write_coil", write_coil_with_lost_response)
+
+    verified = await trovis.rk4.async_write_datapoint(
+        "storage_tank_charging_enabled", True
+    )
+
+    assert verified is True
+    assert datapoint_writes == 1
+    assert trovis.rk4.storage_tank_charging_enabled is True
+
+
+async def test_write_readback_mismatch_retries_twice_at_most(
+    trovis: Trovis557x, unit: MockModbusUnit, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A mismatching targeted readback causes another logical write attempt."""
+    original_read_holding = unit.read_holding_registers
+    original_write_register = unit.write_register
+    datapoint_writes = 0
+    datapoint_reads = 0
+
+    async def count_write(address: int, value: int) -> None:
+        nonlocal datapoint_writes
+        await original_write_register(address, value)
+        if address == 1002:
+            datapoint_writes += 1
+
+    async def stale_first_read(address: int, count: int) -> list[int]:
+        nonlocal datapoint_reads
+        if address == 1002:
+            datapoint_reads += 1
+            if datapoint_reads == 1:
+                return [210]
+        return await original_read_holding(address, count)
+
+    monkeypatch.setattr(unit, "write_register", count_write)
+    monkeypatch.setattr(unit, "read_holding_registers", stale_first_read)
+
+    verified = await trovis.rk1.async_write_datapoint("room_setpoint_day", 21.5)
+
+    assert verified is True
+    assert datapoint_writes == 2
+    assert datapoint_reads == 2
+    assert trovis.rk1.room_setpoint_day == pytest.approx(21.5)
+
+
+async def test_write_stops_after_two_retries_when_readback_never_matches(
+    trovis: Trovis557x, unit: MockModbusUnit, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A persistent mismatch sends one initial write plus exactly two retries."""
+    original_read_holding = unit.read_holding_registers
+    original_write_register = unit.write_register
+    datapoint_writes = 0
+
+    async def count_write(address: int, value: int) -> None:
+        nonlocal datapoint_writes
+        await original_write_register(address, value)
+        if address == 1002:
+            datapoint_writes += 1
+
+    async def always_stale_read(address: int, count: int) -> list[int]:
+        if address == 1002:
+            return [210]
+        return await original_read_holding(address, count)
+
+    monkeypatch.setattr(unit, "write_register", count_write)
+    monkeypatch.setattr(unit, "read_holding_registers", always_stale_read)
+
+    with pytest.raises(TrovisWriteVerificationError):
+        await trovis.rk1.async_write_datapoint("room_setpoint_day", 21.5)
+
+    assert datapoint_writes == 3
+
+
+async def test_forced_charging_timeout_is_never_retried(
+    trovis: Trovis557x, unit: MockModbusUnit, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """CL1807 is a trigger: an ambiguous timeout must never send it twice."""
+    original_write_coil = unit.write_coil
+    trigger_writes = 0
+
+    async def trigger_with_lost_response(address: int, value: bool) -> None:
+        nonlocal trigger_writes
+        await original_write_coil(address, value)
+        if address == 1806:
+            trigger_writes += 1
+            raise ModbusTimeoutError("simulated lost CL1807 response")
+
+    monkeypatch.setattr(unit, "write_coil", trigger_with_lost_response)
+
+    with pytest.raises(TrovisWriteVerificationError, match="deliberately not retried"):
+        await trovis.rk4.async_write_datapoint("forced_charging", True)
+
+    assert trigger_writes == 1
+    assert (await unit.read_coils(1806, 1))[0] is True
 
 
 async def test_write_access_reports_a_device_that_answers_nothing(

@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import datetime
+import logging
 from collections.abc import Callable, Iterable
 from enum import IntEnum
 from typing import Any
 
-from modbus_connection import ModbusError
+from modbus_connection import ModbusError, ModbusTimeoutError
 from modbus_connection.model import (
     Component,
     RegisterField,
@@ -25,7 +26,11 @@ from .configurations.address_ranges import (
     is_span_readable,
 )
 from .enums import OperatingMode
-from .exceptions import TrovisValueValidationError, TrovisWriteAccessError
+from .exceptions import (
+    TrovisValueValidationError,
+    TrovisWriteAccessError,
+    TrovisWriteVerificationError,
+)
 from .metadata import (
     BooleanMetadata,
     DatapointMetadata,
@@ -54,6 +59,13 @@ WRITE_ACCESS_DISABLE_CODE = 0
 
 LEVEL_GLT = False
 LEVEL_AUTARK = True
+
+# One initial attempt plus two retries. Only response timeouts and an
+# explicit readback mismatch are retried; Modbus exception responses and
+# other protocol/connection errors keep their normal fail-fast semantics.
+WRITE_RETRIES = 2
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class PackedTimeField(RegisterField[datetime.time]):
@@ -694,37 +706,119 @@ async def async_read_writing_enabled(unit: Any) -> bool:
         ) from err
 
 
+async def _async_write_access_state(
+    unit: Any,
+    value: int,
+    *,
+    enabled: bool,
+    action: str,
+) -> None:
+    """Write HR40145 and verify the resulting access state.
+
+    A write timeout is ambiguous: the controller may have applied the value and
+    only the response may have been lost. Therefore every attempt is followed by
+    a targeted readback before another write is sent.
+    """
+    address = register_address(WRITE_ACCESS_REGISTER)
+    last_timeout: ModbusTimeoutError | None = None
+
+    for attempt in range(WRITE_RETRIES + 1):
+        # Keep only the failure context from the current/final logical attempt.
+        # A timeout from an earlier attempt must not mask a later plain mismatch.
+        last_timeout = None
+        try:
+            await unit.write_register(address, value)
+        except ModbusTimeoutError as err:
+            last_timeout = err
+            _LOGGER.debug(
+                "TROVIS write-access %s timed out on attempt %d/%d; "
+                "checking HR40145 before retrying",
+                action,
+                attempt + 1,
+                WRITE_RETRIES + 1,
+            )
+        except ModbusError as err:
+            raise TrovisWriteAccessError(
+                f"Could not {action} TROVIS write access"
+            ) from err
+
+        try:
+            (readback,) = await unit.read_holding_registers(address, 1)
+        except ModbusTimeoutError as err:
+            last_timeout = err
+            _LOGGER.debug(
+                "TROVIS write-access %s readback timed out on attempt %d/%d",
+                action,
+                attempt + 1,
+                WRITE_RETRIES + 1,
+            )
+        except ModbusError as err:
+            raise TrovisWriteAccessError(
+                f"Could not verify TROVIS write access while trying to {action} it"
+            ) from err
+        else:
+            state_matches = (readback != WRITE_ACCESS_DISABLE_CODE) == enabled
+            if state_matches:
+                if attempt:
+                    _LOGGER.debug(
+                        "TROVIS write-access %s succeeded on attempt %d/%d",
+                        action,
+                        attempt + 1,
+                        WRITE_RETRIES + 1,
+                    )
+                return
+
+            last_timeout = None
+            _LOGGER.debug(
+                "TROVIS write-access %s readback mismatch on attempt %d/%d: %d",
+                action,
+                attempt + 1,
+                WRITE_RETRIES + 1,
+                readback,
+            )
+
+    message = (
+        f"Could not {action} TROVIS write access after {WRITE_RETRIES + 1} attempts"
+    )
+    if last_timeout is not None:
+        raise TrovisWriteAccessError(message) from last_timeout
+    raise TrovisWriteAccessError(message)
+
+
 async def async_enable_writing(
     unit: Any,
     access_code: int = DEFAULT_WRITE_ACCESS_CODE,
 ) -> None:
-    """Enable TROVIS writing globally."""
-    try:
-        await unit.write_register(register_address(WRITE_ACCESS_REGISTER), access_code)
-    except ModbusError as err:
-        raise TrovisWriteAccessError("Could not enable TROVIS write access") from err
+    """Enable TROVIS writing globally and verify HR40145."""
+    await _async_write_access_state(
+        unit,
+        access_code,
+        enabled=True,
+        action="enable",
+    )
 
 
 async def async_disable_writing(unit: Any) -> None:
-    """Disable TROVIS writing globally."""
-    try:
-        await unit.write_register(
-            register_address(WRITE_ACCESS_REGISTER),
-            WRITE_ACCESS_DISABLE_CODE,
-        )
-    except ModbusError as err:
-        raise TrovisWriteAccessError("Could not reset TROVIS write access") from err
+    """Disable TROVIS writing globally and verify HR40145."""
+    await _async_write_access_state(
+        unit,
+        WRITE_ACCESS_DISABLE_CODE,
+        enabled=False,
+        action="reset",
+    )
 
 
 async def async_ensure_writing_enabled(
     unit: Any,
     access_code: int = DEFAULT_WRITE_ACCESS_CODE,
 ) -> None:
-    """Ensure that the TROVIS access code is active for the next write."""
-    try:
-        await unit.write_register(register_address(WRITE_ACCESS_REGISTER), access_code)
-    except ModbusError as err:
-        raise TrovisWriteAccessError("Could not refresh TROVIS write access") from err
+    """Refresh and verify the TROVIS access code for the next write."""
+    await _async_write_access_state(
+        unit,
+        access_code,
+        enabled=True,
+        action="refresh",
+    )
 
 
 class TrovisComponent(Component):
@@ -745,6 +839,11 @@ class TrovisComponent(Component):
     # Values that restore autonomous controller operation through the Ebene
     # coil instead of being written to the corresponding holding register.
     ebene_autark_values: dict[str, Any] = {"mode": OperatingMode.AUTOMATIC}
+
+    # Command/edge-trigger fields must opt out of automatic write retries.
+    # A timed-out response for such a field has an inherently ambiguous
+    # outcome and repeating the write could execute the command twice.
+    non_retryable_write_fields: frozenset[str] = frozenset()
 
     def _ensure_read_layout_is_configurable(self) -> None:
         """Reject availability changes after the read layout was built."""
@@ -869,17 +968,207 @@ class TrovisComponent(Component):
 
         await super().write(field, value)
 
+    def _resolved_write_field(self, field: str) -> Any:
+        """Return the resolved writable field used for targeted verification."""
+        resolved = self.resolved_fields.get(field)
+        if resolved is None:
+            raise AttributeError(f"unknown field {field!r}")
+        if not resolved.field.writable:
+            raise AttributeError(f"{field} is read-only")
+        return resolved
+
+    @staticmethod
+    def _signed_word(word: int) -> int:
+        """Decode one 16-bit register word as a signed integer."""
+        return word - 0x10000 if word & 0x8000 else word
+
+    async def _read_field_for_verification(
+        self,
+        field: str,
+    ) -> tuple[Any, int | None]:
+        """Read exactly one field span and update its local component cache."""
+        resolved = self._resolved_write_field(field)
+        descriptor = resolved.field
+
+        if isinstance(descriptor, RegisterField):
+            scale_exponent: int | None = None
+            if resolved.scale_address is not None:
+                (scale_word,) = await self._unit.read_holding_registers(
+                    resolved.scale_address,
+                    1,
+                )
+                scale_exponent = self._signed_word(scale_word)
+
+            words = await self._unit.read_holding_registers(
+                resolved.address,
+                descriptor.count,
+            )
+            actual = descriptor.decode(words, scale_exponent)
+            self._values[field] = actual
+            return actual, scale_exponent
+
+        (bit,) = await self._unit.read_coils(resolved.address, 1)
+        actual = descriptor.decode([bit])
+        self._bits[field] = actual
+        return actual, None
+
+    async def _read_ebene_state(self, field: str) -> bool | None:
+        """Read the override/Ebene coil for a field, if it has one."""
+        override = self.ebene_coils.get(field)
+        if override is None:
+            return None
+
+        address, stride = override
+        resolved_address = coil_address(address + stride * (self._index - 1))
+        (state,) = await self._unit.read_coils(resolved_address, 1)
+        return bool(state)
+
+    def _normalized_expected_value(
+        self,
+        field: str,
+        value: Any,
+        scale_exponent: int | None,
+    ) -> Any:
+        """Normalize a requested value through the field's own encode/decode path."""
+        resolved = self._resolved_write_field(field)
+        descriptor = resolved.field
+        normalized = (
+            descriptor.writable(value) if callable(descriptor.writable) else value
+        )
+
+        if isinstance(descriptor, RegisterField):
+            try:
+                return descriptor.decode(
+                    descriptor.encode(normalized, scale_exponent),
+                    scale_exponent,
+                )
+            except NotImplementedError:
+                return normalized
+
+        return bool(normalized)
+
+    async def _verify_written_datapoint(self, field: str, value: Any) -> bool:
+        """Read back one datapoint and any required Ebene state."""
+        override = self.ebene_coils.get(field)
+        autark_value = self.ebene_autark_values.get(field, object())
+
+        if override is not None:
+            ebene_state = await self._read_ebene_state(field)
+            expected_ebene = LEVEL_AUTARK if value == autark_value else LEVEL_GLT
+            if ebene_state is not expected_ebene:
+                return False
+
+            if value == autark_value:
+                # In AUTARK the register is deliberately left untouched. Cache
+                # the logical requested mode after the override coil itself was
+                # verified; the next normal poll remains authoritative.
+                resolved = self._resolved_write_field(field)
+                if isinstance(resolved.field, RegisterField):
+                    self._values[field] = value
+                else:
+                    self._bits[field] = bool(value)
+                return True
+
+        actual, scale_exponent = await self._read_field_for_verification(field)
+        expected = self._normalized_expected_value(field, value, scale_exponent)
+        return actual == expected
+
+    async def _write_datapoint_verified(self, field: str, value: Any) -> None:
+        """Write one normal state value and verify it before any retry.
+
+        A timeout on the write response does not immediately cause another
+        write. The requested datapoint is read back first because the controller
+        may already have applied the value. Only if the readback does not match
+        (or itself times out) is the logical write attempted again.
+        """
+        last_timeout: ModbusTimeoutError | None = None
+
+        for attempt in range(WRITE_RETRIES + 1):
+            # Keep only the failure context from the current/final logical attempt.
+            # A timeout from an earlier attempt must not mask a later plain mismatch.
+            last_timeout = None
+            readback_timed_out = False
+            try:
+                await self.write(field, value)
+            except ModbusTimeoutError as err:
+                last_timeout = err
+                _LOGGER.debug(
+                    "TROVIS write %s timed out on attempt %d/%d; "
+                    "verifying before retrying",
+                    field,
+                    attempt + 1,
+                    WRITE_RETRIES + 1,
+                )
+            except ModbusError:
+                raise
+
+            try:
+                verified = await self._verify_written_datapoint(field, value)
+            except ModbusTimeoutError as err:
+                last_timeout = err
+                readback_timed_out = True
+                verified = False
+                _LOGGER.debug(
+                    "TROVIS write %s readback timed out on attempt %d/%d",
+                    field,
+                    attempt + 1,
+                    WRITE_RETRIES + 1,
+                )
+            except ModbusError:
+                raise
+
+            if verified:
+                if attempt:
+                    _LOGGER.debug(
+                        "TROVIS write %s verified on attempt %d/%d",
+                        field,
+                        attempt + 1,
+                        WRITE_RETRIES + 1,
+                    )
+                return
+
+            if not readback_timed_out:
+                _LOGGER.debug(
+                    "TROVIS write %s readback mismatch on attempt %d/%d",
+                    field,
+                    attempt + 1,
+                    WRITE_RETRIES + 1,
+                )
+
+        message = (
+            f"Could not verify TROVIS write {field!r} after "
+            f"{WRITE_RETRIES + 1} attempts"
+        )
+        if last_timeout is not None:
+            raise TrovisWriteVerificationError(message) from last_timeout
+        raise TrovisWriteVerificationError(message)
+
     async def async_write_datapoint(
         self,
         field: str,
         value: Any,
         *,
         access_code: int = DEFAULT_WRITE_ACCESS_CODE,
-    ) -> None:
-        """Write a TROVIS data point.
+    ) -> bool:
+        """Write a TROVIS data point and return whether it was read back.
 
-        This is the public write entry point for integrations. It refreshes the
-        access code and then delegates to the generic component write path.
+        Normal state-setting fields are verified by a targeted read and retry
+        up to two times on a timeout or mismatch. A ``False`` result is reserved
+        for explicitly non-retryable command/trigger fields; callers should then
+        keep their normal full-refresh path because no cache-safe verification
+        was performed.
         """
         await async_ensure_writing_enabled(self._unit, access_code)
-        await self.write(field, value)
+
+        if field in self.non_retryable_write_fields:
+            try:
+                await self.write(field, value)
+            except ModbusTimeoutError as err:
+                raise TrovisWriteVerificationError(
+                    f"TROVIS command write {field!r} timed out; outcome is "
+                    "unknown and the command was deliberately not retried"
+                ) from err
+            return False
+
+        await self._write_datapoint_verified(field, value)
+        return True

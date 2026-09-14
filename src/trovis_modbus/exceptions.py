@@ -15,5 +15,9 @@ class TrovisWriteAccessError(RuntimeError):
     """Raised when TROVIS write access could not be changed or verified."""
 
 
+class TrovisWriteVerificationError(RuntimeError):
+    """Raised when a TROVIS write cannot be confirmed by targeted readback."""
+
+
 class TrovisValueValidationError(ValueError):
     """Raised when a TROVIS value is outside its allowed domain."""

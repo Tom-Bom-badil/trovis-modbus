@@ -45,6 +45,7 @@ from .exceptions import (
     TrovisWriteAccessDisabledError,
     TrovisWriteAccessError,
     TrovisWriteNotImplementedError,
+    TrovisWriteVerificationError,
 )
 from .metadata import (
     BooleanMetadata,
@@ -108,6 +109,7 @@ __all__ = [
     "heating_curve",
     "DEFAULT_WRITE_ACCESS_CODE",
     "TrovisWriteNotImplementedError",
+    "TrovisWriteVerificationError",
     "TrovisWriteAccessDisabledError",
     "TrovisWriteAccessError",
     "TrovisValueValidationError",
