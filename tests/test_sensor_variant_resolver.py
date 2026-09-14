@@ -26,11 +26,11 @@ async def _updated_device(
     coils: dict[int, bool] | None = None,
 ) -> Trovis557x:
     unit.holding.update(HOLDING)
-    unit.coils.update(COILS)
+    unit.coil.update(COILS)
     if holding:
         unit.holding.update(holding)
     if coils:
-        unit.coils.update(coils)
+        unit.coil.update(coils)
     device = Trovis557x(unit, model=model)
     await device.async_update()
     return device

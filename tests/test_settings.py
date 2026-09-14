@@ -94,7 +94,7 @@ async def test_two_circuit_ranges_filter_unavailable_fields(
     mock_modbus_unit: MockModbusUnit,
 ) -> None:
     mock_modbus_unit.holding.update({2001: 7, 2002: 17})
-    mock_modbus_unit.coils.update(
+    mock_modbus_unit.coil.update(
         {
             401: True,
             404: False,

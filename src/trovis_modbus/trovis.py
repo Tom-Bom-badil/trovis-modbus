@@ -58,6 +58,16 @@ if TYPE_CHECKING:
     from modbus_connection import ModbusUnit
 
 
+_TROVIS_MODBUS_TIMEOUT = 5
+_TROVIS_MODBUS_CONNECT_DELAY = 0
+
+
+def _configure_modbus_unit(unit: ModbusUnit) -> None:
+    """Apply TROVIS-specific Modbus connection requirements."""
+    unit.require_timeout(_TROVIS_MODBUS_TIMEOUT)
+    unit.require_connect_delay(_TROVIS_MODBUS_CONNECT_DELAY)
+
+
 @dataclass(frozen=True)
 class TrovisProbe:
     """Result of the safe setup probe."""
@@ -83,6 +93,8 @@ class Trovis557x:
         excluded_registers: Iterable[int] = (),
         excluded_coils: Iterable[int] = (),
     ) -> None:
+        if unit is not None:
+            _configure_modbus_unit(unit)
         self._unit = unit
         self.model = model
         self.model_definition = get_model_definition_for_reported_model(model)
@@ -154,6 +166,7 @@ class Trovis557x:
     @classmethod
     async def async_probe(cls, unit: ModbusUnit) -> TrovisProbe:
         """Read only safe identity and sensor data for setup."""
+        _configure_modbus_unit(unit)
         model = int(
             (
                 await unit.read_holding_registers(

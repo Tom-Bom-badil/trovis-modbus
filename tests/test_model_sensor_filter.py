@@ -92,7 +92,7 @@ async def test_5576_exposes_valid_free_flow_sensors_without_co8_selectors(
             15: 330,
         }
     )
-    mock_modbus_unit.coils.update(COILS)
+    mock_modbus_unit.coil.update(COILS)
 
     device = Trovis557x(
         mock_modbus_unit,
@@ -119,7 +119,7 @@ async def test_5578_exposes_only_fixed_and_resolved_detected_sensors(
     mock_modbus_unit: MockModbusUnit,
 ) -> None:
     mock_modbus_unit.holding.update(HOLDING)
-    mock_modbus_unit.coils.update(COILS)
+    mock_modbus_unit.coil.update(COILS)
     device = Trovis557x(
         mock_modbus_unit,
         model=5578,
@@ -153,8 +153,8 @@ async def test_5579_exposes_fg3_when_sf3_and_analog_functions_are_inactive(
     mock_modbus_unit: MockModbusUnit,
 ) -> None:
     mock_modbus_unit.holding.update(HOLDING)
-    mock_modbus_unit.coils.update(COILS)
-    mock_modbus_unit.coils.update({904: False, 2124: False})
+    mock_modbus_unit.coil.update(COILS)
+    mock_modbus_unit.coil.update({904: False, 2124: False})
     device = Trovis557x(
         mock_modbus_unit,
         model=5579,

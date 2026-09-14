@@ -197,7 +197,7 @@ async def test_fixed_setpoint_heating_and_return_curves(
     mock_modbus_unit,  # noqa: ANN001
 ) -> None:
     """Return constant flow and return curves for fixed set point control."""
-    mock_modbus_unit.coils[1025] = False
+    mock_modbus_unit.coil[1025] = False
     await trovis.async_update()
 
     operating_mode = trovis.heating_circuit_operating_mode(1)
@@ -233,7 +233,7 @@ async def test_four_point_heating_and_return_curves(
     mock_modbus_unit,  # noqa: ANN001
 ) -> None:
     """Interpolate the active four-point characteristics with flat ends."""
-    mock_modbus_unit.coils[1034] = True
+    mock_modbus_unit.coil[1034] = True
     await trovis.async_update()
 
     operating_mode = trovis.heating_circuit_operating_mode(1)
@@ -276,7 +276,7 @@ async def test_four_point_curve_rejects_invalid_outdoor_axis(
     mock_modbus_unit,  # noqa: ANN001
 ) -> None:
     """Report a calculation error for duplicate or unordered outdoor points."""
-    mock_modbus_unit.coils[1034] = True
+    mock_modbus_unit.coil[1034] = True
     mock_modbus_unit.holding[1013] = 0xFF6A  # P2 duplicates P1 (-15.0 °C)
     await trovis.async_update()
 

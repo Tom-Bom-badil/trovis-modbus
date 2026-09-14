@@ -150,7 +150,7 @@ COILS: dict[int, bool] = {
 def trovis(mock_modbus_unit: MockModbusUnit) -> Trovis557x:
     """A Trovis557x over the mock unit, preloaded with device values."""
     mock_modbus_unit.holding.update(HOLDING)
-    mock_modbus_unit.coils.update(COILS)
+    mock_modbus_unit.coil.update(COILS)
     return Trovis557x(mock_modbus_unit)
 
 

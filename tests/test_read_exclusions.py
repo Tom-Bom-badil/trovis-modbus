@@ -44,7 +44,7 @@ async def test_excluded_addresses_are_never_read(
 ) -> None:
     """Excluded register and coil addresses never occur in pooled reads."""
     mock_modbus_unit.holding.update(HOLDING)
-    mock_modbus_unit.coils.update(COILS)
+    mock_modbus_unit.coil.update(COILS)
 
     excluded_registers = {12, 1099}
     excluded_coils = {0, 56}

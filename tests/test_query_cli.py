@@ -163,7 +163,7 @@ async def test_print_includes_solar_only_for_solar_systems(
 ) -> None:
     mock_modbus_unit.holding.update(HOLDING)
     mock_modbus_unit.holding[1] = 23  # Anlage 2.3 includes solar.
-    mock_modbus_unit.coils.update(COILS)
+    mock_modbus_unit.coil.update(COILS)
     device = Trovis557x(mock_modbus_unit)
     await device.async_update()
 
@@ -185,7 +185,7 @@ async def test_print_includes_buffer_tank_only_for_buffer_tank_systems(
     mock_modbus_unit.holding[1101] = 60  # 6.0 K
     mock_modbus_unit.holding[1102] = 10  # factor 1.0
     mock_modbus_unit.holding[1103] = 4  # charging
-    mock_modbus_unit.coils.update(COILS)
+    mock_modbus_unit.coil.update(COILS)
     device = Trovis557x(mock_modbus_unit)
     await device.async_update()
 

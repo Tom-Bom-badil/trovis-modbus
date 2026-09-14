@@ -33,6 +33,23 @@ from trovis_modbus.configurations.address_ranges import (
 from .conftest import COILS, HOLDING
 
 
+def test_sets_modbus_timing_requirements(
+    mock_modbus_unit: MockModbusUnit,
+) -> None:
+    Trovis557x(mock_modbus_unit)
+    assert mock_modbus_unit.required_timeout == 5
+    assert mock_modbus_unit.required_connect_delay == 0
+
+
+async def test_probe_sets_modbus_timing_requirements(
+    mock_modbus_unit: MockModbusUnit,
+) -> None:
+    mock_modbus_unit.holding.update(HOLDING)
+    await Trovis557x.async_probe(mock_modbus_unit)
+    assert mock_modbus_unit.required_timeout == 5
+    assert mock_modbus_unit.required_connect_delay == 0
+
+
 async def test_device_info(trovis: Trovis557x) -> None:
     await trovis.async_update()
     info = trovis.info
@@ -166,8 +183,8 @@ async def test_system_overall_status_bit_order(
             110: 30,  # Rk3 valve setpoint
         }
     )
-    mock_modbus_unit.coils.update(COILS)
-    mock_modbus_unit.coils.update(
+    mock_modbus_unit.coil.update(COILS)
+    mock_modbus_unit.coil.update(
         {
             56: True,  # UP1
             57: True,  # UP2
@@ -263,7 +280,7 @@ async def test_update_survives_a_dropped_connection() -> None:
     connection = MockModbusConnection()
     unit = connection.for_unit(1)
     unit.holding.update(HOLDING)
-    unit.coils.update(COILS)
+    unit.coil.update(COILS)
     device = Trovis557x(unit)
     await device.async_update()
     assert device.rk1.flow_setpoint == pytest.approx(55.0)
@@ -283,7 +300,7 @@ async def test_update_survives_a_recycled_connection() -> None:
     connection = MockModbusConnection()
     unit = connection.for_unit(1)
     unit.holding.update(HOLDING)
-    unit.coils.update(COILS)
+    unit.coil.update(COILS)
     device = Trovis557x(unit)
     await device.async_update()
 
@@ -571,7 +588,7 @@ async def test_5576_anlage_2_1_exposes_rk1_and_rk4(
     mock_modbus_unit: MockModbusUnit,
 ) -> None:
     mock_modbus_unit.holding.update(HOLDING)
-    mock_modbus_unit.coils.update(COILS)
+    mock_modbus_unit.coil.update(COILS)
     device = Trovis557x(
         mock_modbus_unit,
         model=5576,
@@ -584,7 +601,7 @@ async def test_5576_anlage_2_1_exposes_rk_roles(
     mock_modbus_unit: MockModbusUnit,
 ) -> None:
     mock_modbus_unit.holding.update(HOLDING)
-    mock_modbus_unit.coils.update(COILS)
+    mock_modbus_unit.coil.update(COILS)
     device = Trovis557x(
         mock_modbus_unit,
         model=5576,
@@ -619,7 +636,7 @@ async def test_control_circuit_roles_are_clipped_to_model_capacity(
 ) -> None:
     mock_modbus_unit.holding.update(HOLDING)
     mock_modbus_unit.holding[1] = 61  # Anlage 6.1 uses Rk1 through Rk3.
-    mock_modbus_unit.coils.update(COILS)
+    mock_modbus_unit.coil.update(COILS)
     device = Trovis557x(
         mock_modbus_unit,
         model=5576,
@@ -639,7 +656,7 @@ async def test_5579_anlage_5_1_exposes_precontrol_and_heating_roles(
 ) -> None:
     mock_modbus_unit.holding.update(HOLDING)
     mock_modbus_unit.holding[1] = 51
-    mock_modbus_unit.coils.update(COILS)
+    mock_modbus_unit.coil.update(COILS)
     device = Trovis557x(
         mock_modbus_unit,
         model=5579,
@@ -682,8 +699,8 @@ async def test_heating_function_availability_follows_configuration(
     """Rk function availability follows F01/F02/F11, not live sensor values."""
     mock_modbus_unit.holding.update(HOLDING)
     mock_modbus_unit.holding[1] = 40  # Anlage 4.0: Rk1 and Rk2 are heating circuits.
-    mock_modbus_unit.coils.update(COILS)
-    mock_modbus_unit.coils.update(
+    mock_modbus_unit.coil.update(COILS)
+    mock_modbus_unit.coil.update(
         {
             1024: room_feedback,  # CL1025 / CO1-F01
             1025: outdoor_sensor,  # CL1026 / CO1-F02
@@ -705,8 +722,8 @@ async def test_room_dependent_functions_are_not_available_for_precontrol(
     """Optimization and adaptation are exposed only for real heating circuits."""
     mock_modbus_unit.holding.update(HOLDING)
     mock_modbus_unit.holding[1] = 51  # Anlage 5.1: Rk1 precontrol, Rk2/Rk3 heating.
-    mock_modbus_unit.coils.update(COILS)
-    mock_modbus_unit.coils.update(
+    mock_modbus_unit.coil.update(COILS)
+    mock_modbus_unit.coil.update(
         {
             1024: True,  # CL1025 / CO1-F01
             1025: True,  # CL1026 / CO1-F02
@@ -749,8 +766,8 @@ async def test_rk2_room_functions_use_only_rk2_f02(
     """Optimization uses the same Rk's F02 selector on every model."""
     mock_modbus_unit.holding.update(HOLDING)
     mock_modbus_unit.holding[1] = 40  # Anlage 4.0: Rk1 and Rk2 are heating circuits.
-    mock_modbus_unit.coils.update(COILS)
-    mock_modbus_unit.coils.update(
+    mock_modbus_unit.coil.update(COILS)
+    mock_modbus_unit.coil.update(
         {
             1025: False,  # CL1026 / CO1-F02
             1224: True,  # CL1225 / CO2-F01
@@ -774,8 +791,8 @@ async def test_rk1_f02_does_not_enable_rk2_room_functions(
     """Another circuit's F02 must never satisfy Rk2 room-function gating."""
     mock_modbus_unit.holding.update(HOLDING)
     mock_modbus_unit.holding[1] = 40  # Anlage 4.0: Rk1 and Rk2 are heating circuits.
-    mock_modbus_unit.coils.update(COILS)
-    mock_modbus_unit.coils.update(
+    mock_modbus_unit.coil.update(COILS)
+    mock_modbus_unit.coil.update(
         {
             1025: True,  # CL1026 / CO1-F02
             1224: True,  # CL1225 / CO2-F01
@@ -854,8 +871,8 @@ async def test_fg_role_and_metadata_follow_room_configuration(
     """FG2 semantics follow F01 and the TROVIS 5570 device-bus exception."""
     mock_modbus_unit.holding.update(HOLDING)
     mock_modbus_unit.holding[1] = 40  # Rk2 is a real heating circuit.
-    mock_modbus_unit.coils.update(COILS)
-    mock_modbus_unit.coils.update(
+    mock_modbus_unit.coil.update(COILS)
+    mock_modbus_unit.coil.update(
         {
             1224: room_feedback,  # CL1225 / CO2-F01
             703: trovis_5570,  # CL704 / CO7-F04 / TROVIS 5570 in Rk2
@@ -901,7 +918,7 @@ async def test_trovis_5570_availability_follows_model_and_hydronic_system(
     """CO7-F03/F04/F05 availability comes from manual model/system lists."""
     mock_modbus_unit.holding.update(HOLDING)
     mock_modbus_unit.holding[1] = system_code
-    mock_modbus_unit.coils.update(COILS)
+    mock_modbus_unit.coil.update(COILS)
     device = Trovis557x(mock_modbus_unit, model=model)
 
     await device.async_update()
@@ -919,9 +936,9 @@ async def test_unsupported_trovis_5570_coil_is_ignored(
     """A dormant true CO7-F03 bit must not affect 5578 Anlage 6.1."""
     mock_modbus_unit.holding.update(HOLDING)
     mock_modbus_unit.holding[1] = 61
-    mock_modbus_unit.coils.update(COILS)
-    mock_modbus_unit.coils[702] = True  # CL703 / CO7-F03, unsupported in 5578/6.1
-    mock_modbus_unit.coils[1024] = True  # CO1-F01: local room feedback configured
+    mock_modbus_unit.coil.update(COILS)
+    mock_modbus_unit.coil[702] = True  # CL703 / CO7-F03, unsupported in 5578/6.1
+    mock_modbus_unit.coil[1024] = True  # CO1-F01: local room feedback configured
     device = Trovis557x(mock_modbus_unit, model=5578)
 
     await device.async_update()
@@ -951,7 +968,7 @@ async def test_intermediate_heating_availability_follows_model_and_system(
 ) -> None:
     mock_modbus_unit.holding.update(HOLDING)
     mock_modbus_unit.holding[1] = system_code
-    mock_modbus_unit.coils.update(COILS)
+    mock_modbus_unit.coil.update(COILS)
     device = Trovis557x(mock_modbus_unit, model=model)
 
     await device.async_update()
@@ -964,7 +981,7 @@ async def test_5578_anlage_16_1_exposes_buffer_tank_role(
 ) -> None:
     mock_modbus_unit.holding.update(HOLDING)
     mock_modbus_unit.holding[1] = 161
-    mock_modbus_unit.coils.update(COILS)
+    mock_modbus_unit.coil.update(COILS)
     device = Trovis557x(
         mock_modbus_unit,
         model=5578,
@@ -986,7 +1003,7 @@ async def test_solar_capability_follows_hydronic_system(
     mock_modbus_unit: MockModbusUnit,
 ) -> None:
     mock_modbus_unit.holding.update(HOLDING)
-    mock_modbus_unit.coils.update(COILS)
+    mock_modbus_unit.coil.update(COILS)
     device = Trovis557x(mock_modbus_unit, model=5579)
 
     await device.async_update()
@@ -1011,7 +1028,7 @@ async def test_non_buffer_system_does_not_enable_buffer_tank_circuit(
 ) -> None:
     mock_modbus_unit.holding.update(HOLDING)
     mock_modbus_unit.holding[1] = 21  # Anlage 2.1
-    mock_modbus_unit.coils.update(COILS)
+    mock_modbus_unit.coil.update(COILS)
 
     device = Trovis557x(mock_modbus_unit, model=5579)
     await device.async_update()
@@ -1025,7 +1042,7 @@ async def test_fixed_loading_buffer_system_omits_pa1_p16_to_p19_capability(
 ) -> None:
     mock_modbus_unit.holding.update(HOLDING)
     mock_modbus_unit.holding[1] = 141  # Anlage 14.1
-    mock_modbus_unit.coils.update(COILS)
+    mock_modbus_unit.coil.update(COILS)
 
     device = Trovis557x(mock_modbus_unit, model=5576)
     await device.async_update()
