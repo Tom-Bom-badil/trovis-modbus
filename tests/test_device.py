@@ -37,7 +37,7 @@ def test_sets_modbus_timing_requirements(
     mock_modbus_unit: MockModbusUnit,
 ) -> None:
     Trovis557x(mock_modbus_unit)
-    assert mock_modbus_unit.required_timeout == 5
+    assert mock_modbus_unit.required_timeout == 1
     assert mock_modbus_unit.required_connect_delay == 0
 
 
@@ -46,7 +46,7 @@ async def test_probe_sets_modbus_timing_requirements(
 ) -> None:
     mock_modbus_unit.holding.update(HOLDING)
     await Trovis557x.async_probe(mock_modbus_unit)
-    assert mock_modbus_unit.required_timeout == 5
+    assert mock_modbus_unit.required_timeout == 1
     assert mock_modbus_unit.required_connect_delay == 0
 
 
