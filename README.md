@@ -1,5 +1,3 @@
-# `trovis-modbus` Python library
-
 [![PyPI](https://img.shields.io/pypi/v/trovis-modbus.svg)](https://pypi.org/project/trovis-modbus/)
 [![Python](https://img.shields.io/pypi/pyversions/trovis-modbus.svg)](https://pypi.org/project/trovis-modbus/)
 [![License](https://img.shields.io/github/license/Tom-Bom-badil/trovis-modbus_python-library.svg)](LICENSE)
@@ -7,7 +5,11 @@
 
 <img width="100%" alt="SAMSON TROVIS controllers" src="https://github.com/Tom-Bom-badil/trovis-modbus_python-library/wiki/images/trovis-lib-pic.png" />
 
-<br/>`trovis-modbus` is an asynchronous, transport-independent Python library for communicating with **SAMSON TROVIS 557x** heating and district heating controllers and compatible OEM variants over Modbus.
+<br/>
+
+# `trovis-modbus` Python library
+
+`trovis-modbus` is an asynchronous, transport-independent Python library for communicating with **SAMSON TROVIS 557x** heating and district heating controllers and compatible OEM variants over Modbus.
 
 The library was developed primarily as the backend for the corresponding [Samson Trovis 557x](https://github.com/Tom-Bom-badil/samson_trovis_557x) Home Assistant Integration. However, as it is strictly kept independent of Home Assistant, it can also be used by other applications and projects.
 
