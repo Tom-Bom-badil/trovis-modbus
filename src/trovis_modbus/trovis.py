@@ -63,9 +63,14 @@ _TROVIS_MODBUS_CONNECT_DELAY = 0
 
 
 def _configure_modbus_unit(unit: ModbusUnit) -> None:
-    """Apply TROVIS-specific Modbus connection requirements."""
-    unit.require_timeout(_TROVIS_MODBUS_TIMEOUT)
-    unit.require_connect_delay(_TROVIS_MODBUS_CONNECT_DELAY)
+    """Apply TROVIS-specific Modbus connection requirements when supported."""
+    require_timeout = getattr(unit, "require_timeout", None)
+    if callable(require_timeout):
+        require_timeout(_TROVIS_MODBUS_TIMEOUT)
+
+    require_connect_delay = getattr(unit, "require_connect_delay", None)
+    if callable(require_connect_delay):
+        require_connect_delay(_TROVIS_MODBUS_CONNECT_DELAY)
 
 
 @dataclass(frozen=True)
