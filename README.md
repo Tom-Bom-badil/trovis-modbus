@@ -1,15 +1,15 @@
 # `trovis-modbus` Python library
 
-[![CI](https://github.com/Tom-Bom-badil/trovis-modbus/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/Tom-Bom-badil/trovis-modbus/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/trovis-modbus.svg)](https://pypi.org/project/trovis-modbus/)
-[![Python](https://img.shields.io/pypi/pyversions/trovis-modbus.svg)](https://pypi.org/project/trovis-modbus/)
-[![License](https://img.shields.io/github/license/Tom-Bom-badil/trovis-modbus.svg)](LICENSE)
+[![CI](https://github.com/Tom-Bom-badil/trovis-modbus_python-library/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/Tom-Bom-badil/trovis-modbus_python-library/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/trovis-modbus_python-library.svg)](https://pypi.org/project/trovis-modbus_python-library/)
+[![Python](https://img.shields.io/pypi/pyversions/trovis-modbus_python-library.svg)](https://pypi.org/project/trovis-modbus_python-library/)
+[![License](https://img.shields.io/github/license/Tom-Bom-badil/trovis-modbus_python-library.svg)](LICENSE)
 
-<img width="100%" alt="SAMSON TROVIS controllers" src="https://github.com/Tom-Bom-badil/trovis-modbus/wiki/images/trovis-lib-pic.png" />
+<img width="100%" alt="SAMSON TROVIS controllers" src="https://github.com/Tom-Bom-badil/trovis-modbus_python-library/wiki/images/trovis-lib-pic.png" />
 
 <br/>`trovis-modbus` is an asynchronous, transport-independent Python library for communicating with **SAMSON TROVIS 557x** heating and district heating controllers and compatible OEM variants over Modbus.
 
-The library was developed primarily as the backend for the corresponding Home Assistant integration [`trovis-modbus-hass`](https://github.com/Tom-Bom-badil/trovis-modbus-hass). As it is kept independent of Home Assistant, it can also be used by other Python applications and projects.
+The library was developed primarily as the backend for the corresponding Home Assistant integration [`trovis-modbus-hass`](https://github.com/Tom-Bom-badil/trovis-modbus_python-library-hass). As it is kept independent of Home Assistant, it can also be used by other Python applications and projects.
 
 ## Purpose and scope
 
@@ -91,6 +91,6 @@ Additional software-based tests are part of the project to ensure code quality a
 
 ## Documentation, development and contribution guidelines
 
-Detailed architecture, usage examples, datapoint behavior, development setup, branch workflow, contribution guidance, and known limitations are documented in the [project wiki](https://github.com/Tom-Bom-badil/trovis-modbus/wiki).
+Detailed architecture, usage examples, datapoint behavior, development setup, branch workflow, contribution guidance, and known limitations are documented in the [project wiki](https://github.com/Tom-Bom-badil/trovis-modbus_python-library/wiki).
 
-Support and documentation specific to the Home Assistant integration are maintained separately in [`trovis-modbus-hass`](https://github.com/Tom-Bom-badil/trovis-modbus-hass).
+Support and documentation specific to the Home Assistant integration are maintained separately in [`trovis-modbus-hass`](https://github.com/Tom-Bom-badil/trovis-modbus_python-library-hass).

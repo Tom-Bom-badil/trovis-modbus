@@ -24,7 +24,7 @@ dependencies = ["modbus-connection>=4.12.1,<5"]
 cli = ["modbus-connection[tmodbus]>=4.12.1,<5"]
 
 [project.urls]
-Homepage = "https://github.com/Tom-Bom-badil/trovis-modbus"
+Homepage = "https://github.com/Tom-Bom-badil/trovis-modbus_python-library"
 
 [dependency-groups]
 dev = [
