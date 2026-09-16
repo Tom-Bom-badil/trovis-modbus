@@ -1,17 +1,17 @@
 # `trovis-modbus` Python library
 
-[![CI](https://github.com/Tom-Bom-badil/trovis-modbus_python-library/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/Tom-Bom-badil/trovis-modbus_python-library/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/trovis-modbus_python-library.svg)](https://pypi.org/project/trovis-modbus_python-library/)
-[![Python](https://img.shields.io/pypi/pyversions/trovis-modbus_python-library.svg)](https://pypi.org/project/trovis-modbus_python-library/)
+[![PyPI](https://img.shields.io/pypi/v/trovis-modbus.svg)](https://pypi.org/project/trovis-modbus/)
+[![Python](https://img.shields.io/pypi/pyversions/trovis-modbus.svg)](https://pypi.org/project/trovis-modbus/)
 [![License](https://img.shields.io/github/license/Tom-Bom-badil/trovis-modbus_python-library.svg)](LICENSE)
+[![CI](https://github.com/Tom-Bom-badil/trovis-modbus_python-library/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/Tom-Bom-badil/trovis-modbus_python-library/actions/workflows/ci.yml)
 
 <img width="100%" alt="SAMSON TROVIS controllers" src="https://github.com/Tom-Bom-badil/trovis-modbus_python-library/wiki/images/trovis-lib-pic.png" />
 
 <br/>`trovis-modbus` is an asynchronous, transport-independent Python library for communicating with **SAMSON TROVIS 557x** heating and district heating controllers and compatible OEM variants over Modbus.
 
-The library was developed primarily as the backend for the corresponding Home Assistant integration [`trovis-modbus-hass`](https://github.com/Tom-Bom-badil/trovis-modbus_python-library-hass). As it is kept independent of Home Assistant, it can also be used by other Python applications and projects.
+The library was developed primarily as the backend for the corresponding [Samson Trovis 557x](https://github.com/Tom-Bom-badil/samson_trovis_557x) Home Assistant Integration. However, as it is strictly kept independent of Home Assistant, it can also be used by other applications and projects.
 
-## Purpose and scope
+## 👉 Purpose and scope of this library
 
 `trovis-modbus` is intended for operational monitoring and occasional fine tuning of already commissioned heating systems. It does **not** attempt to reproduce every controller menu, parameter level, special function, register, or coil (there are thousands of them). It is also not intended as an initial commissioning tool for new heating systems - please use the free SAMSON TROVIS-VIEW software for this.
 
@@ -52,7 +52,7 @@ An example script `query.py` in the code of the library shows how to build an ap
 
 <sup>Note: Not all non-SAMSON models have yet been tested. The figures are based on the currently available documentation.</sup>
 
-## Data provided by the library
+## 👉 Data provided by the library
 
 Depending on the controller model and its configuration, `trovis-modbus` provides:
 
@@ -77,7 +77,7 @@ Depending on the controller model and its configuration, `trovis-modbus` provide
 
 The exact datapoints exposed for a controller therefore reflect the capabilities and configuration of the actual installation rather than a static model-wide register list.
 
-## Testing and validation
+## 👉 Testing and validation
 
 All releases of the library are tested with the following hardware setup:
 
@@ -89,8 +89,20 @@ All releases of the library are tested with the following hardware setup:
 
 Additional software-based tests are part of the project to ensure code quality and consistency.
 
-## Documentation, development and contribution guidelines
+## 👉 Manual installation
 
-Detailed architecture, usage examples, datapoint behavior, development setup, branch workflow, contribution guidance, and known limitations are documented in the [project wiki](https://github.com/Tom-Bom-badil/trovis-modbus_python-library/wiki).
+End users shouldn't have to install the library manually - it should normally be
+downloaded and installed automatically from `pypi.org` by the application using it.
 
-Support and documentation specific to the Home Assistant integration are maintained separately in [`trovis-modbus-hass`](https://github.com/Tom-Bom-badil/trovis-modbus_python-library-hass).
+For developers, or if you still want to install it manually, use:
+
+`pip install trovis-modbus`
+
+## 👉 Documentation, development, contributions, issue and bug reporting
+
+The central project documentation for the entire SAMSON TROVIS 557x project,
+including usage and developer guidelines for all sub-projects, is maintained in
+the [TROVIS project Wiki](https://github.com/Tom-Bom-badil/samson_trovis_557x/wiki).
+
+That central repository can also be used for issue and bug reporting in the
+[Discussions section](https://github.com/Tom-Bom-badil/samson_trovis_557x/discussions). Please use `Discussions` instead of opening an `Issue`. Thank you! :)
